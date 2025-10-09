@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results | Quiz Connect</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container results-container">
+        <h1>🏆 Results</h1>
+
+        <div class="trophy">🎉</div>
+
+        <div class="leaderboard">
+            <h3>Leaderboard</h3>
+            <div id="leaderboardContainer"></div>
+        </div>
+
+        <button id="playAgainBtn" class="btn-primary" style="display: none;">Play Again</button>
+        <button id="homeBtn" class="btn-secondary">Back to Home</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <script src="firebase-config.js"></script>
+    <script src="results.js"></script>
+</body>
+
+</html>

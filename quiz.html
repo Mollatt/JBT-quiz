@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz | Quiz Connect</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container quiz-container">
+        <div class="question-header">
+            <div class="question-number">
+                Question <span id="currentQ">1</span> of <span id="totalQ">5</span>
+            </div>
+            <div id="timerDisplay" class="timer" style="display: none;">⏱️ <span id="timeLeft">15</span>s</div>
+        </div>
+
+        <h2 class="question-text" id="questionText">Loading question...</h2>
+
+        <div class="answers" id="answersContainer"></div>
+
+        <div id="feedback" class="feedback" style="display: none;"></div>
+
+        <button id="nextBtn" class="btn-primary" style="display: none;">Next Question</button>
+        <button id="resultsBtn" class="btn-primary" style="display: none;">View Results</button>
+
+        <div id="waitingMsg" style="display: none; margin-top: 1rem; opacity: 0.8;">
+            Waiting for host to continue...
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <script src="firebase-config.js"></script>
+    <script src="quiz.js"></script>
+</body>
+
+</html>
