@@ -45,10 +45,19 @@ const sampleQuestions = [
     }
 ];
 
+// Debug: Check if Firebase is loaded
+console.log('Script loaded!');
+console.log('Firebase available:', typeof firebase !== 'undefined');
+console.log('Database available:', typeof db !== 'undefined');
+
 // HOME PAGE LOGIC
-if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
+    console.log('Home page detected');
     const nameInput = document.getElementById('nameInput');
     const codeInput = document.getElementById('gameCodeInput');
+    
+    console.log('Name input found:', !!nameInput);
+    console.log('Code input found:', !!codeInput);
 
     // Create Host-Controlled Game
     document.getElementById('createHostBtn')?.addEventListener('click', async () => {
