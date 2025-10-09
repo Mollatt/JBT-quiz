@@ -1,43 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Connect</title>
+    <title>Quiz Connect - Test</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
     <div class="container">
         <h1>🎯 Quiz Connect</h1>
-        <p class="subtitle">Real-time multiplayer quiz game</p>
+        <p class="subtitle">Testing Setup</p>
 
-        <div id="errorMsg" class="error"></div>
-
-        <div class="menu">
-            <input id="nameInput" type="text" placeholder="Enter your name..." maxlength="20" autocomplete="off">
-            <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off">
-            <button id="joinBtn" class="btn-secondary">Join Game</button>
+        <div id="status" style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 10px; margin: 1rem 0;">
+            <h3>System Status:</h3>
+            <p>✅ HTML Loaded</p>
+            <p id="cssStatus">⏳ Checking CSS...</p>
+            <p id="jsStatus">⏳ Checking JavaScript...</p>
+            <p id="firebaseStatus">⏳ Checking Firebase...</p>
         </div>
 
-        <div class="divider">
-            <span>OR</span>
-        </div>
-
-        <div class="create-section">
-            <h3>Create New Game</h3>
-            <button id="createHostBtn" class="btn-primary">🎮 Host-Controlled</button>
-            <button id="createAutoBtn" class="btn-primary">⚡ Auto-Play Mode</button>
-        </div>
+        <button id="testBtn" class="btn-primary">Click Me to Test</button>
+        
+        <div id="result" style="margin-top: 1rem; min-height: 50px;"></div>
     </div>
+
+    <script>
+        // Test 1: Check CSS
+        const computedStyle = getComputedStyle(document.body);
+        const hasCss = computedStyle.background.includes('gradient');
+        document.getElementById('cssStatus').textContent = hasCss ? '✅ CSS Loaded' : '❌ CSS Not Found';
+        document.getElementById('cssStatus').style.color = hasCss ? '#4CAF50' : '#f44336';
+
+        // Test 2: Check JavaScript
+        document.getElementById('jsStatus').textContent = '✅ JavaScript Working';
+        document.getElementById('jsStatus').style.color = '#4CAF50';
+
+        // Test 3: Check Firebase (async)
+        setTimeout(() => {
+            const hasFirebase = typeof firebase !== 'undefined';
+            const hasDb = typeof db !== 'undefined';
+            const statusEl = document.getElementById('firebaseStatus');
+            
+            if (hasFirebase && hasDb) {
+                statusEl.textContent = '✅ Firebase Connected';
+                statusEl.style.color = '#4CAF50';
+            } else if (hasFirebase && !hasDb) {
+                statusEl.textContent = '⚠️ Firebase loaded but database not initialized';
+                statusEl.style.color = '#FF9800';
+            } else {
+                statusEl.textContent = '❌ Firebase Not Loaded - Check firebase-config.js';
+                statusEl.style.color = '#f44336';
+            }
+        }, 1000);
+
+        // Test button
+        document.getElementById('testBtn').addEventListener('click', () => {
+            document.getElementById('result').innerHTML = `
+                <div style="background: rgba(76, 175, 80, 0.3); padding: 1rem; border-radius: 10px;">
+                    ✅ Button clicks are working!<br>
+                    Firebase available: ${typeof firebase !== 'undefined'}<br>
+                    Database available: ${typeof db !== 'undefined'}
+                </div>
+            `;
+        });
+
+        console.log('=== DIAGNOSTIC INFO ===');
+        console.log('Current URL:', window.location.href);
+        console.log('Pathname:', window.location.pathname);
+        console.log('Firebase loaded:', typeof firebase !== 'undefined');
+        console.log('Database available:', typeof db !== 'undefined');
+    </script>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
+    
     <script src="firebase-config.js"></script>
-    <script src="script.js"></script>
 </body>
-
 </html>
