@@ -311,6 +311,20 @@ async function calculateAndShowResults(players) {
     }
     window.resultsCalculated = true;
 
+    const resultFlagRef = db.ref(`rooms/${gameCode}/resultsCalculated/${currentQuestion.id}`);
+
+// Atomically check/set flag
+const flagSnap = await resultFlagRef.get();
+if (flagSnap.exists()) {
+    // Someone already calculated results
+    showFeedback(selectedAnswer === currentQuestion.correct);
+    return;
+}
+
+// Mark as calculated immediately so others skip
+await resultFlagRef.set(true);
+
+
     // Calculate points based on speed ranking - ONLY for players who answered
     const correctAnswers = Object.entries(players)
         .filter(([name, data]) => {
@@ -321,7 +335,7 @@ async function calculateAndShowResults(players) {
         .sort((a, b) => (a[1].answerTime || Infinity) - (b[1].answerTime || Infinity));
 
     // Award points: 1st = 1000, 2nd = 800, 3rd = 600, rest = 400
-    const pointsScale = [1, 800, 600, 400];
+    const pointsScale = [1000, 800, 600, 400];
 
     // Use a batch update to prevent race conditions
     const updates = {};
@@ -424,3 +438,4 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
