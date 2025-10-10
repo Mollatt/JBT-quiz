@@ -60,8 +60,22 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
     console.log('Code input found:', !!codeInput);
 
     // Create Host-Controlled Game
-    document.getElementById('createHostBtn')?.addEventListener('click', async () => {
+    const createHostBtn = document.getElementById('createHostBtn');
+    console.log('Create host button found:', !!createHostBtn);
+    
+    createHostBtn?.addEventListener('click', async () => {
+        console.log('Create host button clicked!');
+        
+        // Check if Firebase is ready
+        if (typeof db === 'undefined') {
+            alert('Firebase not initialized! Check your firebase-config.js file.');
+            console.error('Firebase database not available');
+            return;
+        }
+        
         const name = sanitizeName(nameInput.value);
+        console.log('Name entered:', name);
+        
         if (!name) return showError('Please enter your name!');
 
         const code = generateCode();
@@ -76,6 +90,7 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
                 [name]: {
                     score: 0,
                     answer: null,
+                    answered: false,
                     isHost: true,
                     joined: Date.now()
                 }
@@ -168,7 +183,6 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         e.target.value = e.target.value.toUpperCase();
     });
 }
-
 
 
 
