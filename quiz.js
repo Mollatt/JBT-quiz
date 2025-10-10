@@ -46,6 +46,15 @@ function setupQuestionListener(room) {
             return;
         }
 
+        // Clear any existing timer
+        if (window.currentTimerInterval) {
+            clearInterval(window.currentTimerInterval);
+            window.currentTimerInterval = null;
+        }
+
+        // Reset calculation flag
+        window.resultsCalculated = false;
+
         // Reset state for new question
         hasAnswered = false;
         selectedAnswer = null;
@@ -187,7 +196,7 @@ function displayQuestion(question, index) {
 
 function startTimerDisplay() {
     roomRef.child('timePerQuestion').once('value', snapshot => {
-        let timeLeft = snapshot.val();
+        let timeLeft = snapshot.val() || 15;
         const timerEl = document.getElementById('timeLeft');
         timerEl.textContent = timeLeft;
         
@@ -200,11 +209,8 @@ function startTimerDisplay() {
             }
         }, 1000);
         
-        // Clear interval when question changes
-        const clearTimerListener = roomRef.child('currentQ').on('value', () => {
-            clearInterval(interval);
-            roomRef.child('currentQ').off('value', clearTimerListener);
-        });
+        // Store interval ID to clear later
+        window.currentTimerInterval = interval;
     });
 }
 
@@ -212,17 +218,15 @@ function startHostTimer() {
     // For host mode, show elapsed time instead of countdown
     const timerEl = document.getElementById('timeLeft');
     let timeElapsed = 0;
+    timerEl.textContent = timeElapsed;
     
     const interval = setInterval(() => {
         timeElapsed++;
         timerEl.textContent = timeElapsed;
     }, 1000);
     
-    // Clear interval when question changes
-    const clearTimerListener = roomRef.child('currentQ').on('value', () => {
-        clearInterval(interval);
-        roomRef.child('currentQ').off('value', clearTimerListener);
-    });
+    // Store interval ID to clear later
+    window.currentTimerInterval = interval;
 }
 
 async function handleAnswer(answerIndex) {
@@ -300,13 +304,27 @@ async function forceShowResults() {
 }
 
 async function calculateAndShowResults(players) {
-    // Calculate points based on speed ranking
+    // Prevent double calculation
+    if (window.resultsCalculated) {
+        showFeedback(selectedAnswer === currentQuestion.correct);
+        return;
+    }
+    window.resultsCalculated = true;
+    
+    // Calculate points based on speed ranking - ONLY for players who answered
     const correctAnswers = Object.entries(players)
-        .filter(([name, data]) => data.answer === currentQuestion.correct && data.answered === true)
+        .filter(([name, data]) => {
+            return data.answer === currentQuestion.correct && 
+                   data.answered === true && 
+                   data.answerTime != null;
+        })
         .sort((a, b) => (a[1].answerTime || Infinity) - (b[1].answerTime || Infinity));
     
     // Award points: 1st = 1000, 2nd = 800, 3rd = 600, rest = 400
     const pointsScale = [1000, 800, 600, 400];
+    
+    // Use a batch update to prevent race conditions
+    const updates = {};
     
     for (let i = 0; i < correctAnswers.length; i++) {
         const [name, data] = correctAnswers[i];
@@ -314,10 +332,13 @@ async function calculateAndShowResults(players) {
         const currentScore = data.score || 0;
         const newScore = currentScore + points;
         
-        await db.ref(`rooms/${gameCode}/players/${name}`).update({
-            score: newScore,
-            lastPoints: points
-        });
+        updates[`rooms/${gameCode}/players/${name}/score`] = newScore;
+        updates[`rooms/${gameCode}/players/${name}/lastPoints`] = points;
+    }
+    
+    // Apply all updates at once
+    if (Object.keys(updates).length > 0) {
+        await db.ref().update(updates);
     }
     
     // Small delay to ensure database updates
@@ -333,10 +354,12 @@ function showFeedback(isCorrect) {
     const buttons = document.querySelectorAll('.answer-btn');
     
     // Always highlight the correct answer in green
-    buttons[currentQuestion.correct].classList.add('correct');
+    if (buttons[currentQuestion.correct]) {
+        buttons[currentQuestion.correct].classList.add('correct');
+    }
     
     // Highlight wrong answer if applicable
-    if (!isCorrect && selectedAnswer !== null) {
+    if (!isCorrect && selectedAnswer !== null && selectedAnswer !== undefined && buttons[selectedAnswer]) {
         buttons[selectedAnswer].classList.add('incorrect');
     }
     
@@ -401,5 +424,3 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
-
-
