@@ -28,7 +28,8 @@ playersRef.once('value').then(snapshot => {
     const leaderboard = Object.entries(players)
         .map(([name, data]) => ({
             name,
-            score: data.score || 0
+            score: data.score || 0,
+            correct: data.correctCount || 0
         }))
         .sort((a, b) => b.score - a.score);
 
@@ -41,12 +42,12 @@ playersRef.once('value').then(snapshot => {
 
 function displayLeaderboard(leaderboard, totalQuestions) {
     const container = document.getElementById('leaderboardContainer');
-    
+
     container.innerHTML = leaderboard.map((player, index) => {
         const rank = index + 1;
         let rankClass = '';
         let rankEmoji = '';
-        
+
         if (rank === 1) {
             rankClass = 'gold';
             rankEmoji = '🥇';
@@ -57,9 +58,9 @@ function displayLeaderboard(leaderboard, totalQuestions) {
             rankClass = 'bronze';
             rankEmoji = '🥉';
         }
-        
+
         const isCurrentPlayer = player.name === playerName;
-        
+
         return `
             <div class="leaderboard-item ${isCurrentPlayer ? 'highlight' : ''}">
                 <div class="rank ${rankClass}">${rankEmoji || rank}</div>
@@ -67,10 +68,14 @@ function displayLeaderboard(leaderboard, totalQuestions) {
                     <div class="player-name" style="font-weight: ${isCurrentPlayer ? 'bold' : 'normal'}">
                         ${player.name}${isCurrentPlayer ? ' (You)' : ''}
                     </div>
+                       <div class="player-stats">
+                           <div class="score">Score: ${player.score}</div>
+                           <div class="questions">Questions: ${player.correct || 0}/${totalQuestions}</div>
+                    </div>
                 </div>
-                <div class="score">${player.score}/${totalQuestions}</div>
             </div>
-        `;
+          `;
+        // "<div class="score">${player.score}/${totalQuestions}</div>" makes no sense. Should be correct answers out of total questions
     }).join('');
 }
 
@@ -79,11 +84,11 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
     // Reset game state
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
-    
+
     // Reset all player scores and answers
     const players = room.players;
     const resetPlayers = {};
-    
+
     for (const [name, data] of Object.entries(players)) {
         resetPlayers[name] = {
             ...data,
@@ -91,13 +96,13 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
             answer: null
         };
     }
-    
+
     await roomRef.update({
         status: 'lobby',
         currentQ: -1,
         players: resetPlayers
     });
-    
+
     window.location.href = 'lobby.html';
 });
 
@@ -105,15 +110,15 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
 document.getElementById('homeBtn')?.addEventListener('click', async () => {
     // Remove player from room
     await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
-    
+
     // Check if room is empty and clean up
     const snapshot = await playersRef.once('value');
     const players = snapshot.val();
-    
+
     if (!players || Object.keys(players).length === 0) {
         await roomRef.remove();
     }
-    
+
     // Clear session and return home
     sessionStorage.clear();
     window.location.href = 'index.html';
