@@ -349,20 +349,28 @@ button:active {
     font-weight: 700;
 }
 
-.gold { color: #FFD700; }
-.silver { color: #C0C0C0; }
-.bronze { color: #CD7F32; }
+.gold {
+    color: #FFD700;
+}
+
+.silver {
+    color: #C0C0C0;
+}
+
+.bronze {
+    color: #CD7F32;
+}
 
 /* Mobile optimization */
 @media (max-width: 480px) {
     .container {
         padding: 1.5rem;
     }
-    
+
     h1 {
         font-size: 1.8rem;
     }
-    
+
     .question-text {
         font-size: 1.1rem;
     }
@@ -395,5 +403,7 @@ button:active {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
