@@ -304,14 +304,14 @@ async function forceShowResults() {
 }
 
 async function calculateAndShowResults(players) {
-    // Prevent double calculation
+    // Intended to prevent double calculation
     if (window.resultsCalculated) {
         showFeedback(selectedAnswer === currentQuestion.correct);
         return;
     }
     window.resultsCalculated = true;
 
- const roomSnap = await db.ref(`rooms/${gameCode}`).once('value');
+    const roomSnap = await db.ref(`rooms/${gameCode}`).once('value');
     const room = roomSnap.val();
     const resultFlagRef = db.ref(`rooms/${gameCode}/resultsCalculated/${room.currentQ}`);
 
@@ -322,7 +322,6 @@ async function calculateAndShowResults(players) {
     }
 
     await resultFlagRef.set(true);
-
 
     // Calculate points based on speed ranking - ONLY for players who answered
     const correctAnswers = Object.entries(players)
@@ -345,8 +344,12 @@ async function calculateAndShowResults(players) {
         const currentScore = data.score || 0;
         const newScore = currentScore + points;
 
+        //increment correct answer count
+        const correctCount = (data.correctCount || 0) + 1;
+
         updates[`rooms/${gameCode}/players/${name}/score`] = newScore;
         updates[`rooms/${gameCode}/players/${name}/lastPoints`] = points;
+        updates[`rooms/${gameCode}/players/${name}/correctCount`] = correctCount;
     }
 
     // Apply all updates at once
@@ -429,11 +432,11 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
             answered: false
         });
     }
-    
+
     if (room.currentQ != null) {
         await db.ref(`rooms/${gameCode}/resultsCalculated/${room.currentQ}`).remove();
     }
-    
+
     await roomRef.update({ currentQ: room.currentQ + 1 });
 });
 
@@ -441,6 +444,3 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
-
-
-
