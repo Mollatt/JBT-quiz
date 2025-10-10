@@ -1,7 +1,7 @@
 // Get session data
 const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
-const isHost = sessionStorage.getItem('isHost') === 'true';
+let isHost = sessionStorage.getItem('isHost') === 'true';
 
 // Redirect if no session
 if (!gameCode || !playerName) {
@@ -14,10 +14,20 @@ const playersRef = db.ref(`rooms/${gameCode}/players`);
 // Display game code
 document.getElementById('gameCode').textContent = gameCode;
 
-// Show start button for host
-if (isHost) {
-    document.getElementById('startBtn').style.display = 'block';
-}
+// Watch for host changes
+playerRef = db.ref(`rooms/${gameCode}/players/${playerName}`);
+playerRef.child('isHost').on('value', (snapshot) => {
+    const hostStatus = snapshot.val();
+    if (hostStatus === true) {
+        isHost = true;
+        sessionStorage.setItem('isHost', 'true');
+        document.getElementById('startBtn').style.display = 'block';
+    } else if (hostStatus === false) {
+        isHost = false;
+        sessionStorage.setItem('isHost', 'false');
+        document.getElementById('startBtn').style.display = 'none';
+    }
+});
 
 // Listen for player changes
 playersRef.on('value', (snapshot) => {
@@ -38,8 +48,18 @@ playersRef.on('value', (snapshot) => {
         <div class="player-item">
             <span class="player-name">${player.name}</span>
             ${player.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
+            ${isHost && !player.isHost ? 
+                `<button class="transfer-host-btn" data-player="${player.name}">Make Host</button>` 
+                : ''}
         </div>
     `).join('');
+    
+    // Add transfer host button handlers
+    if (isHost) {
+        document.querySelectorAll('.transfer-host-btn').forEach(btn => {
+            btn.addEventListener('click', () => transferHost(btn.dataset.player));
+        });
+    }
 });
 
 // Listen for game start
@@ -94,3 +114,23 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
 window.addEventListener('beforeunload', async () => {
     await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
 });
+
+// Transfer host function
+async function transferHost(newHostName) {
+    if (!isHost) return;
+    
+    const updates = {};
+    updates[`rooms/${gameCode}/host`] = newHostName;
+    updates[`rooms/${gameCode}/players/${playerName}/isHost`] = false;
+    updates[`rooms/${gameCode}/players/${newHostName}/isHost`] = true;
+    
+    await db.ref().update(updates);
+    
+    // Update local session
+    sessionStorage.setItem('isHost', 'false');
+    
+    // Hide start button for old host
+    document.getElementById('startBtn').style.display = 'none';
+    
+    alert(`${newHostName} is now the host!`);
+}
