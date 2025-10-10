@@ -147,6 +147,28 @@ function displayQuestion(question, index) {
         btn.addEventListener('click', () => handleAnswer(parseInt(btn.dataset.index)));
     });
     
+    // Check if this player already answered (after refresh)
+    playerRef.once('value', snapshot => {
+        const playerData = snapshot.val();
+        if (playerData && playerData.answered === true) {
+            // Player already answered, disable buttons
+            hasAnswered = true;
+            selectedAnswer = playerData.answer;
+            
+            document.querySelectorAll('.answer-btn').forEach(btn => {
+                btn.disabled = true;
+            });
+            
+            // Highlight their previous answer
+            if (playerData.answer !== null && playerData.answer !== undefined) {
+                document.querySelectorAll('.answer-btn')[playerData.answer].classList.add('selected');
+            }
+            
+            // Start checking for all answers
+            checkAllAnswered();
+        }
+    });
+    
     // Show timer display
     roomRef.child('mode').once('value', snapshot => {
         const mode = snapshot.val();
@@ -379,4 +401,5 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
 
