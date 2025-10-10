@@ -54,7 +54,7 @@ roomRef.child('status').on('value', (snapshot) => {
 document.getElementById('startBtn')?.addEventListener('click', async () => {
     const snapshot = await playersRef.once('value');
     const players = snapshot.val();
-
+    
     if (!players || Object.keys(players).length < 1) {
         alert('Need at least 1 player to start!');
         return;
@@ -75,7 +75,7 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
     // Check if room is empty and clean up
     const snapshot = await playersRef.once('value');
     const players = snapshot.val();
-
+    
     if (!players || Object.keys(players).length === 0) {
         await roomRef.remove();
     } else if (isHost) {
