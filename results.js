@@ -68,42 +68,47 @@ function displayLeaderboard(leaderboard, totalQuestions) {
                     <div class="player-name" style="font-weight: ${isCurrentPlayer ? 'bold' : 'normal'}">
                         ${player.name}${isCurrentPlayer ? ' (You)' : ''}
                     </div>
-                       <div class="player-stats">
-                           <div class="score">Score: ${player.score}</div>
-                           <div class="questions">Questions: ${player.correct || 0}/${totalQuestions}</div>
+                    <div class="player-stats">
+                        <div class="score">Score: ${player.score}</div>
+                        <div class="questions">Correct: ${player.correct || 0}/${totalQuestions}</div>
                     </div>
                 </div>
             </div>
-          `;
-        // "<div class="score">${player.score}/${totalQuestions}</div>" makes no sense. Should be correct answers out of total questions
+        `;
     }).join('');
 }
 
-// Play again button (host only)
+// Play again button - ALL players can click
 document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
-    // Reset game state
+    // Only one person should trigger the reset (use host or first clicker)
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
-
+    
+    // Check if already being reset
+    if (room.status === 'lobby') {
+        window.location.href = 'lobby.html';
+        return;
+    }
+    
     // Reset all player scores and answers
     const players = room.players;
-    const resetPlayers = {};
-
+    const updates = {};
+    
     for (const [name, data] of Object.entries(players)) {
-        resetPlayers[name] = {
-            ...data,
-            score: 0,
-            answer: null
-        };
+        updates[`rooms/${gameCode}/players/${name}/score`] = 0;
+        updates[`rooms/${gameCode}/players/${name}/answer`] = null;
+        updates[`rooms/${gameCode}/players/${name}/answered`] = false;
+        updates[`rooms/${gameCode}/players/${name}/answerTime`] = null;
+        updates[`rooms/${gameCode}/players/${name}/lastPoints`] = 0;
+        updates[`rooms/${gameCode}/players/${name}/correctCount`] = 0;
     }
-
-    await roomRef.update({
-        status: 'lobby',
-        currentQ: -1,
-        players: resetPlayers
-    });
-
-    window.location.href = 'lobby.html';
+    
+    updates[`rooms/${gameCode}/status`] = 'lobby';
+    updates[`rooms/${gameCode}/currentQ`] = -1;
+    
+    await db.ref().update(updates);
+    
+    // Will redirect via status listener
 });
 
 // Home button
