@@ -14,7 +14,7 @@ const playersRef = db.ref(`rooms/${gameCode}/players`);
 let currentQuestion = null;
 let selectedAnswer = null;
 let hasAnswered = false;
-let timer = null;
+let answerCheckListener = null;
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -26,7 +26,6 @@ roomRef.once('value').then(snapshot => {
 
     document.getElementById('totalQ').textContent = room.questions.length;
     
-    // Setup listeners
     setupQuestionListener(room);
     setupStatusListener();
     
@@ -51,17 +50,18 @@ function setupQuestionListener(room) {
         hasAnswered = false;
         selectedAnswer = null;
         
+        // Stop previous answer listener if exists
+        if (answerCheckListener) {
+            playersRef.off('value', answerCheckListener);
+            answerCheckListener = null;
+        }
+        
         // Clear previous answer and timing data
         await playerRef.update({
             answer: null,
             answerTime: null,
             lastPoints: 0
         });
-        
-        // Stop any existing listeners
-        if (playersRef) {
-            playersRef.off('value');
-        }
         
         // Load and display question
         displayQuestion(room.questions[qIndex], qIndex);
@@ -78,7 +78,7 @@ function setupStatusListener() {
 }
 
 function setupAutoMode(room) {
-    // Only host manages the timer
+    // Only host manages the timer in auto mode
     if (!isHost) return;
 
     roomRef.child('currentQ').on('value', async (snapshot) => {
@@ -97,13 +97,18 @@ function setupAutoMode(room) {
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 
-                // Move to next question or finish
-                const nextQ = qIndex + 1;
-                if (nextQ >= room.questions.length) {
-                    await roomRef.update({ status: 'finished' });
-                } else {
-                    await roomRef.update({ currentQ: nextQ });
-                }
+                // Force show results even if not everyone answered
+                await forceShowResults();
+                
+                // Wait 3 seconds then move to next
+                setTimeout(async () => {
+                    const nextQ = qIndex + 1;
+                    if (nextQ >= room.questions.length) {
+                        await roomRef.update({ status: 'finished' });
+                    } else {
+                        await roomRef.update({ currentQ: nextQ });
+                    }
+                }, 3000);
             }
         }, 1000);
     });
@@ -124,7 +129,7 @@ function displayQuestion(question, index) {
     document.getElementById('resultsBtn').style.display = 'none';
     document.getElementById('waitingMsg').style.display = 'none';
     
-    // Reset answer progress
+    // Reset and show answer progress
     const progressEl = document.getElementById('answerProgress');
     progressEl.textContent = 'Waiting for answers...';
     progressEl.style.display = 'block';
@@ -142,11 +147,18 @@ function displayQuestion(question, index) {
         btn.addEventListener('click', () => handleAnswer(parseInt(btn.dataset.index)));
     });
     
-    // Show timer for auto mode
+    // Show timer display
     roomRef.child('mode').once('value', snapshot => {
-        if (snapshot.val() === 'auto') {
-            document.getElementById('timerDisplay').style.display = 'block';
+        const mode = snapshot.val();
+        const timerDisplay = document.getElementById('timerDisplay');
+        
+        if (mode === 'auto') {
+            timerDisplay.style.display = 'block';
             startTimerDisplay();
+        } else {
+            // Host mode also shows a timer but doesn't auto-advance
+            timerDisplay.style.display = 'block';
+            startHostTimer();
         }
     });
 }
@@ -155,10 +167,11 @@ function startTimerDisplay() {
     roomRef.child('timePerQuestion').once('value', snapshot => {
         let timeLeft = snapshot.val();
         const timerEl = document.getElementById('timeLeft');
+        timerEl.textContent = timeLeft;
         
         const interval = setInterval(() => {
             timeLeft--;
-            timerEl.textContent = timeLeft;
+            timerEl.textContent = Math.max(0, timeLeft);
             
             if (timeLeft <= 0) {
                 clearInterval(interval);
@@ -166,9 +179,27 @@ function startTimerDisplay() {
         }, 1000);
         
         // Clear interval when question changes
-        roomRef.child('currentQ').once('value', () => {
+        const clearTimerListener = roomRef.child('currentQ').on('value', () => {
             clearInterval(interval);
+            roomRef.child('currentQ').off('value', clearTimerListener);
         });
+    });
+}
+
+function startHostTimer() {
+    // For host mode, show elapsed time instead of countdown
+    const timerEl = document.getElementById('timeLeft');
+    let timeElapsed = 0;
+    
+    const interval = setInterval(() => {
+        timeElapsed++;
+        timerEl.textContent = timeElapsed;
+    }, 1000);
+    
+    // Clear interval when question changes
+    const clearTimerListener = roomRef.child('currentQ').on('value', () => {
+        clearInterval(interval);
+        roomRef.child('currentQ').off('value', clearTimerListener);
     });
 }
 
@@ -199,15 +230,13 @@ async function handleAnswer(answerIndex) {
             return;
         }
         
-        const currentScore = playerData.score || 0;
-        
         await playerRef.update({
             answer: answerIndex,
             answerTime: answerTime,
-            score: isCorrect ? currentScore + 1 : currentScore
+            answered: true
         });
         
-        // Wait for all players or show waiting message
+        // Start checking if all players have answered
         checkAllAnswered();
         
     } catch (error) {
@@ -216,13 +245,13 @@ async function handleAnswer(answerIndex) {
 }
 
 function checkAllAnswered() {
-    // Listen for all players' answers
-    playersRef.on('value', (snapshot) => {
+    // Create a one-time listener for answer changes
+    answerCheckListener = playersRef.on('value', async (snapshot) => {
         const players = snapshot.val();
         if (!players) return;
         
         const playerArray = Object.values(players);
-        const answeredCount = playerArray.filter(p => p.answer !== null && p.answer !== undefined).length;
+        const answeredCount = playerArray.filter(p => p.answered === true).length;
         const totalPlayers = playerArray.length;
         
         // Update UI to show progress
@@ -233,22 +262,26 @@ function checkAllAnswered() {
         
         // All players answered - show results
         if (answeredCount === totalPlayers) {
-            playersRef.off('value'); // Stop listening
-            setTimeout(() => calculateAndShowResults(players), 500);
+            playersRef.off('value', answerCheckListener);
+            answerCheckListener = null;
+            await calculateAndShowResults(players);
         }
     });
 }
 
+async function forceShowResults() {
+    const snapshot = await playersRef.once('value');
+    const players = snapshot.val();
+    if (players) {
+        await calculateAndShowResults(players);
+    }
+}
+
 async function calculateAndShowResults(players) {
-    // Get current question info
-    const roomSnapshot = await roomRef.once('value');
-    const room = roomSnapshot.val();
-    const currentQ = room.currentQ;
-    
     // Calculate points based on speed ranking
     const correctAnswers = Object.entries(players)
-        .filter(([name, data]) => data.answer === currentQuestion.correct)
-        .sort((a, b) => (a[1].answerTime || 0) - (b[1].answerTime || 0));
+        .filter(([name, data]) => data.answer === currentQuestion.correct && data.answered === true)
+        .sort((a, b) => (a[1].answerTime || Infinity) - (b[1].answerTime || Infinity));
     
     // Award points: 1st = 1000, 2nd = 800, 3rd = 600, rest = 400
     const pointsScale = [1000, 800, 600, 400];
@@ -256,7 +289,8 @@ async function calculateAndShowResults(players) {
     for (let i = 0; i < correctAnswers.length; i++) {
         const [name, data] = correctAnswers[i];
         const points = i < pointsScale.length ? pointsScale[i] : 400;
-        const newScore = (data.score || 0) + points;
+        const currentScore = data.score || 0;
+        const newScore = currentScore + points;
         
         await db.ref(`rooms/${gameCode}/players/${name}`).update({
             score: newScore,
@@ -264,14 +298,19 @@ async function calculateAndShowResults(players) {
         });
     }
     
+    // Small delay to ensure database updates
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     // Show feedback for this player
     const isCorrect = selectedAnswer === currentQuestion.correct;
-    showFeedback(isCorrect, players);
+    showFeedback(isCorrect);
+}
 
+function showFeedback(isCorrect) {
     const feedbackEl = document.getElementById('feedback');
     const buttons = document.querySelectorAll('.answer-btn');
     
-    // Highlight correct answer
+    // Always highlight the correct answer in green
     buttons[currentQuestion.correct].classList.add('correct');
     
     // Highlight wrong answer if applicable
@@ -279,12 +318,27 @@ async function calculateAndShowResults(players) {
         buttons[selectedAnswer].classList.add('incorrect');
     }
     
-    // Show feedback message
-    feedbackEl.textContent = isCorrect ? '✅ Correct!' : `❌ Wrong! Correct answer: ${currentQuestion.options[currentQuestion.correct]}`;
-    feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
-    feedbackEl.style.display = 'block';
+    // Hide answer progress
+    document.getElementById('answerProgress').style.display = 'none';
     
-    // Show next button or waiting message
+    // Get points earned this round
+    playerRef.once('value', snapshot => {
+        const playerData = snapshot.val();
+        const points = playerData.lastPoints || 0;
+        const currentScore = playerData.score || 0;
+        
+        // Show feedback message with points
+        if (isCorrect) {
+            feedbackEl.innerHTML = `✅ Correct! <strong>+${points} points</strong><br>Total: ${currentScore}`;
+            feedbackEl.className = 'feedback correct';
+        } else {
+            feedbackEl.innerHTML = `❌ Wrong! Correct answer: <strong>${currentQuestion.options[currentQuestion.correct]}</strong><br>Total: ${currentScore}`;
+            feedbackEl.className = 'feedback incorrect';
+        }
+        feedbackEl.style.display = 'block';
+    });
+    
+    // Show next button for host
     roomRef.once('value').then(snapshot => {
         const room = snapshot.val();
         const nextQ = room.currentQ + 1;
@@ -297,6 +351,10 @@ async function calculateAndShowResults(players) {
             }
         } else if (room.mode === 'host' && !isHost) {
             document.getElementById('waitingMsg').style.display = 'block';
+        } else if (room.mode === 'auto') {
+            // In auto mode, show waiting message
+            document.getElementById('waitingMsg').textContent = 'Next question starting soon...';
+            document.getElementById('waitingMsg').style.display = 'block';
         }
     });
 }
@@ -306,6 +364,14 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
     
+    // Reset all players' answered status
+    const players = room.players;
+    for (const name in players) {
+        await db.ref(`rooms/${gameCode}/players/${name}`).update({
+            answered: false
+        });
+    }
+    
     await roomRef.update({ currentQ: room.currentQ + 1 });
 });
 
@@ -313,3 +379,4 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
