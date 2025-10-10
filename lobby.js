@@ -134,3 +134,23 @@ async function transferHost(newHostName) {
     
     alert(`${newHostName} is now the host!`);
 }
+
+// Transfer host function
+async function transferHost(newHostName) {
+    if (!isHost) return;
+    
+    const updates = {};
+    updates[`rooms/${gameCode}/host`] = newHostName;
+    updates[`rooms/${gameCode}/players/${playerName}/isHost`] = false;
+    updates[`rooms/${gameCode}/players/${newHostName}/isHost`] = true;
+    
+    await db.ref().update(updates);
+    
+    // Update local session
+    sessionStorage.setItem('isHost', 'false');
+    
+    // Hide start button for old host
+    document.getElementById('startBtn').style.display = 'none';
+    
+    alert(`${newHostName} is now the host!`);
+}
