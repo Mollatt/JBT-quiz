@@ -311,18 +311,17 @@ async function calculateAndShowResults(players) {
     }
     window.resultsCalculated = true;
 
-    const resultFlagRef = db.ref(`rooms/${gameCode}/resultsCalculated/${currentQuestion.id}`);
+ const roomSnap = await db.ref(`rooms/${gameCode}`).once('value');
+    const room = roomSnap.val();
+    const resultFlagRef = db.ref(`rooms/${gameCode}/resultsCalculated/${room.currentQ}`);
 
-// Atomically check/set flag
-const flagSnap = await resultFlagRef.get();
-if (flagSnap.exists()) {
-    // Someone already calculated results
-    showFeedback(selectedAnswer === currentQuestion.correct);
-    return;
-}
+    const flagSnap = await resultFlagRef.get();
+    if (flagSnap.exists()) {
+        showFeedback(selectedAnswer === currentQuestion.correct);
+        return;
+    }
 
-// Mark as calculated immediately so others skip
-await resultFlagRef.set(true);
+    await resultFlagRef.set(true);
 
 
     // Calculate points based on speed ranking - ONLY for players who answered
@@ -442,5 +441,6 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
 
 
