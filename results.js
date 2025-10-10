@@ -10,10 +10,14 @@ if (!gameCode || !playerName) {
 const roomRef = db.ref(`rooms/${gameCode}`);
 const playersRef = db.ref(`rooms/${gameCode}/players`);
 
-// Show play again button for host
-if (isHost) {
-    document.getElementById('playAgainBtn').style.display = 'block';
-}
+// Listen for status changes to sync all players
+roomRef.child('status').on('value', (snapshot) => {
+    const status = snapshot.val();
+    if (status === 'lobby') {
+        // Game is restarting, go back to lobby
+        window.location.href = 'lobby.html';
+    }
+});
 
 // Load and display results
 playersRef.once('value').then(snapshot => {
@@ -37,12 +41,12 @@ playersRef.once('value').then(snapshot => {
 
 function displayLeaderboard(leaderboard, totalQuestions) {
     const container = document.getElementById('leaderboardContainer');
-
+    
     container.innerHTML = leaderboard.map((player, index) => {
         const rank = index + 1;
         let rankClass = '';
         let rankEmoji = '';
-
+        
         if (rank === 1) {
             rankClass = 'gold';
             rankEmoji = '🥇';
@@ -53,9 +57,9 @@ function displayLeaderboard(leaderboard, totalQuestions) {
             rankClass = 'bronze';
             rankEmoji = '🥉';
         }
-
+        
         const isCurrentPlayer = player.name === playerName;
-
+        
         return `
             <div class="leaderboard-item ${isCurrentPlayer ? 'highlight' : ''}">
                 <div class="rank ${rankClass}">${rankEmoji || rank}</div>
@@ -75,11 +79,11 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
     // Reset game state
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
-
+    
     // Reset all player scores and answers
     const players = room.players;
     const resetPlayers = {};
-
+    
     for (const [name, data] of Object.entries(players)) {
         resetPlayers[name] = {
             ...data,
@@ -87,13 +91,13 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
             answer: null
         };
     }
-
+    
     await roomRef.update({
         status: 'lobby',
         currentQ: -1,
         players: resetPlayers
     });
-
+    
     window.location.href = 'lobby.html';
 });
 
@@ -101,15 +105,15 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
 document.getElementById('homeBtn')?.addEventListener('click', async () => {
     // Remove player from room
     await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
-
+    
     // Check if room is empty and clean up
     const snapshot = await playersRef.once('value');
     const players = snapshot.val();
-
+    
     if (!players || Object.keys(players).length === 0) {
         await roomRef.remove();
     }
-
+    
     // Clear session and return home
     sessionStorage.clear();
     window.location.href = 'index.html';
