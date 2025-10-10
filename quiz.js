@@ -430,7 +430,11 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
             answered: false
         });
     }
-
+    
+    if (room.currentQ != null) {
+        await db.ref(`rooms/${gameCode}/resultsCalculated/${room.currentQ}`).remove();
+    }
+    
     await roomRef.update({ currentQ: room.currentQ + 1 });
 });
 
@@ -438,4 +442,5 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
 
