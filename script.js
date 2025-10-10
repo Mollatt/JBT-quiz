@@ -55,27 +55,27 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
     console.log('Home page detected');
     const nameInput = document.getElementById('nameInput');
     const codeInput = document.getElementById('gameCodeInput');
-    
+
     console.log('Name input found:', !!nameInput);
     console.log('Code input found:', !!codeInput);
 
     // Create Host-Controlled Game
     const createHostBtn = document.getElementById('createHostBtn');
     console.log('Create host button found:', !!createHostBtn);
-    
+
     createHostBtn?.addEventListener('click', async () => {
         console.log('Create host button clicked!');
-        
+
         // Check if Firebase is ready
         if (typeof db === 'undefined') {
             alert('Firebase not initialized! Check your firebase-config.js file.');
             console.error('Firebase database not available');
             return;
         }
-        
+
         const name = sanitizeName(nameInput.value);
         console.log('Name entered:', name);
-        
+
         if (!name) return showError('Please enter your name!');
 
         const code = generateCode();
@@ -183,6 +183,3 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         e.target.value = e.target.value.toUpperCase();
     });
 }
-
-
-
