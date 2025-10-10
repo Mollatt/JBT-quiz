@@ -34,6 +34,15 @@ roomRef.once('value').then(snapshot => {
     }
 });
 
+// Calculate scoreboard display points
+function shouldShowScoreboard(currentQ, totalQ) {
+    // Show at 25%, 50%, 75%, and 90%
+    const percentages = [0.25, 0.5, 0.75, 0.9];
+    const showPoints = percentages.map(p => Math.floor(totalQ * p));
+    
+    return showPoints.includes(currentQ);
+}
+
 function setupQuestionListener(room) {
     roomRef.child('currentQ').on('value', async (snapshot) => {
         const qIndex = snapshot.val();
@@ -82,6 +91,8 @@ function setupStatusListener() {
         const status = snapshot.val();
         if (status === 'finished') {
             window.location.href = 'results.html';
+        } else if (status === 'scoreboard') {
+            window.location.href = 'scoreboard.html';
         }
     });
 }
@@ -109,11 +120,18 @@ function setupAutoMode(room) {
                 // Force show results even if not everyone answered
                 await forceShowResults();
 
-                // Wait 3 seconds then move to next
+                // Wait 3 seconds then move to next or scoreboard
                 setTimeout(async () => {
                     const nextQ = qIndex + 1;
-                    if (nextQ >= room.questions.length) {
+                    const totalQ = room.questions.length;
+                    
+                    if (nextQ >= totalQ) {
                         await roomRef.update({ status: 'finished' });
+                    } else if (shouldShowScoreboard(nextQ, totalQ)) {
+                        await roomRef.update({ 
+                            currentQ: nextQ,
+                            status: 'scoreboard'
+                        });
                     } else {
                         await roomRef.update({ currentQ: nextQ });
                     }
@@ -344,7 +362,7 @@ async function calculateAndShowResults(players) {
         const currentScore = data.score || 0;
         const newScore = currentScore + points;
 
-        //increment correct answer count
+        // Increment correct answer count
         const correctCount = (data.correctCount || 0) + 1;
 
         updates[`rooms/${gameCode}/players/${name}/score`] = newScore;
@@ -424,6 +442,9 @@ function showFeedback(isCorrect) {
 document.getElementById('nextBtn')?.addEventListener('click', async () => {
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
+    
+    const nextQ = room.currentQ + 1;
+    const totalQ = room.questions.length;
 
     // Reset all players' answered status
     const players = room.players;
@@ -437,7 +458,15 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
         await db.ref(`rooms/${gameCode}/resultsCalculated/${room.currentQ}`).remove();
     }
 
-    await roomRef.update({ currentQ: room.currentQ + 1 });
+    // Check if we should show scoreboard
+    if (shouldShowScoreboard(nextQ, totalQ)) {
+        await roomRef.update({ 
+            currentQ: nextQ,
+            status: 'scoreboard'
+        });
+    } else {
+        await roomRef.update({ currentQ: nextQ });
+    }
 });
 
 // Results button handler (host only)
