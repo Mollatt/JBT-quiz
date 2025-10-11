@@ -19,29 +19,43 @@ function sanitizeName(name) {
 // Sample quiz questions - you can replace these with your own
 const sampleQuestions = [
     {
+        type: "music",
+        soundcloudUrl: "https://soundcloud.com/user-12345/zelda-theme", // Replace with actual SoundCloud URL
+        startTime: 0,
+        duration: 30,
+        text: "Which game is this music from?",
+        options: ["The Legend of Zelda", "Final Fantasy", "Halo", "Super Mario Bros"],
+        correct: 0
+    },
+    {
+        type: "text",
         text: "What is the capital of France?",
         options: ["Paris", "London", "Berlin", "Madrid"],
         correct: 0
     },
     {
+        type: "music",
+        soundcloudUrl: "https://soundcloud.com/user-12345/halo-theme", // Replace with actual SoundCloud URL
+        startTime: 10,
+        duration: 30,
+        text: "Which game is this soundtrack from?",
+        options: ["Call of Duty", "Halo", "Doom", "Destiny"],
+        correct: 1
+    },
+    {
+        type: "text",
         text: "Which planet is known as the Red Planet?",
         options: ["Venus", "Mars", "Jupiter", "Saturn"],
         correct: 1
     },
     {
-        text: "What is 7 × 8?",
-        options: ["54", "56", "58", "62"],
-        correct: 1
-    },
-    {
-        text: "Who painted the Mona Lisa?",
-        options: ["Van Gogh", "Picasso", "Da Vinci", "Monet"],
+        type: "music",
+        soundcloudUrl: "https://soundcloud.com/user-12345/minecraft-theme", // Replace with actual SoundCloud URL
+        startTime: 5,
+        duration: 30,
+        text: "What game is this music from?",
+        options: ["Terraria", "Roblox", "Minecraft", "Fortnite"],
         correct: 2
-    },
-    {
-        text: "What is the largest ocean on Earth?",
-        options: ["Atlantic", "Indian", "Arctic", "Pacific"],
-        correct: 3
     }
 ];
 
@@ -55,27 +69,27 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
     console.log('Home page detected');
     const nameInput = document.getElementById('nameInput');
     const codeInput = document.getElementById('gameCodeInput');
-
+    
     console.log('Name input found:', !!nameInput);
     console.log('Code input found:', !!codeInput);
 
     // Create Host-Controlled Game
     const createHostBtn = document.getElementById('createHostBtn');
     console.log('Create host button found:', !!createHostBtn);
-
+    
     createHostBtn?.addEventListener('click', async () => {
         console.log('Create host button clicked!');
-
+        
         // Check if Firebase is ready
         if (typeof db === 'undefined') {
             alert('Firebase not initialized! Check your firebase-config.js file.');
             console.error('Firebase database not available');
             return;
         }
-
+        
         const name = sanitizeName(nameInput.value);
         console.log('Name entered:', name);
-
+        
         if (!name) return showError('Please enter your name!');
 
         const code = generateCode();
@@ -127,6 +141,7 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
                 [name]: {
                     score: 0,
                     answer: null,
+                    answered: false,
                     isHost: true,
                     joined: Date.now()
                 }
@@ -164,6 +179,7 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
             await db.ref(`rooms/${code}/players/${name}`).set({
                 score: 0,
                 answer: null,
+                answered: false,
                 isHost: false,
                 joined: Date.now()
             });
