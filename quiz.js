@@ -119,21 +119,37 @@ function setupAutoMode(room) {
     // Only host manages the timer in auto mode
     if (!isHost) return;
 
+    let currentTimerInterval = null;
+
     roomRef.child('currentQ').on('value', async (snapshot) => {
         const qIndex = snapshot.val();
 
-        if (qIndex === -1 || qIndex >= room.questions.length) return;
+        if (qIndex === -1 || qIndex >= room.questions.length) {
+            // Clean up timer on exit
+            if (currentTimerInterval) {
+                clearInterval(currentTimerInterval);
+                currentTimerInterval = null;
+            }
+            return;
+        }
+
+        // Clear previous timer if exists
+        if (currentTimerInterval) {
+            clearInterval(currentTimerInterval);
+            currentTimerInterval = null;
+        }
 
         // Wait a bit before starting timer
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // Start countdown
         let timeLeft = room.timePerQuestion;
-        const timerInterval = setInterval(async () => {
+        currentTimerInterval = setInterval(async () => {
             timeLeft--;
 
             if (timeLeft <= 0) {
-                clearInterval(timerInterval);
+                clearInterval(currentTimerInterval);
+                currentTimerInterval = null;
 
                 // Force show results even if not everyone answered
                 await forceShowResults();
@@ -251,18 +267,27 @@ function startTimerDisplay() {
 }
 
 function startHostTimer() {
-    // For host mode, show elapsed time instead of countdown
-    const timerEl = document.getElementById('timeLeft');
-    let timeElapsed = 0;
-    timerEl.textContent = timeElapsed;
+    // For host mode, show countdown timer (configurable, default 60s)
+    roomRef.child('hostTimerDuration').once('value', snapshot => {
+        let timeLeft = snapshot.val() || 60; // Default 60 seconds for host mode
+        const timerEl = document.getElementById('timeLeft');
+        timerEl.textContent = timeLeft;
 
-    const interval = setInterval(() => {
-        timeElapsed++;
-        timerEl.textContent = timeElapsed;
-    }, 1000);
+        const interval = setInterval(() => {
+            timeLeft--;
+            timerEl.textContent = Math.max(0, timeLeft);
 
-    // Store interval ID to clear later
-    window.currentTimerInterval = interval;
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                // Optional: Show time's up message
+                document.getElementById('waitingMsg').textContent = "Time's up! Waiting for host...";
+                document.getElementById('waitingMsg').style.display = 'block';
+            }
+        }, 1000);
+
+        // Store interval ID to clear later
+        window.currentTimerInterval = interval;
+    });
 }
 
 async function handleAnswer(answerIndex) {
