@@ -41,6 +41,17 @@ playersRef.on('value', (snapshot) => {
 
     // Update player count
     document.getElementById('playerCount').textContent = playerArray.length;
+    
+    // Check if there's a host, if not and I'm the only one, make me host
+    const hasHost = playerArray.some(p => p.isHost);
+    if (!hasHost && playerArray.length > 0) {
+        // No host exists, make first player (or self) host
+        const firstPlayer = playerArray[0].name;
+        if (firstPlayer === playerName) {
+            db.ref(`rooms/${gameCode}/players/${playerName}/isHost`).set(true);
+            db.ref(`rooms/${gameCode}/host`).set(playerName);
+        }
+    }
 
     // Render player list
     const container = document.getElementById('playerListContainer');
