@@ -17,6 +17,9 @@
             </div>
         </div>
 
+        <!-- Music Player (hidden for text questions) -->
+        <div id="musicPlayer" style="display: none; margin: 1.5rem 0;"></div>
+
         <h2 class="question-text" id="questionText">Loading question...</h2>
 
         <div class="answers" id="answersContainer"></div>
@@ -33,10 +36,14 @@
         </div>
     </div>
 
+    <!-- SoundCloud Widget API -->
+    <script src="https://w.soundcloud.com/player/api.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script src="firebase-config.js"></script>
+    <script src="soundcloud-player.js"></script>
     <script src="quiz.js"></script>
 </body>
 </html>
