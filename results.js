@@ -103,6 +103,9 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
         updates[`rooms/${gameCode}/players/${name}/correctCount`] = 0;
     }
     
+    // Clear results flags
+    updates[`rooms/${gameCode}/resultsCalculated`] = null;
+    
     updates[`rooms/${gameCode}/status`] = 'lobby';
     updates[`rooms/${gameCode}/currentQ`] = -1;
     
