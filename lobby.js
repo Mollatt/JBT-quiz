@@ -137,11 +137,7 @@ async function transferHost(newHostName) {
     
     await db.ref().update(updates);
     
-    // Update local session
-    sessionStorage.setItem('isHost', 'false');
-    
-    // Hide start button for old host
-    document.getElementById('startBtn').style.display = 'none';
+    // Don't need to manually update session, the listener will handle it
     
     alert(`${newHostName} is now the host!`);
 }
