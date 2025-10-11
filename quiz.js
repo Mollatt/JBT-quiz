@@ -15,6 +15,7 @@ let currentQuestion = null;
 let selectedAnswer = null;
 let hasAnswered = false;
 let answerCheckListener = null;
+let musicPlayer = null;
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -119,24 +120,25 @@ function setupAutoMode(room) {
     // Only host manages the timer in auto mode
     if (!isHost) return;
 
-    let currentTimerInterval = null;
+    // Store timer at module level so it can be accessed globally
+    window.autoModeTimerInterval = null;
 
     roomRef.child('currentQ').on('value', async (snapshot) => {
         const qIndex = snapshot.val();
 
         if (qIndex === -1 || qIndex >= room.questions.length) {
             // Clean up timer on exit
-            if (currentTimerInterval) {
-                clearInterval(currentTimerInterval);
-                currentTimerInterval = null;
+            if (window.autoModeTimerInterval) {
+                clearInterval(window.autoModeTimerInterval);
+                window.autoModeTimerInterval = null;
             }
             return;
         }
 
         // Clear previous timer if exists
-        if (currentTimerInterval) {
-            clearInterval(currentTimerInterval);
-            currentTimerInterval = null;
+        if (window.autoModeTimerInterval) {
+            clearInterval(window.autoModeTimerInterval);
+            window.autoModeTimerInterval = null;
         }
 
         // Wait a bit before starting timer
@@ -144,18 +146,27 @@ function setupAutoMode(room) {
 
         // Start countdown
         let timeLeft = room.timePerQuestion;
-        currentTimerInterval = setInterval(async () => {
+        let resultsShown = false;
+        
+        window.autoModeTimerInterval = setInterval(async () => {
             timeLeft--;
 
-            if (timeLeft <= 0) {
-                clearInterval(currentTimerInterval);
-                currentTimerInterval = null;
+            if (timeLeft <= 0 && !resultsShown) {
+                resultsShown = true;
+                clearInterval(window.autoModeTimerInterval);
+                window.autoModeTimerInterval = null;
 
                 // Force show results even if not everyone answered
                 await forceShowResults();
 
                 // Wait 3 seconds then move to next or scoreboard
                 setTimeout(async () => {
+                    const currentQCheck = await roomRef.child('currentQ').once('value');
+                    if (currentQCheck.val() !== qIndex) {
+                        // Already moved on, don't do anything
+                        return;
+                    }
+                    
                     const nextQ = qIndex + 1;
                     const totalQ = room.questions.length;
                     
@@ -194,6 +205,37 @@ function displayQuestion(question, index) {
     const progressEl = document.getElementById('answerProgress');
     progressEl.textContent = 'Waiting for answers...';
     progressEl.style.display = 'block';
+
+    // Handle music questions
+    const musicPlayerEl = document.getElementById('musicPlayer');
+    if (question.type === 'music') {
+        musicPlayerEl.style.display = 'block';
+        
+        // Initialize music player if not already done
+        if (!musicPlayer) {
+            musicPlayer = new SoundCloudPlayer('musicPlayer');
+        }
+        
+        // Load and play the track
+        musicPlayer.load(question.soundcloudUrl, false).then(() => {
+            // Auto-play the clip for auto mode, wait for host in host mode
+            roomRef.child('mode').once('value', modeSnapshot => {
+                if (modeSnapshot.val() === 'auto') {
+                    musicPlayer.playClip(question.startTime, question.duration);
+                }
+                // In host mode, host controls play/pause
+            });
+        }).catch(error => {
+            console.error('Failed to load music:', error);
+            musicPlayerEl.innerHTML = '<p style="color: #ff6b6b;">Failed to load music track</p>';
+        });
+    } else {
+        musicPlayerEl.style.display = 'none';
+        // Stop any playing music
+        if (musicPlayer) {
+            musicPlayer.stop();
+        }
+    }
 
     // Render answer options
     const container = document.getElementById('answersContainer');
@@ -384,6 +426,12 @@ async function calculateAndShowResults(players) {
 
     await resultFlagRef.set(true);
 
+    // If in auto mode and host, stop the timer since everyone answered
+    if (isHost && room.mode === 'auto' && window.autoModeTimerInterval) {
+        clearInterval(window.autoModeTimerInterval);
+        window.autoModeTimerInterval = null;
+    }
+
     // Calculate points based on speed ranking - ONLY for players who answered
     const correctAnswers = Object.entries(players)
         .filter(([name, data]) => {
@@ -424,6 +472,28 @@ async function calculateAndShowResults(players) {
     // Show feedback for this player
     const isCorrect = selectedAnswer === currentQuestion.correct;
     showFeedback(isCorrect);
+    
+    // If in auto mode and host, advance after delay
+    if (isHost && room.mode === 'auto') {
+        setTimeout(async () => {
+            const currentQCheck = await roomRef.child('currentQ').once('value');
+            const currentQ = currentQCheck.val();
+            
+            const nextQ = currentQ + 1;
+            const totalQ = room.questions.length;
+            
+            if (nextQ >= totalQ) {
+                await roomRef.update({ status: 'finished' });
+            } else if (shouldShowScoreboard(nextQ, totalQ)) {
+                await roomRef.update({ 
+                    currentQ: nextQ,
+                    status: 'scoreboard'
+                });
+            } else {
+                await roomRef.update({ currentQ: nextQ });
+            }
+        }, 3000);
+    }
 }
 
 function showFeedback(isCorrect) {
