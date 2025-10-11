@@ -36,11 +36,29 @@ roomRef.once('value').then(snapshot => {
 
 // Calculate scoreboard display points
 function shouldShowScoreboard(currentQ, totalQ) {
-    // Show at 25%, 50%, 75%, and 90%
-    const percentages = [0.25, 0.5, 0.75, 0.9];
-    const showPoints = percentages.map(p => Math.floor(totalQ * p));
+    // Show 2-3 times during quiz
+    // At 33% and 66% for shorter quizzes
+    // At 25%, 50%, 75% for longer quizzes
     
-    return showPoints.includes(currentQ);
+    if (totalQ <= 5) {
+        // Short quiz: show once at midpoint
+        return currentQ === Math.floor(totalQ * 0.5);
+    } else if (totalQ <= 10) {
+        // Medium quiz: show twice (33%, 66%)
+        const showPoints = [
+            Math.floor(totalQ * 0.33),
+            Math.floor(totalQ * 0.66)
+        ];
+        return showPoints.includes(currentQ);
+    } else {
+        // Long quiz: show three times (25%, 50%, 75%)
+        const showPoints = [
+            Math.floor(totalQ * 0.25),
+            Math.floor(totalQ * 0.5),
+            Math.floor(totalQ * 0.75)
+        ];
+        return showPoints.includes(currentQ);
+    }
 }
 
 function setupQuestionListener(room) {
