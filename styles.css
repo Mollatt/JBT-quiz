@@ -490,3 +490,161 @@ button:active {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Buzzer Styles */
+.buzzer-container {
+    max-width: 500px;
+}
+
+.buzzer-btn {
+    width: 280px;
+    height: 280px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle, #ff4757 0%, #c23616 100%);
+    border: 8px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    box-shadow: 0 10px 40px rgba(255, 71, 87, 0.4),
+                inset 0 -5px 20px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+}
+
+.buzzer-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 15px 50px rgba(255, 71, 87, 0.6),
+                inset 0 -5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.buzzer-btn:active:not(:disabled) {
+    transform: scale(0.95);
+    box-shadow: 0 5px 20px rgba(255, 71, 87, 0.4),
+                inset 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+.buzzer-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.buzzer-icon {
+    font-size: 5rem;
+    margin-bottom: 0.5rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.buzzer-text {
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.2rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.lockout-msg {
+    background: rgba(255, 107, 107, 0.3);
+    border: 2px solid rgba(255, 107, 107, 0.6);
+    padding: 1rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.buzz-display {
+    background: rgba(255, 215, 0, 0.2);
+    border: 3px solid rgba(255, 215, 0, 0.6);
+    padding: 2rem;
+    border-radius: 16px;
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.buzz-alert {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    margin-bottom: 1rem;
+    animation: flash 0.5s ease-in-out 3;
+}
+
+@keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.buzzed-player {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-top: 1rem;
+}
+
+.correct-answer {
+    background: rgba(76, 175, 80, 0.3);
+    border: 2px solid rgba(76, 175, 80, 0.6);
+    padding: 1rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+    font-size: 1.1rem;
+}
+
+.host-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.host-buttons button {
+    flex: 1;
+}
+
+.btn-correct {
+    background: rgba(76, 175, 80, 0.8);
+    color: white;
+    border: 2px solid rgba(76, 175, 80, 1);
+}
+
+.btn-correct:hover {
+    background: rgba(76, 175, 80, 1);
+    transform: translateY(-2px);
+}
+
+.btn-wrong {
+    background: rgba(244, 67, 54, 0.8);
+    color: white;
+    border: 2px solid rgba(244, 67, 54, 1);
+}
+
+.btn-wrong:hover {
+    background: rgba(244, 67, 54, 1);
+    transform: translateY(-2px);
+}
+
+/* Mobile optimization for buzzer */
+@media (max-width: 480px) {
+    .buzzer-btn {
+        width: 220px;
+        height: 220px;
+    }
+    
+    .buzzer-icon {
+        font-size: 4rem;
+    }
+    
+    .buzzer-text {
+        font-size: 1.5rem;
+    }
+    
+    .host-buttons {
+        flex-direction: column;
+    }
+}
