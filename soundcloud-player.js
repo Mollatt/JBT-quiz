@@ -7,10 +7,11 @@ class SoundCloudPlayer {
         this.containerId = containerId;
         this.isReady = false;
         this.onReadyCallback = null;
+        this.clipTimer = null;
     }
 
-    // Load a SoundCloud track
-    load(soundcloudUrl, autoPlay = false) {
+    // Load a SoundCloud track (hidden player)
+    load(soundcloudUrl) {
         return new Promise((resolve, reject) => {
             const container = document.getElementById(this.containerId);
             if (!container) {
@@ -18,15 +19,16 @@ class SoundCloudPlayer {
                 return;
             }
 
-            // Create iframe
+            // Create HIDDEN iframe (visual=false hides the waveform)
             const iframe = document.createElement('iframe');
             iframe.id = 'sc-widget';
-            iframe.width = '100%';
-            iframe.height = '166';
+            iframe.width = '0';
+            iframe.height = '0';
+            iframe.style.display = 'none'; // Completely hidden
             iframe.scrolling = 'no';
             iframe.frameborder = 'no';
             iframe.allow = 'autoplay';
-            iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(soundcloudUrl)}&auto_play=${autoPlay}&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=false`;
+            iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(soundcloudUrl)}&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=false&buying=false&sharing=false&download=false`;
             
             // Clear existing content
             container.innerHTML = '';
@@ -49,21 +51,39 @@ class SoundCloudPlayer {
         });
     }
 
-    // Play from specific time for specific duration
-    playClip(startTime, duration) {
+    // Play from specific time for specific duration with timer callback
+    playClip(startTime, duration, onTick) {
         if (!this.isReady) {
             console.error('Widget not ready');
             return;
         }
 
-        // Seek to start time
+        // Clear any existing timer
+        if (this.clipTimer) {
+            clearInterval(this.clipTimer);
+        }
+
+        // Seek to start time and play
         this.widget.seekTo(startTime * 1000); // Convert to ms
         this.widget.play();
 
-        // Stop after duration
-        setTimeout(() => {
-            this.widget.pause();
-        }, duration * 1000);
+        let elapsed = 0;
+        
+        // Update timer every second
+        this.clipTimer = setInterval(() => {
+            elapsed++;
+            const remaining = duration - elapsed;
+            
+            if (onTick) {
+                onTick(remaining);
+            }
+            
+            if (elapsed >= duration) {
+                clearInterval(this.clipTimer);
+                this.clipTimer = null;
+                this.pause();
+            }
+        }, 1000);
     }
 
     play() {
@@ -79,6 +99,11 @@ class SoundCloudPlayer {
     }
 
     stop() {
+        if (this.clipTimer) {
+            clearInterval(this.clipTimer);
+            this.clipTimer = null;
+        }
+        
         if (this.widget && this.isReady) {
             this.widget.pause();
             this.widget.seekTo(0);
