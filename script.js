@@ -20,11 +20,11 @@ function sanitizeName(name) {
 const sampleQuestions = [
     {
         type: "music",
-        soundcloudUrl: "https://soundcloud.com/goldielou2/ori-and-the-blind-forest-ost-light-of-nibel", 
+        soundcloudUrl: "https://soundcloud.com/user-12345/zelda-theme", // Replace with actual SoundCloud URL
         startTime: 0,
         duration: 30,
         text: "Which game is this music from?",
-        options: ["Ori and the blind forrest", "Final Fantasy", "Halo", "Super Mario Bros"],
+        options: ["The Legend of Zelda", "Final Fantasy", "Halo", "Super Mario Bros"],
         correct: 0
     },
     {
@@ -199,4 +199,3 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         e.target.value = e.target.value.toUpperCase();
     });
 }
-
