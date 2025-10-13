@@ -20,11 +20,11 @@ function sanitizeName(name) {
 const sampleQuestions = [
     {
         type: "music",
-        soundcloudUrl: "https://soundcloud.com/user-12345/zelda-theme", // Replace with actual SoundCloud URL
+        soundcloudUrl: "https://on.soundcloud.com/BZNT0JesQ3eCf1dVFY", // Replace with actual SoundCloud URL
         startTime: 0,
         duration: 30,
         text: "Which game is this music from?",
-        options: ["The Legend of Zelda", "Final Fantasy", "Halo", "Super Mario Bros"],
+        options: ["Clair Obscur: Expedition 33", "Final Fantasy", "Halo", "Super Mario Bros"],
         correct: 0
     },
     {
@@ -35,12 +35,12 @@ const sampleQuestions = [
     },
     {
         type: "music",
-        soundcloudUrl: "https://soundcloud.com/user-12345/halo-theme", // Replace with actual SoundCloud URL
+        soundcloudUrl: "https://on.soundcloud.com/lnPYSPZHymzoKurXXU", // Replace with actual SoundCloud URL
         startTime: 10,
         duration: 30,
         text: "Which game is this soundtrack from?",
-        options: ["Call of Duty", "Halo", "Doom", "Destiny"],
-        correct: 1
+        options: ["Call of Duty", "Halo", "Dark Souls III", "Destiny"],
+        correct: 2
     },
     {
         type: "text",
@@ -50,12 +50,12 @@ const sampleQuestions = [
     },
     {
         type: "music",
-        soundcloudUrl: "https://soundcloud.com/user-12345/minecraft-theme", // Replace with actual SoundCloud URL
+        soundcloudUrl: "https://on.soundcloud.com/RagVIqUYAX0mPlWwm6", // Replace with actual SoundCloud URL
         startTime: 5,
         duration: 30,
         text: "What game is this music from?",
         options: ["Terraria", "Roblox", "Minecraft", "Fortnite"],
-        correct: 2
+        correct: 0
     }
 ];
 
@@ -199,3 +199,4 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         e.target.value = e.target.value.toUpperCase();
     });
 }
+
