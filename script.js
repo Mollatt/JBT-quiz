@@ -20,7 +20,7 @@ function sanitizeName(name) {
 const sampleQuestions = [
     {
         type: "music",
-        soundcloudUrl: "https://soundcloud.com/lorientestard/sets/clair-obscur-expedition-33-6", // Replace with actual SoundCloud URL
+        soundcloudUrl: "https://soundcloud.com/lorientestard/lumiere", // Replace with actual SoundCloud URL
         startTime: 0,
         duration: 30,
         text: "Which game is this music from?",
@@ -199,5 +199,6 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         e.target.value = e.target.value.toUpperCase();
     });
 }
+
 
 
