@@ -20,7 +20,7 @@ function sanitizeName(name) {
 const sampleQuestions = [
     {
         type: "music",
-        soundcloudUrl: "https://on.soundcloud.com/BZNT0JesQ3eCf1dVFY", // Replace with actual SoundCloud URL
+        soundcloudUrl: "https://soundcloud.com/lorientestard/sets/clair-obscur-expedition-33-6", // Replace with actual SoundCloud URL
         startTime: 0,
         duration: 30,
         text: "Which game is this music from?",
@@ -35,8 +35,8 @@ const sampleQuestions = [
     },
     {
         type: "music",
-        soundcloudUrl: "https://on.soundcloud.com/lnPYSPZHymzoKurXXU", // Replace with actual SoundCloud URL
-        startTime: 10,
+        soundcloudUrl: "https://soundcloud.com/goldielou2/dark-souls-iii-ost-dark-souls-3-main-theme", // Replace with actual SoundCloud URL
+        startTime: 30,
         duration: 30,
         text: "Which game is this soundtrack from?",
         options: ["Call of Duty", "Halo", "Dark Souls III", "Destiny"],
@@ -50,8 +50,8 @@ const sampleQuestions = [
     },
     {
         type: "music",
-        soundcloudUrl: "https://on.soundcloud.com/RagVIqUYAX0mPlWwm6", // Replace with actual SoundCloud URL
-        startTime: 5,
+        soundcloudUrl: "https://soundcloud.com/journeys-end/journeys-end", // Replace with actual SoundCloud URL
+        startTime: 20,
         duration: 30,
         text: "What game is this music from?",
         options: ["Terraria", "Roblox", "Minecraft", "Fortnite"],
@@ -199,4 +199,5 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         e.target.value = e.target.value.toUpperCase();
     });
 }
+
 
