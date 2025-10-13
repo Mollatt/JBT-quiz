@@ -21,7 +21,7 @@ const sampleQuestions = [
     {
         type: "music",
         soundcloudUrl: "https://soundcloud.com/lorientestard/lumiere", // Replace with actual SoundCloud URL
-        startTime: 0,
+        startTime: 10,
         duration: 30,
         text: "Which game is this music from?",
         options: ["Clair Obscur: Expedition 33", "Final Fantasy", "Halo", "Super Mario Bros"],
@@ -199,6 +199,7 @@ if (window.location.pathname.endsWith('index.html') || window.location.pathname 
         e.target.value = e.target.value.toUpperCase();
     });
 }
+
 
 
 
