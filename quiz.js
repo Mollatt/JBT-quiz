@@ -97,7 +97,8 @@ function setupQuestionListener(room) {
         await playerRef.update({
             answer: null,
             answerTime: null,
-            lastPoints: 0
+            lastPoints: 0,
+            answered: false  // Critical: reset answered status
         });
 
         // Load and display question
@@ -439,10 +440,20 @@ async function calculateAndShowResults(players) {
 
     await resultFlagRef.set(true);
 
-    // If in auto mode and host, stop the timer since everyone answered
-    if (isHost && room.mode === 'auto' && window.autoModeTimerInterval) {
+    // Stop timer and music when all players answer
+    if (window.currentTimerInterval) {
+        clearInterval(window.currentTimerInterval);
+        window.currentTimerInterval = null;
+    }
+    
+    if (window.autoModeTimerInterval) {
         clearInterval(window.autoModeTimerInterval);
         window.autoModeTimerInterval = null;
+    }
+    
+    // Stop music
+    if (musicPlayer && currentQuestion.type === 'music') {
+        musicPlayer.stop();
     }
 
     // Calculate points based on speed ranking - ONLY for players who answered
