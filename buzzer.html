@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buzzer | Quiz Connect</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container buzzer-container">
+        <div class="question-header">
+            <div class="question-number">
+                Question <span id="currentQ">1</span> of <span id="totalQ">5</span>
+            </div>
+            <div id="timerDisplay" class="timer">
+                ⏱️ <span id="timeLeft">30</span>s
+            </div>
+        </div>
+
+        <!-- Hidden Music Player -->
+        <div id="musicPlayer" style="display: none;"></div>
+
+        <h2 class="question-text" id="questionText">Loading question...</h2>
+
+        <!-- Buzzer Button (for players) -->
+        <div id="buzzerSection" style="display: none;">
+            <button id="buzzerBtn" class="buzzer-btn">
+                <span class="buzzer-icon">🔴</span>
+                <span class="buzzer-text">BUZZ!</span>
+            </button>
+            <div id="lockoutMsg" class="lockout-msg" style="display: none;">
+                🚫 Locked out for <span id="lockoutTime">5</span>s
+            </div>
+        </div>
+
+        <!-- Buzz Display (shows who buzzed) -->
+        <div id="buzzDisplay" class="buzz-display" style="display: none;">
+            <div class="buzz-alert">⚡ BUZZED! ⚡</div>
+            <div class="buzzed-player" id="buzzedPlayer"></div>
+        </div>
+
+        <!-- Host Controls -->
+        <div id="hostControls" style="display: none;">
+            <div class="correct-answer">
+                Correct Answer: <strong id="correctAnswer"></strong>
+            </div>
+            <div class="host-buttons">
+                <button id="correctBtn" class="btn-correct">✅ Correct (+1000)</button>
+                <button id="wrongBtn" class="btn-wrong">❌ Wrong (-250)</button>
+            </div>
+        </div>
+
+        <!-- Continue Button (appears when time runs out) -->
+        <button id="continueBtn" class="btn-primary" style="display: none;">Continue</button>
+
+        <!-- Results Button (last question) -->
+        <button id="resultsBtn" class="btn-primary" style="display: none;">View Results</button>
+    </div>
+
+    <!-- SoundCloud Widget API -->
+    <script src="https://w.soundcloud.com/player/api.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <script src="firebase-config.js"></script>
+    <script src="soundcloud-player.js"></script>
+    <script src="buzzer.js"></script>
+</body>
+</html>
