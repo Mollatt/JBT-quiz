@@ -209,25 +209,32 @@ function displayQuestion(question, index) {
     // Handle music questions
     const musicPlayerEl = document.getElementById('musicPlayer');
     if (question.type === 'music') {
-        musicPlayerEl.style.display = 'block';
+        // Keep container but don't show player (it's hidden)
+        musicPlayerEl.style.display = 'none';
         
         // Initialize music player if not already done
         if (!musicPlayer) {
             musicPlayer = new SoundCloudPlayer('musicPlayer');
         }
         
-        // Load and play the track
-        musicPlayer.load(question.soundcloudUrl, false).then(() => {
-            // Auto-play the clip for auto mode, wait for host in host mode
-            roomRef.child('mode').once('value', modeSnapshot => {
-                if (modeSnapshot.val() === 'auto') {
-                    musicPlayer.playClip(question.startTime, question.duration);
+        // Load the track
+        musicPlayer.load(question.soundcloudUrl).then(() => {
+            // Always auto-play the clip (both auto and host mode)
+            const duration = question.duration || 30;
+            
+            // Play with timer callback
+            musicPlayer.playClip(question.startTime, duration, (remaining) => {
+                // Update timer display with music countdown
+                const timerEl = document.getElementById('timeLeft');
+                if (timerEl) {
+                    timerEl.textContent = remaining;
                 }
-                // In host mode, host controls play/pause
             });
+            
         }).catch(error => {
             console.error('Failed to load music:', error);
-            musicPlayerEl.innerHTML = '<p style="color: #ff6b6b;">Failed to load music track</p>';
+            // Show error message to players
+            document.getElementById('questionText').innerHTML += '<br><span style="color: #ff6b6b; font-size: 0.9rem;">⚠️ Music failed to load</span>';
         });
     } else {
         musicPlayerEl.style.display = 'none';
@@ -277,11 +284,17 @@ function displayQuestion(question, index) {
         const mode = snapshot.val();
         const timerDisplay = document.getElementById('timerDisplay');
 
-        if (mode === 'auto') {
+        // For music questions, timer is controlled by music player
+        if (question.type === 'music') {
+            timerDisplay.style.display = 'block';
+            const duration = question.duration || 30;
+            document.getElementById('timeLeft').textContent = duration;
+            // Timer updates are handled by music player callback
+        } else if (mode === 'auto') {
             timerDisplay.style.display = 'block';
             startTimerDisplay();
         } else {
-            // Host mode also shows a timer but doesn't auto-advance
+            // Host mode with text questions
             timerDisplay.style.display = 'block';
             startHostTimer();
         }
