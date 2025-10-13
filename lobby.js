@@ -77,7 +77,15 @@ playersRef.on('value', (snapshot) => {
 roomRef.child('status').on('value', (snapshot) => {
     const status = snapshot.val();
     if (status === 'playing') {
-        window.location.href = 'quiz.html';
+        // Check mode to redirect to correct page
+        roomRef.child('mode').once('value', modeSnapshot => {
+            const mode = modeSnapshot.val();
+            if (mode === 'buzzer') {
+                window.location.href = 'buzzer.html';
+            } else {
+                window.location.href = 'quiz.html';
+            }
+        });
     }
 });
 
