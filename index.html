@@ -15,23 +15,18 @@
 
         <div class="menu">
             <input id="nameInput" type="text" placeholder="Enter your name..." maxlength="20" autocomplete="off">
-            <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off">
-            <button id="joinBtn" class="btn-secondary">Join Game</button>
-        </div>
-
-        <div class="divider">
-            <span>OR</span>
-        </div>
-
-        <div class="create-section">
-            <h3>Create New Game</h3>
-            <button id="createHostBtn" class="btn-primary">🎮 Host-Controlled</button>
-            <button id="createAutoBtn" class="btn-primary">⚡ Auto-Play Mode</button>
-            <button id="createBuzzerBtn" class="btn-primary">🔴 Buzzer Mode</button>
+            
+            <!-- Create Lobby -->
+            <button id="createLobbyBtn" class="btn-primary">🎮 Create Lobby</button>
+            
+            <!-- Join Lobby -->
+            <div class="join-section">
+                <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off">
+                <button id="joinBtn" class="btn-secondary">Join Lobby</button>
+            </div>
         </div>
     </div>
 
-    <!-- Firebase SDK here -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
