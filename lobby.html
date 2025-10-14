@@ -1,36 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lobby | Quiz Connect</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-    <div class="container">
-        <h1>🎯 Game Lobby</h1>
+    <div class="container lobby-container">
+        <h1>🎯 Quiz Connect Lobby</h1>
 
         <div class="game-code">
             <div class="label">Game Code:</div>
             <div class="code" id="gameCode">----</div>
         </div>
 
+        <!-- Game Mode Display -->
+        <div class="game-mode-display">
+            <div class="mode-label">Game Mode:</div>
+            <div class="mode-value" id="modeDisplay">Text Quiz</div>
+            <button id="changeGameModeBtn" class="btn-secondary">Change Game Mode</button>
+        </div>
+
+        <!-- Game Mode Menu (hidden by default) -->
+        <div id="gameModeMenu" class="game-mode-menu" style="display: none;">
+            <div class="mode-option">
+                <input type="radio" name="gameMode" value="text" id="textMode" checked>
+                <label for="textMode">📝 Text Quiz</label>
+            </div>
+            <div class="mode-option">
+                <input type="radio" name="gameMode" value="music" id="musicMode">
+                <label for="musicMode">🎵 Music Quiz</label>
+            </div>
+            <div class="mode-option">
+                <input type="radio" name="gameMode" value="buzzer" id="buzzerMode">
+                <label for="buzzerMode">🔴 Buzzer Mode</label>
+            </div>
+            <button id="confirmModeBtn" class="btn-primary">Confirm</button>
+        </div>
+
+        <!-- Game Parameters (hidden by default) -->
+        <div id="parametersPanel" class="parameters-panel" style="display: none;">
+            <h3>Game Parameters</h3>
+            
+            <div class="param-group">
+                <label>Correct Answer Points (1st place):</label>
+                <input type="number" id="firstPlacePoints" value="1000" min="0">
+            </div>
+
+            <div class="param-group">
+                <label>Buzzer Correct Points:</label>
+                <input type="number" id="buzzerCorrectPoints" value="1000" min="0">
+            </div>
+
+            <div class="param-group">
+                <label>Buzzer Wrong Penalty:</label>
+                <input type="number" id="buzzerWrongPoints" value="-250" min="-1000">
+            </div>
+
+            <div class="param-group">
+                <label>Buzzer Lockout (seconds):</label>
+                <input type="number" id="buzzerLockoutTime" value="5" min="0" max="30">
+            </div>
+
+            <div class="param-group">
+                <label>Music/Question Duration (seconds):</label>
+                <input type="number" id="questionDuration" value="30" min="5" max="120">
+            </div>
+
+            <button id="saveParametersBtn" class="btn-primary">Save Parameters</button>
+        </div>
+
+        <div style="margin: 2rem 0;">
+            <button id="parametersBtn" class="btn-secondary">Alter Rules</button>
+        </div>
+
+        <!-- Player List -->
         <div class="player-list">
             <h3>Players (<span id="playerCount">0</span>)</h3>
             <div id="playerListContainer"></div>
         </div>
 
+        <!-- Start/Continue Button -->
         <button id="startBtn" class="btn-primary" style="display: none;">Start Game</button>
+        
+        <!-- Leave Lobby Button -->
         <button id="leaveBtn" class="btn-secondary">Leave Lobby</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
+    
     <script src="firebase-config.js"></script>
     <script src="lobby.js"></script>
 </body>
-
 </html>
