@@ -16,13 +16,26 @@
         <div class="menu">
             <input id="nameInput" type="text" placeholder="Enter your name..." maxlength="20" autocomplete="off">
             
-            <!-- Create Lobby -->
             <button id="createLobbyBtn" class="btn-primary">🎮 Create Lobby</button>
+            <button id="joinLobbyBtn" class="btn-secondary">Join Lobby</button>
+        </div>
+    </div>
+
+    <!-- Join Modal -->
+    <div id="joinModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Join Lobby</h2>
+                <button id="closeModalBtn" class="modal-close">&times;</button>
+            </div>
             
-            <!-- Join Lobby -->
-            <div class="join-section">
-                <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off">
-                <button id="joinBtn" class="btn-secondary">Join Lobby</button>
+            <div class="modal-body">
+                <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off" class="modal-input">
+            </div>
+            
+            <div class="modal-footer">
+                <button id="modalJoinBtn" class="btn-primary">Join</button>
+                <button id="modalCancelBtn" class="btn-secondary">Cancel</button>
             </div>
         </div>
     </div>
