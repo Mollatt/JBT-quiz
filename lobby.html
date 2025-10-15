@@ -15,64 +15,61 @@
             <div class="code" id="gameCode">----</div>
         </div>
 
-        <!-- Game Mode Display -->
-        <div class="game-mode-display">
-            <div class="mode-label">Game Mode:</div>
-            <div class="mode-value" id="modeDisplay">Text Quiz</div>
-            <button id="changeGameModeBtn" class="btn-secondary">Change Game Mode</button>
+        <!-- Game Mode Selection -->
+        <div class="game-mode-section">
+            <h3>Select Game Mode</h3>
+            <div class="mode-buttons">
+                <button class="mode-btn" data-mode="text">📝 Text Quiz</button>
+                <button class="mode-btn" data-mode="music">🎵 Music Quiz</button>
+                <button class="mode-btn" data-mode="buzzer">🔴 Buzzer Mode</button>
+            </div>
         </div>
 
-        <!-- Game Mode Menu (hidden by default) -->
-        <div id="gameModeMenu" class="game-mode-menu" style="display: none;">
-            <div class="mode-option">
-                <input type="radio" name="gameMode" value="text" id="textMode" checked>
-                <label for="textMode">📝 Text Quiz</label>
-            </div>
-            <div class="mode-option">
-                <input type="radio" name="gameMode" value="music" id="musicMode">
-                <label for="musicMode">🎵 Music Quiz</label>
-            </div>
-            <div class="mode-option">
-                <input type="radio" name="gameMode" value="buzzer" id="buzzerMode">
-                <label for="buzzerMode">🔴 Buzzer Mode</label>
-            </div>
-            <button id="confirmModeBtn" class="btn-primary">Confirm</button>
-        </div>
-
-        <!-- Game Parameters (hidden by default) -->
-        <div id="parametersPanel" class="parameters-panel" style="display: none;">
+        <!-- Game Parameters (conditional based on mode) -->
+        <div id="parametersSection" class="parameters-section">
             <h3>Game Parameters</h3>
             
-            <div class="param-group">
-                <label>Correct Answer Points (1st place):</label>
-                <input type="number" id="firstPlacePoints" value="1000" min="0">
+            <!-- Text/Music Mode Parameters -->
+            <div id="standardModeParams" style="display: none;">
+                <div class="param-group">
+                    <label>1st Place Points:</label>
+                    <input type="number" id="firstPlacePoints" value="1000" min="0">
+                </div>
+                <div class="param-group">
+                    <label>2nd Place Points:</label>
+                    <input type="number" id="secondPlacePoints" value="800" min="0">
+                </div>
+                <div class="param-group">
+                    <label>3rd Place Points:</label>
+                    <input type="number" id="thirdPlacePoints" value="600" min="0">
+                </div>
+                <div class="param-group">
+                    <label>Question Duration (seconds):</label>
+                    <input type="number" id="questionDuration" value="30" min="5" max="120">
+                </div>
             </div>
 
-            <div class="param-group">
-                <label>Buzzer Correct Points:</label>
-                <input type="number" id="buzzerCorrectPoints" value="1000" min="0">
-            </div>
-
-            <div class="param-group">
-                <label>Buzzer Wrong Penalty:</label>
-                <input type="number" id="buzzerWrongPoints" value="-250" min="-1000">
-            </div>
-
-            <div class="param-group">
-                <label>Buzzer Lockout (seconds):</label>
-                <input type="number" id="buzzerLockoutTime" value="5" min="0" max="30">
-            </div>
-
-            <div class="param-group">
-                <label>Music/Question Duration (seconds):</label>
-                <input type="number" id="questionDuration" value="30" min="5" max="120">
+            <!-- Buzzer Mode Parameters -->
+            <div id="buzzerModeParams" style="display: none;">
+                <div class="param-group">
+                    <label>Correct Answer Points:</label>
+                    <input type="number" id="buzzerCorrectPoints" value="1000" min="0">
+                </div>
+                <div class="param-group">
+                    <label>Wrong Answer Penalty:</label>
+                    <input type="number" id="buzzerWrongPoints" value="-250" min="-1000">
+                </div>
+                <div class="param-group">
+                    <label>Buzzer Lockout (seconds):</label>
+                    <input type="number" id="buzzerLockoutTime" value="5" min="0" max="30">
+                </div>
+                <div class="param-group">
+                    <label>Music Duration (seconds):</label>
+                    <input type="number" id="buzzerMusicDuration" value="30" min="5" max="120">
+                </div>
             </div>
 
             <button id="saveParametersBtn" class="btn-primary">Save Parameters</button>
-        </div>
-
-        <div style="margin: 2rem 0;">
-            <button id="parametersBtn" class="btn-secondary">Alter Rules</button>
         </div>
 
         <!-- Player List -->
@@ -81,11 +78,11 @@
             <div id="playerListContainer"></div>
         </div>
 
-        <!-- Start/Continue Button -->
-        <button id="startBtn" class="btn-primary" style="display: none;">Start Game</button>
-        
-        <!-- Leave Lobby Button -->
-        <button id="leaveBtn" class="btn-secondary">Leave Lobby</button>
+        <!-- Action Buttons -->
+        <div class="lobby-actions">
+            <button id="startBtn" class="btn-primary" style="display: none;">Start Game</button>
+            <button id="leaveBtn" class="btn-secondary">Leave Lobby</button>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
