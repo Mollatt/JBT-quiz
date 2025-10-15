@@ -64,10 +64,52 @@ if (document.getElementById('createLobbyBtn')) {
     });
 }
 
-// Join Lobby
-if (document.getElementById('joinBtn')) {
-    document.getElementById('joinBtn').addEventListener('click', async () => {
-        const code = document.getElementById('gameCodeInput').value.trim().toUpperCase();
+// Modal handling
+const joinModal = document.getElementById('joinModal');
+const joinLobbyBtn = document.getElementById('joinLobbyBtn');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const modalCancelBtn = document.getElementById('modalCancelBtn');
+const modalJoinBtn = document.getElementById('modalJoinBtn');
+const gameCodeInput = document.getElementById('gameCodeInput');
+
+// Open modal
+if (joinLobbyBtn) {
+    joinLobbyBtn.addEventListener('click', () => {
+        joinModal.style.display = 'flex';
+        gameCodeInput.focus();
+    });
+}
+
+// Close modal
+const closeModal = () => {
+    joinModal.style.display = 'none';
+    gameCodeInput.value = '';
+};
+
+if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', closeModal);
+}
+
+if (modalCancelBtn) {
+    modalCancelBtn.addEventListener('click', closeModal);
+}
+
+// Click outside modal to close
+window.addEventListener('click', (event) => {
+    if (event.target === joinModal) {
+        closeModal();
+    }
+});
+
+// Auto-uppercase game code in modal
+gameCodeInput?.addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase();
+});
+
+// Join from modal
+if (modalJoinBtn) {
+    modalJoinBtn.addEventListener('click', async () => {
+        const code = gameCodeInput.value.trim().toUpperCase();
         const name = sanitizeName(document.getElementById('nameInput').value);
 
         if (!code) return showError('Please enter a game code!');
@@ -99,11 +141,11 @@ if (document.getElementById('joinBtn')) {
             console.error(error);
         }
     });
-}
 
-// Auto-uppercase game code
-if (document.getElementById('gameCodeInput')) {
-    document.getElementById('gameCodeInput').addEventListener('input', (e) => {
-        e.target.value = e.target.value.toUpperCase();
+    // Also allow Enter key to join
+    gameCodeInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            modalJoinBtn.click();
+        }
     });
 }
