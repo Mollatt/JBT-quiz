@@ -16,6 +16,30 @@ let currentMode = 'text';
 // Display game code
 document.getElementById('gameCode').textContent = gameCode;
 
+// Game Mode Selection with Buttons
+const modeButtons = document.querySelectorAll('.mode-btn');
+modeButtons.forEach(btn => {
+    btn.addEventListener('click', async () => {
+        if (!isHost) return;
+        
+        const mode = btn.getAttribute('data-mode');
+        
+        // Only allow click if not already selected
+        if (btn.classList.contains('active')) return;
+        
+        // Update all buttons
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Update database
+        currentMode = mode;
+        await roomRef.update({ mode });
+        
+        // Show/hide appropriate parameters
+        updateParametersDisplay(mode);
+    });
+});
+
 // Watch for host changes
 playerRef.child('isHost').on('value', (snapshot) => {
     const hostStatus = snapshot.val();
@@ -23,72 +47,44 @@ playerRef.child('isHost').on('value', (snapshot) => {
         isHost = true;
         sessionStorage.setItem('isHost', 'true');
         document.getElementById('startBtn').style.display = 'block';
-        document.getElementById('changeGameModeBtn').style.display = 'block';
-        document.getElementById('parametersBtn').style.display = 'block';
+        modeButtons.forEach(btn => btn.style.pointerEvents = 'auto');
     } else if (hostStatus === false) {
         isHost = false;
         sessionStorage.setItem('isHost', 'false');
         document.getElementById('startBtn').style.display = 'none';
-        document.getElementById('changeGameModeBtn').style.display = 'none';
-        document.getElementById('parametersBtn').style.display = 'none';
+        modeButtons.forEach(btn => btn.style.pointerEvents = 'none');
     }
 });
 
 // Listen for game mode changes
 roomRef.child('mode').on('value', (snapshot) => {
-    const mode = snapshot.val();
-    currentMode = mode || 'text';
-    updateModeDisplay(currentMode);
-});
-
-function updateModeDisplay(mode) {
-    const modeMap = {
-        'text': '📝 Text Quiz',
-        'music': '🎵 Music Quiz',
-        'buzzer': '🔴 Buzzer Mode'
-    };
-    document.getElementById('modeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
-}
-
-// Game Mode Selection
-document.getElementById('changeGameModeBtn')?.addEventListener('click', () => {
-    const menu = document.getElementById('gameModeMenu');
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-});
-
-document.getElementById('confirmModeBtn')?.addEventListener('click', async () => {
-    const selectedMode = document.querySelector('input[name="gameMode"]:checked').value;
+    const mode = snapshot.val() || 'text';
+    currentMode = mode;
     
-    if (selectedMode !== currentMode) {
-        await roomRef.update({ mode: selectedMode });
+    // Update button states
+    modeButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-mode') === mode) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Update parameters display
+    updateParametersDisplay(mode);
+});
+
+function updateParametersDisplay(mode) {
+    const standardParams = document.getElementById('standardModeParams');
+    const buzzerParams = document.getElementById('buzzerModeParams');
+    
+    if (mode === 'buzzer') {
+        standardParams.style.display = 'none';
+        buzzerParams.style.display = 'block';
+    } else {
+        standardParams.style.display = 'block';
+        buzzerParams.style.display = 'none';
     }
-    
-    document.getElementById('gameModeMenu').style.display = 'none';
-});
-
-// Parameters Button
-document.getElementById('parametersBtn')?.addEventListener('click', () => {
-    const panel = document.getElementById('parametersPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-});
-
-// Save Parameters
-document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
-    const gameParams = {
-        correctPointsScale: [
-            parseInt(document.getElementById('firstPlacePoints').value) || 1000,
-            800, 600, 400  // Keep other tiers for now
-        ],
-        buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints').value) || 1000,
-        buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints').value) || -250,
-        buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime').value) || 5,
-        questionDuration: parseInt(document.getElementById('questionDuration').value) || 30
-    };
-    
-    await roomRef.update({ gameParams });
-    alert('Parameters saved!');
-    document.getElementById('parametersPanel').style.display = 'none';
-});
+}
 
 // Listen for player changes
 playersRef.on('value', (snapshot) => {
@@ -133,11 +129,33 @@ playersRef.on('value', (snapshot) => {
     }
 });
 
+// Save Parameters
+document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
+    const gameParams = currentMode === 'buzzer' 
+        ? {
+            buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints').value) || 1000,
+            buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints').value) || -250,
+            buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime').value) || 5,
+            musicDuration: parseInt(document.getElementById('buzzerMusicDuration').value) || 30
+        }
+        : {
+            correctPointsScale: [
+                parseInt(document.getElementById('firstPlacePoints').value) || 1000,
+                parseInt(document.getElementById('secondPlacePoints').value) || 800,
+                parseInt(document.getElementById('thirdPlacePoints').value) || 600,
+                400
+            ],
+            questionDuration: parseInt(document.getElementById('questionDuration').value) || 30
+        };
+    
+    await roomRef.update({ gameParams });
+    alert('Parameters saved!');
+});
+
 // Listen for game start
 roomRef.child('status').on('value', (snapshot) => {
     const status = snapshot.val();
     if (status === 'playing') {
-        // Route to correct page based on mode
         roomRef.child('mode').once('value', modeSnapshot => {
             const mode = modeSnapshot.val();
             if (mode === 'buzzer') {
@@ -172,7 +190,6 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
-    // Start with currentQ = 0 (will be incremented by quiz/buzzer page)
     await roomRef.update({
         status: 'playing',
         currentQ: 0
