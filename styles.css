@@ -117,7 +117,7 @@
 }
 
 /* Lobby Actions */
-.lobby-actions {* {
+* {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -468,20 +468,28 @@ button:active {
     font-weight: 700;
 }
 
-.gold { color: #FFD700; }
-.silver { color: #C0C0C0; }
-.bronze { color: #CD7F32; }
+.gold {
+    color: #FFD700;
+}
+
+.silver {
+    color: #C0C0C0;
+}
+
+.bronze {
+    color: #CD7F32;
+}
 
 /* Mobile optimization */
 @media (max-width: 480px) {
     .container {
         padding: 1.5rem;
     }
-    
+
     h1 {
         font-size: 1.8rem;
     }
-    
+
     .question-text {
         font-size: 1.1rem;
     }
@@ -607,7 +615,9 @@ button:active {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .lobby-container {
@@ -661,7 +671,7 @@ button:active {
     font-weight: 500;
 }
 
-.mode-option input[type="radio"]:checked + label {
+.mode-option input[type="radio"]:checked+label {
     font-weight: 700;
 }
 
@@ -914,18 +924,19 @@ button:active {
     .mode-buttons {
         grid-template-columns: 1fr;
     }
-    
+
     .modal-content {
         width: 95%;
     }
-    
+
     .parameters-section,
     .game-mode-section {
         margin: 1rem 0;
         padding: 1rem;
     }
 }
-}
+
+
 .buzzer-container {
     max-width: 500px;
 }
@@ -942,7 +953,7 @@ button:active {
     border: 8px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     box-shadow: 0 10px 40px rgba(255, 71, 87, 0.4),
-                inset 0 -5px 20px rgba(0, 0, 0, 0.3);
+        inset 0 -5px 20px rgba(0, 0, 0, 0.3);
     cursor: pointer;
     transition: all 0.2s;
     touch-action: manipulation;
@@ -951,13 +962,13 @@ button:active {
 .buzzer-btn:hover:not(:disabled) {
     transform: scale(1.05);
     box-shadow: 0 15px 50px rgba(255, 71, 87, 0.6),
-                inset 0 -5px 20px rgba(0, 0, 0, 0.3);
+        inset 0 -5px 20px rgba(0, 0, 0, 0.3);
 }
 
 .buzzer-btn:active:not(:disabled) {
     transform: scale(0.95);
     box-shadow: 0 5px 20px rgba(255, 71, 87, 0.4),
-                inset 0 5px 20px rgba(0, 0, 0, 0.5);
+        inset 0 5px 20px rgba(0, 0, 0, 0.5);
 }
 
 .buzzer-btn:disabled {
@@ -972,8 +983,15 @@ button:active {
 }
 
 @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .buzzer-text {
@@ -1012,8 +1030,15 @@ button:active {
 }
 
 @keyframes flash {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .buzzed-player {
@@ -1069,15 +1094,15 @@ button:active {
         width: 220px;
         height: 220px;
     }
-    
+
     .buzzer-icon {
         font-size: 4rem;
     }
-    
+
     .buzzer-text {
         font-size: 1.5rem;
     }
-    
+
     .host-buttons {
         flex-direction: column;
     }
