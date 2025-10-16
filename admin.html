@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Song Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .admin-header {
+            margin-bottom: 2rem;
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-row.full {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            opacity: 0.95;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 0.8rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: rgba(102, 126, 234, 0.8);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .songs-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .song-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .song-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .song-details {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .song-details span {
+            margin-right: 1rem;
+        }
+
+        .song-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .song-actions button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            flex: 1;
+        }
+
+        .status-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .status-message.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid rgba(76, 175, 80, 0.6);
+            display: block;
+        }
+
+        .status-message.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid rgba(244, 67, 54, 0.6);
+            display: block;
+        }
+
+        .required {
+            color: #ff6b6b;
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container admin-container">
+        <div class="admin-header">
+            <h1>🎵 Admin Panel - Song Manager</h1>
+            <p class="subtitle">Add and manage game soundtrack questions</p>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Add Song Form -->
+        <div class="form-section">
+            <h2>Add New Song</h2>
+            
+            <form id="addSongForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Song Title <span class="required">*</span></label>
+                        <input type="text" name="title" placeholder="e.g., Dark Souls III Main Theme" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Artist/Composer</label>
+                        <input type="text" name="artist" placeholder="e.g., Motoi Sakuraba">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Specific Game <span class="required">*</span></label>
+                        <input type="text" name="specificGame" placeholder="e.g., Dark Souls III" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Game Series</label>
+                        <input type="text" name="seriesSource" placeholder="e.g., Dark Souls">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Developer</label>
+                        <input type="text" name="developer" placeholder="e.g., FromSoftware">
+                    </div>
+                    <div class="form-group">
+                        <label>Release Year</label>
+                        <input type="number" name="releaseYear" placeholder="2016" min="1980" max="2099">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Boss Battle</label>
+                        <input type="text" name="bossBattle" placeholder="e.g., Champion Gundyr">
+                    </div>
+                    <div class="form-group">
+                        <label>Area/Location</label>
+                        <input type="text" name="area" placeholder="e.g., Firelink Shrine">
+                    </div>
+                </div>
+
+                <div class="form-row full">
+                    <div class="form-group">
+                        <label>YouTube URL <span class="required">*</span></label>
+                        <input type="url" name="youtubeUrl" placeholder="https://youtube.com/watch?v=..." required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Start Time (seconds)</label>
+                        <input type="number" name="startTime" value="0" min="0" max="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (seconds)</label>
+                        <input type="number" name="duration" value="30" min="5" max="120">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Add Song</button>
+                    <button type="reset" class="btn-secondary">Clear Form</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Songs List -->
+        <div class="form-section">
+            <h2>Added Songs</h2>
+            <div id="songsList" class="songs-list">
+                <p style="opacity: 0.7;">Loading songs...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <script src="firebase-config.js"></script>
+    <script src="admin-panel.js"></script>
+</body>
+</html>
