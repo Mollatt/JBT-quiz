@@ -15,8 +15,17 @@
             <div class="code" id="gameCode">----</div>
         </div>
 
-        <!-- Game Mode Selection -->
-        <div class="game-mode-section">
+        <!-- Current Game Mode Display -->
+        <div class="current-mode-display">
+            <div class="mode-label">Current Mode:</div>
+            <div class="mode-value" id="currentModeDisplay">📝 Text Quiz</div>
+        </div>
+
+        <!-- Change Game Mode Button -->
+        <button id="toggleGameModeBtn" class="btn-secondary">Change Game Mode</button>
+
+        <!-- Game Mode Selection (hidden by default) -->
+        <div id="gameModeSection" class="game-mode-section" style="display: none;">
             <h3>Select Game Mode</h3>
             <div class="mode-buttons">
                 <button class="mode-btn" data-mode="text">📝 Text Quiz</button>
@@ -25,8 +34,11 @@
             </div>
         </div>
 
-        <!-- Game Parameters (conditional based on mode) -->
-        <div id="parametersSection" class="parameters-section">
+        <!-- Alter Parameters Button -->
+        <button id="toggleParametersBtn" class="btn-secondary">Alter Parameters</button>
+
+        <!-- Game Parameters (hidden by default) -->
+        <div id="parametersSection" class="parameters-section" style="display: none;">
             <h3>Game Parameters</h3>
             
             <!-- Text/Music Mode Parameters -->
