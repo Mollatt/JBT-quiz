@@ -16,6 +16,18 @@ let currentMode = 'text';
 // Display game code
 document.getElementById('gameCode').textContent = gameCode;
 
+// Toggle Game Mode Section
+document.getElementById('toggleGameModeBtn')?.addEventListener('click', () => {
+    const section = document.getElementById('gameModeSection');
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+});
+
+// Toggle Parameters Section
+document.getElementById('toggleParametersBtn')?.addEventListener('click', () => {
+    const section = document.getElementById('parametersSection');
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+});
+
 // Game Mode Selection with Buttons
 const modeButtons = document.querySelectorAll('.mode-btn');
 modeButtons.forEach(btn => {
@@ -37,6 +49,9 @@ modeButtons.forEach(btn => {
         
         // Show/hide appropriate parameters
         updateParametersDisplay(mode);
+        
+        // Auto-close mode selection after choosing
+        document.getElementById('gameModeSection').style.display = 'none';
     });
 });
 
@@ -47,11 +62,15 @@ playerRef.child('isHost').on('value', (snapshot) => {
         isHost = true;
         sessionStorage.setItem('isHost', 'true');
         document.getElementById('startBtn').style.display = 'block';
+        document.getElementById('toggleGameModeBtn').style.display = 'block';
+        document.getElementById('toggleParametersBtn').style.display = 'block';
         modeButtons.forEach(btn => btn.style.pointerEvents = 'auto');
     } else if (hostStatus === false) {
         isHost = false;
         sessionStorage.setItem('isHost', 'false');
         document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('toggleGameModeBtn').style.display = 'none';
+        document.getElementById('toggleParametersBtn').style.display = 'none';
         modeButtons.forEach(btn => btn.style.pointerEvents = 'none');
     }
 });
@@ -68,6 +87,14 @@ roomRef.child('mode').on('value', (snapshot) => {
             btn.classList.add('active');
         }
     });
+    
+    // Update current mode display
+    const modeMap = {
+        'text': '📝 Text Quiz',
+        'music': '🎵 Music Quiz',
+        'buzzer': '🔴 Buzzer Mode'
+    };
+    document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
     
     // Update parameters display
     updateParametersDisplay(mode);
@@ -150,6 +177,9 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
     
     await roomRef.update({ gameParams });
     alert('Parameters saved!');
+    
+    // Auto-close parameters section
+    document.getElementById('parametersSection').style.display = 'none';
 });
 
 // Listen for game start
@@ -190,10 +220,36 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
-    await roomRef.update({
-        status: 'playing',
-        currentQ: 0
-    });
+    // Disable button while generating
+    const btn = document.getElementById('startBtn');
+    btn.disabled = true;
+    btn.textContent = 'Generating questions...';
+
+    try {
+        // Generate questions from database
+        const generator = new QuestionGenerator();
+        const questions = await generator.generateQuestions(10);
+
+        if (questions.length === 0) {
+            alert('Error: Could not generate questions. Please check that songs have been added to the database.');
+            btn.disabled = false;
+            btn.textContent = 'Start Game';
+            return;
+        }
+
+        // Start game with generated questions
+        await roomRef.update({
+            status: 'playing',
+            currentQ: 0,
+            questions: questions
+        });
+
+    } catch (error) {
+        console.error('Error starting game:', error);
+        alert(`Error starting game: ${error.message}`);
+        btn.disabled = false;
+        btn.textContent = 'Start Game';
+    }
 });
 
 // Leave Lobby
