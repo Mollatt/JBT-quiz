@@ -215,11 +215,11 @@ function displayQuestion(question, index) {
         
         // Initialize music player if not already done
         if (!musicPlayer) {
-            musicPlayer = new SoundCloudPlayer('musicPlayer');
+            musicPlayer = new YouTubePlayer('musicPlayer');
         }
         
         // Load the track
-        musicPlayer.load(question.soundcloudUrl).then(() => {
+        musicPlayer.load(question.youtubeUrl).then(() => {
             // Always auto-play the clip (both auto and host mode)
             const duration = question.duration || 30;
             
@@ -610,3 +610,4 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
