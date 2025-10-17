@@ -105,11 +105,11 @@ function displayQuestion(question, index) {
     // Initialize and play music
     const musicPlayerEl = document.getElementById('musicPlayer');
     if (!musicPlayer) {
-        musicPlayer = new SoundCloudPlayer('musicPlayer');
+        musicPlayer = new YoutubePlayer('musicPlayer');
     }
 
-    if (question.type === 'music' && question.soundcloudUrl) {
-        musicPlayer.load(question.soundcloudUrl).then(() => {
+    if (question.type === 'music' && question.youtubeUrl) {
+        musicPlayer.load(question.youtubeUrl).then(() => {
             const duration = question.duration || 30;
             
             // Play music with timer sync
