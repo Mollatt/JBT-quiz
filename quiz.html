@@ -28,6 +28,15 @@
 
         <div id="feedback" class="feedback" style="display: none;"></div>
 
+        <!-- Next Question Section -->
+        <div id="nextQuestionSection" style="display: none; margin-top: 1.5rem;">
+            <button id="nextQuestionBtn" class="btn-primary">Next Question</button>
+            <div id="countdownDisplay" style="display: none; margin-top: 1rem; font-size: 1.2rem; font-weight: 700;">
+                Starting next question in <span id="countdownTime">3</span>s
+                <button id="cancelCountdownBtn" class="btn-secondary" style="margin-top: 0.5rem; width: 100%;">Cancel</button>
+            </div>
+        </div>
+
         <button id="nextBtn" class="btn-primary" style="display: none;">Next Question</button>
         <button id="resultsBtn" class="btn-primary" style="display: none;">View Results</button>
 
@@ -36,16 +45,15 @@
         </div>
     </div>
 
-    <!-- SoundCloud Widget API -->
-    <script src="https://w.soundcloud.com/player/api.js"></script>
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script src="firebase-config.js"></script>
-    <script src="question-generator.js"></script>
     <script src="youtube-player.js"></script>
+    <script src="question-generator.js"></script>
     <script src="quiz.js"></script>
 </body>
 </html>
-
