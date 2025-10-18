@@ -16,6 +16,8 @@ let selectedAnswer = null;
 let hasAnswered = false;
 let answerCheckListener = null;
 let musicPlayer = null;
+let countdownInterval = null;
+let isCountingDown = false;
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -215,11 +217,11 @@ function displayQuestion(question, index) {
         
         // Initialize music player if not already done
         if (!musicPlayer) {
-            musicPlayer = new YouTubePlayer('musicPlayer');
+            musicPlayer = new SoundCloudPlayer('musicPlayer');
         }
         
         // Load the track
-        musicPlayer.load(question.youtubeUrl).then(() => {
+        musicPlayer.load(question.soundcloudUrl).then(() => {
             // Always auto-play the clip (both auto and host mode)
             const duration = question.duration || 30;
             
@@ -554,60 +556,90 @@ function showFeedback(isCorrect) {
         feedbackEl.style.display = 'block';
     });
 
-    // Show next button for host
+    // Show next question button for all players in music/text modes
     roomRef.once('value').then(snapshot => {
         const room = snapshot.val();
-        const nextQ = room.currentQ + 1;
-
-        if (room.mode === 'host' && isHost) {
+        
+        if (room.mode === 'buzzer') {
+            // Buzzer mode: show host controls (handled in buzzer.js)
+            if (isHost) {
+                if (room.currentQ + 1 >= room.questions.length) {
+                    document.getElementById('resultsBtn').style.display = 'block';
+                } else {
+                    document.getElementById('nextBtn').style.display = 'block';
+                }
+            } else {
+                document.getElementById('waitingMsg').style.display = 'block';
+            }
+        } else {
+            // Music mode: all players see next button
+            const nextQ = room.currentQ + 1;
             if (nextQ >= room.questions.length) {
                 document.getElementById('resultsBtn').style.display = 'block';
             } else {
-                document.getElementById('nextBtn').style.display = 'block';
+                document.getElementById('nextQuestionSection').style.display = 'block';
             }
-        } else if (room.mode === 'host' && !isHost) {
-            document.getElementById('waitingMsg').style.display = 'block';
-        } else if (room.mode === 'auto') {
-            // In auto mode, show waiting message
-            document.getElementById('waitingMsg').textContent = 'Next question starting soon...';
-            document.getElementById('waitingMsg').style.display = 'block';
         }
     });
 }
 
-// Next button handler (host only)
-document.getElementById('nextBtn')?.addEventListener('click', async () => {
-    const snapshot = await roomRef.once('value');
-    const room = snapshot.val();
+// Next Question Button - All players in music mode
+document.getElementById('nextQuestionBtn')?.addEventListener('click', async () => {
+    if (isCountingDown) return;
     
-    const nextQ = room.currentQ + 1;
-    const totalQ = room.questions.length;
+    isCountingDown = true;
+    document.getElementById('nextQuestionBtn').disabled = true;
+    document.getElementById('countdownDisplay').style.display = 'block';
+    
+    let timeLeft = 3;
+    document.getElementById('countdownTime').textContent = timeLeft;
+    
+    countdownInterval = setInterval(async () => {
+        timeLeft--;
+        document.getElementById('countdownTime').textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            
+            // Advance to next question
+            const snapshot = await roomRef.once('value');
+            const room = snapshot.val();
+            const nextQ = room.currentQ + 1;
+            
+            if (nextQ >= room.questions.length) {
+                await roomRef.update({ status: 'finished' });
+            } else {
+                // Reset all players' answered status
+                const players = room.players;
+                for (const name in players) {
+                    await db.ref(`rooms/${gameCode}/players/${name}`).update({
+                        answered: false
+                    });
+                }
+                
+                if (room.currentQ != null) {
+                    await db.ref(`rooms/${gameCode}/resultsCalculated/${room.currentQ}`).remove();
+                }
+                
+                await roomRef.update({ currentQ: nextQ });
+            }
+        }
+    }, 1000);
+});
 
-    // Reset all players' answered status
-    const players = room.players;
-    for (const name in players) {
-        await db.ref(`rooms/${gameCode}/players/${name}`).update({
-            answered: false
-        });
+// Cancel Countdown Button
+document.getElementById('cancelCountdownBtn')?.addEventListener('click', () => {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
     }
-
-    if (room.currentQ != null) {
-        await db.ref(`rooms/${gameCode}/resultsCalculated/${room.currentQ}`).remove();
-    }
-
-    // Check if we should show scoreboard
-    if (shouldShowScoreboard(nextQ, totalQ)) {
-        await roomRef.update({ 
-            currentQ: nextQ,
-            status: 'scoreboard'
-        });
-    } else {
-        await roomRef.update({ currentQ: nextQ });
-    }
+    
+    isCountingDown = false;
+    document.getElementById('nextQuestionBtn').disabled = false;
+    document.getElementById('countdownDisplay').style.display = 'none';
 });
 
 // Results button handler (host only)
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
-
