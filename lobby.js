@@ -75,26 +75,11 @@ playerRef.child('isHost').on('value', (snapshot) => {
     }
 });
 
-// Listen for game mode changes
-roomRef.child('mode').on('value', (snapshot) => {
-    const mode = snapshot.val() || 'text';
-    currentMode = mode;
-    
-    // Update button states
-    modeButtons.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-mode') === mode) {
-            btn.classList.add('active');
-        }
-    });
-    
-    // Update current mode display
-    const modeMap = {
-        'text': '📝 Text Quiz',
-        'music': '🎵 Music Quiz',
-        'buzzer': '🔴 Buzzer Mode'
-    };
-    document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
+// Update current mode display - only show Music and Buzzer
+const modeMap = {
+    'music': '🎵 Music Quiz',
+    'buzzer': '🔴 Buzzer Mode'
+};
     
     // Update parameters display
     updateParametersDisplay(mode);
@@ -104,13 +89,9 @@ function updateParametersDisplay(mode) {
     const standardParams = document.getElementById('standardModeParams');
     const buzzerParams = document.getElementById('buzzerModeParams');
     
-    if (mode === 'buzzer') {
-        standardParams.style.display = 'none';
-        buzzerParams.style.display = 'block';
-    } else {
-        standardParams.style.display = 'block';
-        buzzerParams.style.display = 'none';
-    }
+    // Both modes use standard parameters now
+    standardParams.style.display = 'block';
+    buzzerParams.style.display = 'none';
 }
 
 // Listen for player changes
@@ -158,22 +139,26 @@ playersRef.on('value', (snapshot) => {
 
 // Save Parameters
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
-    const gameParams = currentMode === 'buzzer' 
-        ? {
-            buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints').value) || 1000,
-            buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints').value) || -250,
-            buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime').value) || 5,
-            musicDuration: parseInt(document.getElementById('buzzerMusicDuration').value) || 30
-        }
-        : {
-            correctPointsScale: [
-                parseInt(document.getElementById('firstPlacePoints').value) || 1000,
-                parseInt(document.getElementById('secondPlacePoints').value) || 800,
-                parseInt(document.getElementById('thirdPlacePoints').value) || 600,
-                400
-            ],
-            questionDuration: parseInt(document.getElementById('questionDuration').value) || 30
-        };
+    // Get selected question types
+    const selectedTypes = Array.from(document.querySelectorAll('input[name="questionType"]:checked'))
+        .map(el => el.value);
+    
+    if (selectedTypes.length === 0) {
+        alert('Please select at least one question type!');
+        return;
+    }
+
+    // Get selected difficulties
+    const selectedDifficulties = Array.from(document.querySelectorAll('input[name="difficulty"]:checked'))
+        .map(el => el.value);
+
+    const gameParams = {
+        questionCount: Math.max(1, parseInt(document.getElementById('questionCount').value) || 10),
+        questionTypes: selectedTypes,
+        yearFrom: document.getElementById('yearFrom').value ? parseInt(document.getElementById('yearFrom').value) : null,
+        yearTo: document.getElementById('yearTo').value ? parseInt(document.getElementById('yearTo').value) : null,
+        difficulties: selectedDifficulties
+    };
     
     await roomRef.update({ gameParams });
     alert('Parameters saved!');
