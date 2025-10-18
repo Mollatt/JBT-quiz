@@ -96,6 +96,7 @@ function displayQuestion(question, index) {
     document.getElementById('continueBtn').style.display = 'none';
     document.getElementById('resultsBtn').style.display = 'none';
     document.getElementById('lockoutMsg').style.display = 'none';
+    document.getElementById('waitingMsg').style.display = 'none';
 
     // Show buzzer for non-hosts
     if (!isHost) {
@@ -105,7 +106,7 @@ function displayQuestion(question, index) {
     // Initialize and play music
     const musicPlayerEl = document.getElementById('musicPlayer');
     if (!musicPlayer) {
-        musicPlayer = new YoutubePlayer('musicPlayer');
+        musicPlayer = new YouTubePlayer('musicPlayer');
     }
 
     if (question.type === 'music' && question.youtubeUrl) {
@@ -159,6 +160,11 @@ function handleBuzzed(buzzedPlayerName) {
 
     // Hide buzzer
     document.getElementById('buzzerSection').style.display = 'none';
+
+    // Show waiting message for non-hosts
+    if (!isHost) {
+        document.getElementById('waitingMsg').style.display = 'block';
+    }
 
     // Show host controls
     if (isHost) {
@@ -219,6 +225,7 @@ async function resumeQuiz(lockedOutPlayer) {
     // Hide buzz display
     document.getElementById('buzzDisplay').style.display = 'none';
     document.getElementById('hostControls').style.display = 'none';
+    document.getElementById('waitingMsg').style.display = 'none';
 
     // Show buzzer again for non-locked players
     if (!isHost) {
@@ -262,6 +269,11 @@ function handleTimeUp() {
     // Hide buzzer
     document.getElementById('buzzerSection').style.display = 'none';
 
+    // Show waiting message for non-hosts
+    if (!isHost) {
+        document.getElementById('waitingMsg').style.display = 'block';
+    }
+
     // Show continue button for host
     if (isHost) {
         const room = roomRef.once('value').then(snapshot => {
@@ -286,37 +298,12 @@ async function advanceQuestion() {
     
     if (nextQ >= totalQ) {
         await roomRef.update({ status: 'finished' });
-    } else if (shouldShowScoreboard(nextQ, totalQ)) {
-        await roomRef.update({ 
-            currentQ: nextQ,
-            status: 'scoreboard'
-        });
     } else {
         await roomRef.update({ currentQ: nextQ });
     }
 }
 
-// Calculate scoreboard display points
-function shouldShowScoreboard(currentQ, totalQ) {
-    if (totalQ <= 5) {
-        return currentQ === Math.floor(totalQ * 0.5);
-    } else if (totalQ <= 10) {
-        const showPoints = [
-            Math.floor(totalQ * 0.33),
-            Math.floor(totalQ * 0.66)
-        ];
-        return showPoints.includes(currentQ);
-    } else {
-        const showPoints = [
-            Math.floor(totalQ * 0.25),
-            Math.floor(totalQ * 0.5),
-            Math.floor(totalQ * 0.75)
-        ];
-        return showPoints.includes(currentQ);
-    }
-}
-
-// Continue button (host only, after time runs out)
+// Continue button (host only, after time runs out or wrong answer)
 document.getElementById('continueBtn')?.addEventListener('click', async () => {
     await advanceQuestion();
 });
