@@ -16,8 +16,7 @@ let musicPlayer = null;
 let isLockedOut = false;
 let lockoutTimer = null;
 let room = null;
-let musicTimerInterval = null;
-let lockoutDuration = 5; // Default, will be updated from game params
+let lockoutDuration = 5;
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -37,7 +36,6 @@ roomRef.once('value').then(snapshot => {
     setupQuestionListener(room);
     setupStatusListener();
     setupBuzzListener();
-    setupPauseStateListener();
 });
 
 function setupQuestionListener(room) {
@@ -46,13 +44,12 @@ function setupQuestionListener(room) {
 
         if (qIndex === -1) return;
 
-        // Check if quiz is finished
         if (qIndex >= room.questions.length) {
             await roomRef.update({ status: 'finished' });
             return;
         }
 
-        // Reset buzzer state for new question
+        // Reset state for new question
         await roomRef.update({
             buzzedPlayer: null,
             buzzTime: null,
@@ -64,10 +61,6 @@ function setupQuestionListener(room) {
         if (lockoutTimer) {
             clearInterval(lockoutTimer);
             lockoutTimer = null;
-        }
-        if (musicTimerInterval) {
-            clearInterval(musicTimerInterval);
-            musicTimerInterval = null;
         }
 
         // Load and display question
@@ -93,33 +86,11 @@ function setupBuzzListener() {
         if (buzzedPlayer) {
             handleBuzzed(buzzedPlayer);
         } else {
-            // No one buzzed - reset UI
-            updateHostControlsForNoBuzz();
-        }
-    });
-}
-
-function setupPauseStateListener() {
-    roomRef.child('gamePaused').on('value', (snapshot) => {
-        const gamePaused = snapshot.val();
-        
-        if (gamePaused && musicPlayer) {
-            musicPlayer.pause();
-        } else if (!gamePaused && musicPlayer) {
-            musicPlayer.play();
-        }
-
-        // Disable buzzer if game is paused
-        const buzzerBtn = document.getElementById('buzzerBtn');
-        if (buzzerBtn) {
-            buzzerBtn.disabled = gamePaused || isLockedOut;
-        }
-
-        // Update pause button text for host
-        if (isHost) {
-            const pauseBtn = document.getElementById('pauseBtn');
-            if (pauseBtn) {
-                pauseBtn.textContent = gamePaused ? '▶️ Resume Music' : '⏸️ Pause Music';
+            // No one buzzed - show appropriate UI
+            if (isHost) {
+                showHostControls();
+            } else {
+                showPlayerBuzzer();
             }
         }
     });
@@ -128,38 +99,31 @@ function setupPauseStateListener() {
 function displayQuestion(question, index) {
     currentQuestion = question;
 
-    // Update question number
     document.getElementById('currentQ').textContent = index + 1;
     document.getElementById('questionText').textContent = question.text;
 
-    // Hide all UI elements initially
+    // Hide all UI
     const buzzerSection = document.getElementById('buzzerSection');
-    const buzzDisplay = document.getElementById('buzzDisplay');
     const hostControls = document.getElementById('hostControls');
     const hostBuzzControls = document.getElementById('hostBuzzControls');
-    const continueBtn = document.getElementById('continueBtn');
+    const buzzDisplay = document.getElementById('buzzDisplay');
     const resultsBtn = document.getElementById('resultsBtn');
-    const lockoutMsg = document.getElementById('lockoutMsg');
     const waitingMsg = document.getElementById('waitingMsg');
+    const lockoutMsg = document.getElementById('lockoutMsg');
 
     if (buzzerSection) buzzerSection.style.display = 'none';
-    if (buzzDisplay) buzzDisplay.style.display = 'none';
     if (hostControls) hostControls.style.display = 'none';
     if (hostBuzzControls) hostBuzzControls.style.display = 'none';
-    if (continueBtn) continueBtn.style.display = 'none';
+    if (buzzDisplay) buzzDisplay.style.display = 'none';
     if (resultsBtn) resultsBtn.style.display = 'none';
-    if (lockoutMsg) lockoutMsg.style.display = 'none';
     if (waitingMsg) waitingMsg.style.display = 'none';
+    if (lockoutMsg) lockoutMsg.style.display = 'none';
 
-    // Show buzzer for non-hosts
-    if (!isHost && buzzerSection) {
-        buzzerSection.style.display = 'block';
-    }
-
-    // Show host controls (pause/skip) for host
-    if (isHost && hostControls) {
-        hostControls.style.display = 'block';
-        updateHostControlsForNoBuzz();
+    // Show appropriate UI based on role
+    if (isHost) {
+        showHostControls();
+    } else {
+        showPlayerBuzzer();
     }
 
     // Initialize and play music
@@ -171,48 +135,59 @@ function displayQuestion(question, index) {
     if (question.type === 'music' && question.youtubeUrl) {
         musicPlayer.load(question.youtubeUrl).then(() => {
             const duration = question.duration || 30;
-            
-            // Play music with timer sync
-            startMusicTimer(duration);
+            startMusic(duration);
         }).catch(error => {
             console.error('Failed to load music:', error);
         });
     }
 }
 
-function startMusicTimer(duration) {
-    let remaining = duration;
+function startMusic(duration) {
     const timeLeftEl = document.getElementById('timeLeft');
+    let remaining = duration;
     
     if (timeLeftEl) {
         timeLeftEl.textContent = remaining;
     }
 
-    // Clear any existing timer
-    if (musicTimerInterval) {
-        clearInterval(musicTimerInterval);
-    }
-
-    // Start music
     if (musicPlayer) {
         musicPlayer.playClip(0, duration, () => {
-            // Timer callback - only update if not paused
-            roomRef.child('gamePaused').once('value', (snapshot) => {
-                const gamePaused = snapshot.val();
-                
-                if (!gamePaused) {
-                    remaining--;
-                    if (timeLeftEl) {
-                        timeLeftEl.textContent = Math.max(0, remaining);
-                    }
+            remaining--;
+            if (timeLeftEl) {
+                timeLeftEl.textContent = Math.max(0, remaining);
+            }
 
-                    // Time's up
-                    if (remaining <= 0) {
-                        handleTimeUp();
-                    }
-                }
-            });
+            if (remaining <= 0) {
+                handleTimeUp();
+            }
         });
+    }
+}
+
+function showHostControls() {
+    const hostControls = document.getElementById('hostControls');
+    const hostBuzzControls = document.getElementById('hostBuzzControls');
+    const buzzerSection = document.getElementById('buzzerSection');
+    
+    if (hostControls) hostControls.style.display = 'block';
+    if (hostBuzzControls) hostBuzzControls.style.display = 'none';
+    if (buzzerSection) buzzerSection.style.display = 'none';
+}
+
+function showPlayerBuzzer() {
+    const buzzerSection = document.getElementById('buzzerSection');
+    const hostControls = document.getElementById('hostControls');
+    
+    if (buzzerSection) buzzerSection.style.display = 'block';
+    if (hostControls) hostControls.style.display = 'none';
+
+    // Check if locked out on display
+    if (isLockedOut) {
+        const buzzerBtn = document.getElementById('buzzerBtn');
+        const lockoutMsg = document.getElementById('lockoutMsg');
+        
+        if (buzzerBtn) buzzerBtn.disabled = true;
+        if (lockoutMsg) lockoutMsg.style.display = 'block';
     }
 }
 
@@ -220,15 +195,9 @@ function startMusicTimer(duration) {
 document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
     if (isLockedOut || isHost) return;
 
-    // Check if game is paused
-    const pauseSnapshot = await roomRef.child('gamePaused').once('value');
-    if (pauseSnapshot.val()) {
-        return; // Can't buzz if game is paused
-    }
-
     const buzzTime = Date.now();
     
-    // Try to set buzz (race condition handled by Firebase)
+    // Try to buzz (race condition handled by Firebase)
     const buzzedPlayerRef = roomRef.child('buzzedPlayer');
     const currentBuzz = await buzzedPlayerRef.once('value');
     
@@ -237,7 +206,8 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
         await roomRef.update({
             buzzedPlayer: playerName,
             buzzTime: buzzTime,
-            buzzerLocked: true
+            buzzerLocked: true,
+            gamePaused: true  // PAUSE MUSIC FOR EVERYONE
         });
     }
 });
@@ -250,25 +220,7 @@ function handleBuzzed(buzzedPlayerName) {
         document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
     }
 
-    // Hide buzzer for all players - but keep section visible for locked player
-    const buzzerSection = document.getElementById('buzzerSection');
-    if (buzzerSection) {
-        buzzerSection.style.display = 'block';
-    }
-
-    // Disable buzzer button for everyone
-    const buzzerBtn = document.getElementById('buzzerBtn');
-    if (buzzerBtn) {
-        buzzerBtn.disabled = true;
-    }
-
-    // Show waiting message for non-hosts who didn't buzz
-    const waitingMsg = document.getElementById('waitingMsg');
-    if (!isHost && playerName !== buzzedPlayerName && waitingMsg) {
-        waitingMsg.style.display = 'block';
-    }
-
-    // Show host buzz controls
+    // For HOST: Show correct/wrong buttons
     if (isHost) {
         const hostControls = document.getElementById('hostControls');
         const hostBuzzControls = document.getElementById('hostBuzzControls');
@@ -278,30 +230,30 @@ function handleBuzzed(buzzedPlayerName) {
             hostBuzzControls.style.display = 'block';
             document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
         }
-    }
-}
-
-function updateHostControlsForNoBuzz() {
-    const hostControls = document.getElementById('hostControls');
-    const hostBuzzControls = document.getElementById('hostBuzzControls');
-    const buzzDisplay = document.getElementById('buzzDisplay');
-    const waitingMsg = document.getElementById('waitingMsg');
-    const buzzerBtn = document.getElementById('buzzerBtn');
-
-    if (hostControls) hostControls.style.display = 'block';
-    if (hostBuzzControls) hostBuzzControls.style.display = 'none';
-    if (buzzDisplay) buzzDisplay.style.display = 'none';
-    if (waitingMsg) waitingMsg.style.display = 'none';
-    if (buzzerBtn) buzzerBtn.disabled = false;
-
-    // Update pause button state
-    roomRef.child('gamePaused').once('value', (snapshot) => {
-        const gamePaused = snapshot.val();
-        const pauseBtn = document.getElementById('pauseBtn');
-        if (pauseBtn) {
-            pauseBtn.textContent = gamePaused ? '▶️ Resume Music' : '⏸️ Pause Music';
+        
+        // Pause music for host too
+        if (musicPlayer) {
+            musicPlayer.pause();
         }
-    });
+    } 
+    // For PLAYERS: Show waiting or lockout
+    else {
+        const buzzerSection = document.getElementById('buzzerSection');
+        if (buzzerSection) buzzerSection.style.display = 'block';
+        
+        if (playerName === buzzedPlayerName) {
+            // This player buzzed - disable their button
+            const buzzerBtn = document.getElementById('buzzerBtn');
+            if (buzzerBtn) buzzerBtn.disabled = true;
+        } else {
+            // Another player buzzed - disable all buttons
+            const buzzerBtn = document.getElementById('buzzerBtn');
+            if (buzzerBtn) buzzerBtn.disabled = true;
+            
+            const waitingMsg = document.getElementById('waitingMsg');
+            if (waitingMsg) waitingMsg.style.display = 'block';
+        }
+    }
 }
 
 // Host clicks Pause/Resume
@@ -309,10 +261,22 @@ document.getElementById('pauseBtn')?.addEventListener('click', async () => {
     const pauseSnapshot = await roomRef.child('gamePaused').once('value');
     const currentPauseState = pauseSnapshot.val() || false;
     
-    // Toggle pause state in database (syncs to all players)
     await roomRef.update({
         gamePaused: !currentPauseState
     });
+
+    // Update music state locally
+    if (!currentPauseState && musicPlayer) {
+        musicPlayer.pause();
+    } else if (currentPauseState && musicPlayer) {
+        musicPlayer.play();
+    }
+
+    // Update button text
+    const pauseBtn = document.getElementById('pauseBtn');
+    if (pauseBtn) {
+        pauseBtn.textContent = currentPauseState ? '⏸️ Pause Music' : '▶️ Resume Music';
+    }
 });
 
 // Host clicks Skip/Next Song (no points awarded)
@@ -344,7 +308,7 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
         }
     }
 
-    // Move to next question
+    // Advance to next question
     await advanceQuestion();
 });
 
@@ -370,15 +334,16 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
         }
     }
 
-    // Resume quiz with lockout
-    await resumeQuiz(buzzedPlayerName);
+    // Resume and lock out player
+    await resumeAfterWrong(buzzedPlayerName);
 });
 
-async function resumeQuiz(lockedOutPlayer) {
-    // Reset buzz state
+async function resumeAfterWrong(lockedOutPlayer) {
+    // Reset buzz state and unpause
     await roomRef.update({
         buzzedPlayer: null,
-        buzzerLocked: false
+        buzzerLocked: false,
+        gamePaused: false
     });
 
     // Hide buzz display
@@ -390,15 +355,23 @@ async function resumeQuiz(lockedOutPlayer) {
     if (hostBuzzControls) hostBuzzControls.style.display = 'none';
     if (waitingMsg) waitingMsg.style.display = 'none';
 
-    // Show buzzer again for non-locked players
+    // Resume music for host
+    if (isHost && musicPlayer) {
+        musicPlayer.play();
+    }
+
+    // Handle locked player
     if (!isHost) {
         if (playerName === lockedOutPlayer) {
             // This player is locked out
             isLockedOut = true;
+            const buzzerBtn = document.getElementById('buzzerBtn');
             const lockoutMsg = document.getElementById('lockoutMsg');
-            if (lockoutMsg) {
-                lockoutMsg.style.display = 'block';
-            }
+            const buzzerSection = document.getElementById('buzzerSection');
+            
+            if (buzzerSection) buzzerSection.style.display = 'block';
+            if (buzzerBtn) buzzerBtn.disabled = true;
+            if (lockoutMsg) lockoutMsg.style.display = 'block';
             
             let timeLeft = lockoutDuration;
             const lockoutTimeEl = document.getElementById('lockoutTime');
@@ -416,37 +389,19 @@ async function resumeQuiz(lockedOutPlayer) {
                     clearInterval(lockoutTimer);
                     lockoutTimer = null;
                     isLockedOut = false;
+                    if (buzzerBtn) buzzerBtn.disabled = false;
                     if (lockoutMsg) lockoutMsg.style.display = 'none';
-                    
-                    // Re-enable buzzer button
-                    const buzzerBtn = document.getElementById('buzzerBtn');
-                    if (buzzerBtn) {
-                        buzzerBtn.disabled = false;
-                    }
                 }
             }, 1000);
-            
-            // Disable buzzer button while locked
-            const buzzerBtn = document.getElementById('buzzerBtn');
-            if (buzzerBtn) {
-                buzzerBtn.disabled = true;
-            }
         } else {
-            const buzzerSection = document.getElementById('buzzerSection');
-            if (buzzerSection) {
-                buzzerSection.style.display = 'block';
-            }
-            
-            // Re-enable buzzer button
+            // Other players can buzz again
             const buzzerBtn = document.getElementById('buzzerBtn');
-            if (buzzerBtn) {
-                buzzerBtn.disabled = false;
-            }
+            const buzzerSection = document.getElementById('buzzerSection');
+            
+            if (buzzerSection) buzzerSection.style.display = 'block';
+            if (buzzerBtn) buzzerBtn.disabled = false;
         }
     }
-
-    // Update host controls
-    updateHostControlsForNoBuzz();
 }
 
 function handleTimeUp() {
@@ -454,36 +409,33 @@ function handleTimeUp() {
     if (musicPlayer) {
         musicPlayer.stop();
     }
-    if (musicTimerInterval) {
-        clearInterval(musicTimerInterval);
-    }
 
     // Hide buzzer
     const buzzerSection = document.getElementById('buzzerSection');
     if (buzzerSection) buzzerSection.style.display = 'none';
 
-    // Show waiting message for non-hosts
+    // Show waiting for host
     const waitingMsg = document.getElementById('waitingMsg');
     if (!isHost && waitingMsg) {
         waitingMsg.textContent = "Time's up! Waiting for host...";
         waitingMsg.style.display = 'block';
     }
 
-    // Show continue button for host
+    // Show next button for host
     if (isHost) {
         roomRef.once('value').then(snapshot => {
             const roomData = snapshot.val();
             const nextQ = roomData.currentQ + 1;
+            const hostControls = document.getElementById('hostControls');
+            const resultsBtn = document.getElementById('resultsBtn');
+            
+            if (hostControls) hostControls.style.display = 'block';
             
             if (nextQ >= roomData.questions.length) {
-                const resultsBtn = document.getElementById('resultsBtn');
                 if (resultsBtn) resultsBtn.style.display = 'block';
             } else {
                 const skipBtn = document.getElementById('skipBtn');
-                if (skipBtn) {
-                    skipBtn.textContent = 'Next Question';
-                    skipBtn.style.display = 'block';
-                }
+                if (skipBtn) skipBtn.textContent = 'Next Question';
             }
         });
     }
@@ -503,7 +455,7 @@ async function advanceQuestion() {
     }
 }
 
-// Results button (host only, after last question)
+// Results button (host only)
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
