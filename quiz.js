@@ -342,6 +342,8 @@ function showFeedback(isCorrect) {
             document.getElementById('resultsBtn').style.display = 'block';
         } else {
             document.getElementById('nextBtn').style.display = 'block';
+            // Setup listener for next button after it appears
+            setupNextButtonListener();
         }
     });
 }
