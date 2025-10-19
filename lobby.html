@@ -18,7 +18,7 @@
         <!-- Current Game Mode Display -->
         <div class="current-mode-display">
             <div class="mode-label">Current Mode:</div>
-            <div class="mode-value" id="currentModeDisplay">📝 Text Quiz</div>
+            <div class="mode-value" id="currentModeDisplay">🎵 Everybody Plays</div>
         </div>
 
         <!-- Change Game Mode Button -->
@@ -28,7 +28,7 @@
         <div id="gameModeSection" class="game-mode-section" style="display: none;">
             <h3>Select Game Mode</h3>
             <div class="mode-buttons">
-                <button class="mode-btn" data-mode="music">🎵 Music Quiz</button>
+                <button class="mode-btn" data-mode="everybody">🎵 Everybody Plays</button>
                 <button class="mode-btn" data-mode="buzzer">🔴 Buzzer Mode</button>
             </div>
         </div>
@@ -40,98 +40,34 @@
         <div id="parametersSection" class="parameters-section" style="display: none;">
             <h3>Game Parameters</h3>
             
-            <!-- Music/Buzzer Mode Parameters -->
-            <div id="standardModeParams" style="display: none;">
+            <!-- Everybody Plays Mode Parameters -->
+            <div id="everybodyModeParams" style="display: none;">
                 <div class="param-group">
-                    <label>Number of Questions:</label>
-                    <input type="number" id="questionCount" value="10" min="1">
+                    <label>Number of Questions (1-X):</label>
+                    <input type="number" id="everybodyNumQuestions" value="10" min="1">
                 </div>
 
                 <div class="param-group">
-                    <label>Question Types (select at least 1):</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="specificGame" checked>
-                            Which Game?
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="seriesSource">
-                            Which Series?
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="artist">
-                            Who Composed?
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="developer">
-                            Which Developer?
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="title">
-                            Song Title?
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="area">
-                            Which Area?
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="bossBattle">
-                            Boss Battle?
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="questionType" value="releaseYear">
-                            Release Year?
-                        </label>
-                    </div>
+                    <label>1st Place Points:</label>
+                    <input type="number" id="everybodyFirstPlacePoints" value="1000" min="0">
                 </div>
-
                 <div class="param-group">
-                    <label>Release Year Range:</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
-                        <div>
-                            <label style="font-size: 0.85rem; opacity: 0.8;">From:</label>
-                            <input type="number" id="yearFrom" placeholder="1980" min="1980" max="2099">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.85rem; opacity: 0.8;">To:</label>
-                            <input type="number" id="yearTo" placeholder="2099" min="1980" max="2099">
-                        </div>
-                    </div>
+                    <label>2nd Place Points:</label>
+                    <input type="number" id="everybodySecondPlacePoints" value="800" min="0">
                 </div>
-
                 <div class="param-group">
-                    <label>Difficulty Filter:</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="difficulty" value="Very Easy" checked>
-                            Very Easy
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="difficulty" value="Easy" checked>
-                            Easy
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="difficulty" value="Medium" checked>
-                            Medium
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="difficulty" value="Hard" checked>
-                            Hard
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="difficulty" value="Very Hard" checked>
-                            Very Hard
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" name="difficulty" value="Unknown" checked>
-                            Unknown
-                        </label>
-                    </div>
+                    <label>3rd Place Points:</label>
+                    <input type="number" id="everybodyThirdPlacePoints" value="600" min="0">
                 </div>
             </div>
 
             <!-- Buzzer Mode Parameters -->
             <div id="buzzerModeParams" style="display: none;">
+                <div class="param-group">
+                    <label>Number of Questions (1-X):</label>
+                    <input type="number" id="buzzerNumQuestions" value="10" min="1">
+                </div>
+
                 <div class="param-group">
                     <label>Correct Answer Points:</label>
                     <input type="number" id="buzzerCorrectPoints" value="1000" min="0">
@@ -147,6 +83,51 @@
                 <div class="param-group">
                     <label>Music Duration (seconds):</label>
                     <input type="number" id="buzzerMusicDuration" value="30" min="5" max="120">
+                </div>
+            </div>
+
+            <!-- Shared Parameters -->
+            <div class="param-group">
+                <label>Release Year Range (Optional):</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="number" id="everybodyReleaseYearMin" placeholder="From" min="1980" max="2099" style="flex: 1;">
+                    <span>to</span>
+                    <input type="number" id="everybodyReleaseYearMax" placeholder="To" min="1980" max="2099" style="flex: 1;">
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="number" id="buzzerReleaseYearMin" placeholder="From" min="1980" max="2099" style="flex: 1; display: none;">
+                    <span style="display: none;">to</span>
+                    <input type="number" id="buzzerReleaseYearMax" placeholder="To" min="1980" max="2099" style="flex: 1; display: none;">
+                </div>
+            </div>
+
+            <div class="param-group">
+                <label>Question Categories (Select at least one):</label>
+                <div class="category-checkboxes">
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="game" checked> Game Title
+                    </label>
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="series"> Game Series
+                    </label>
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="composer"> Composer
+                    </label>
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="developer"> Developer
+                    </label>
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="title"> Track Title
+                    </label>
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="location"> Location/Area
+                    </label>
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="boss"> Boss Battle
+                    </label>
+                    <label class="category-label">
+                        <input type="checkbox" class="category-checkbox" value="year"> Release Year
+                    </label>
                 </div>
             </div>
 
@@ -170,6 +151,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script src="firebase-config.js"></script>
+    <script src="question-generator.js"></script>
     <script src="lobby.js"></script>
 </body>
 </html>
