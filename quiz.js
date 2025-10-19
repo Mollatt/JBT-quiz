@@ -347,11 +347,19 @@ function showFeedback(isCorrect) {
 }
 
 // Next button handler (all players can click)
-document.getElementById('nextBtn')?.addEventListener('click', async () => {
-    if (!countdownActive) {
-        startNextCountdown();
+const setupNextButtonListener = () => {
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) {
+        // Remove old listeners
+        nextBtn.replaceWith(nextBtn.cloneNode(true));
+        const newNextBtn = document.getElementById('nextBtn');
+        newNextBtn.addEventListener('click', async () => {
+            if (!countdownActive) {
+                startNextCountdown();
+            }
+        });
     }
-});
+};
 
 function startNextCountdown() {
     countdownActive = true;
