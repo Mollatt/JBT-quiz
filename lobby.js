@@ -12,6 +12,37 @@ const playersRef = db.ref(`rooms/${gameCode}/players`);
 const playerRef = db.ref(`rooms/${gameCode}/players/${playerName}`);
 
 let currentMode = 'everybody'; // Default to 'everybody' plays
+let totalSongsCount = 0;
+
+// Load total songs count
+async function loadTotalSongsCount() {
+    try {
+        const snapshot = await db.ref('songs').orderByChild('verified').equalTo(true).once('value');
+        const songs = snapshot.val();
+        totalSongsCount = songs ? Object.keys(songs).length : 0;
+        
+        // Update UI with total count
+        updateQuestionCountLabels();
+    } catch (error) {
+        console.error('Error loading songs count:', error);
+        totalSongsCount = 0;
+    }
+}
+
+function updateQuestionCountLabels() {
+    const everybodyLabel = document.querySelector('label[for="everybodyNumQuestions"]');
+    const buzzerLabel = document.querySelector('label[for="buzzerNumQuestions"]');
+    
+    if (everybodyLabel) {
+        everybodyLabel.textContent = `Number of Questions (1-${totalSongsCount}):`;
+    }
+    if (buzzerLabel) {
+        buzzerLabel.textContent = `Number of Questions (1-${totalSongsCount}):`;
+    }
+}
+
+// Load songs count on page load
+loadTotalSongsCount();
 
 // Display game code
 document.getElementById('gameCode').textContent = gameCode;
