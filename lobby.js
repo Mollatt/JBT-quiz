@@ -11,7 +11,7 @@ const roomRef = db.ref(`rooms/${gameCode}`);
 const playersRef = db.ref(`rooms/${gameCode}/players`);
 const playerRef = db.ref(`rooms/${gameCode}/players/${playerName}`);
 
-let currentMode = 'text';
+let currentMode = 'everybody'; // Default to 'everybody' plays
 
 // Display game code
 document.getElementById('gameCode').textContent = gameCode;
@@ -75,23 +75,41 @@ playerRef.child('isHost').on('value', (snapshot) => {
     }
 });
 
-// Update current mode display - only show Music and Buzzer
-const modeMap = {
-    'music': '🎵 Music Quiz',
-    'buzzer': '🔴 Buzzer Mode'
-};
+// Listen for game mode changes
+roomRef.child('mode').on('value', (snapshot) => {
+    const mode = snapshot.val() || 'everybody';
+    currentMode = mode;
+    
+    // Update button states
+    modeButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-mode') === mode) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Update current mode display
+    const modeMap = {
+        'everybody': '🎵 Everybody Plays',
+        'buzzer': '🔴 Buzzer Mode'
+    };
+    document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
     
     // Update parameters display
     updateParametersDisplay(mode);
 });
 
 function updateParametersDisplay(mode) {
-    const standardParams = document.getElementById('standardModeParams');
+    const everybodyParams = document.getElementById('everybodyModeParams');
     const buzzerParams = document.getElementById('buzzerModeParams');
     
-    // Both modes use standard parameters now
-    standardParams.style.display = 'block';
-    buzzerParams.style.display = 'none';
+    if (mode === 'buzzer') {
+        everybodyParams.style.display = 'none';
+        buzzerParams.style.display = 'block';
+    } else {
+        everybodyParams.style.display = 'block';
+        buzzerParams.style.display = 'none';
+    }
 }
 
 // Listen for player changes
@@ -139,26 +157,29 @@ playersRef.on('value', (snapshot) => {
 
 // Save Parameters
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
-    // Get selected question types
-    const selectedTypes = Array.from(document.querySelectorAll('input[name="questionType"]:checked'))
-        .map(el => el.value);
-    
-    if (selectedTypes.length === 0) {
-        alert('Please select at least one question type!');
-        return;
-    }
-
-    // Get selected difficulties
-    const selectedDifficulties = Array.from(document.querySelectorAll('input[name="difficulty"]:checked'))
-        .map(el => el.value);
-
-    const gameParams = {
-        questionCount: Math.max(1, parseInt(document.getElementById('questionCount').value) || 10),
-        questionTypes: selectedTypes,
-        yearFrom: document.getElementById('yearFrom').value ? parseInt(document.getElementById('yearFrom').value) : null,
-        yearTo: document.getElementById('yearTo').value ? parseInt(document.getElementById('yearTo').value) : null,
-        difficulties: selectedDifficulties
-    };
+    const gameParams = currentMode === 'buzzer' 
+        ? {
+            buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints').value) || 1000,
+            buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints').value) || -250,
+            buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime').value) || 5,
+            musicDuration: parseInt(document.getElementById('buzzerMusicDuration').value) || 30,
+            numQuestions: parseInt(document.getElementById('buzzerNumQuestions').value) || 10,
+            releaseYearMin: parseInt(document.getElementById('buzzerReleaseYearMin').value) || null,
+            releaseYearMax: parseInt(document.getElementById('buzzerReleaseYearMax').value) || null,
+            selectedCategories: getSelectedCategories()
+        }
+        : {
+            correctPointsScale: [
+                parseInt(document.getElementById('everybodyFirstPlacePoints').value) || 1000,
+                parseInt(document.getElementById('everybodySecondPlacePoints').value) || 800,
+                parseInt(document.getElementById('everybodyThirdPlacePoints').value) || 600,
+                400
+            ],
+            numQuestions: parseInt(document.getElementById('everybodyNumQuestions').value) || 10,
+            releaseYearMin: parseInt(document.getElementById('everybodyReleaseYearMin').value) || null,
+            releaseYearMax: parseInt(document.getElementById('everybodyReleaseYearMax').value) || null,
+            selectedCategories: getSelectedCategories()
+        };
     
     await roomRef.update({ gameParams });
     alert('Parameters saved!');
@@ -166,6 +187,15 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
     // Auto-close parameters section
     document.getElementById('parametersSection').style.display = 'none';
 });
+
+function getSelectedCategories() {
+    const checkboxes = document.querySelectorAll('.category-checkbox:checked');
+    const categories = [];
+    checkboxes.forEach(cb => {
+        categories.push(cb.value);
+    });
+    return categories.length > 0 ? categories : null;
+}
 
 // Listen for game start
 roomRef.child('status').on('value', (snapshot) => {
@@ -211,9 +241,22 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
     btn.textContent = 'Generating questions...';
 
     try {
+        // Get current game parameters
+        const roomSnapshot = await roomRef.once('value');
+        const room = roomSnapshot.val();
+        const gameParams = room.gameParams || {};
+        
+        // Get number of questions (default 10)
+        const numQuestions = gameParams.numQuestions || 10;
+        
         // Generate questions from database
         const generator = new QuestionGenerator();
-        const questions = await generator.generateQuestions(10);
+        const questions = await generator.generateQuestions(
+            numQuestions,
+            gameParams.selectedCategories,
+            gameParams.releaseYearMin,
+            gameParams.releaseYearMax
+        );
 
         if (questions.length === 0) {
             alert('Error: Could not generate questions. Please check that songs have been added to the database.');
