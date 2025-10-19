@@ -37,7 +37,7 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
     const data = Object.fromEntries(formData);
 
     // Validate required fields
-    if (!data.title || !data.specificGame || !data.youtubeUrl) {
+    if (!data.title || !data.specificGame || !data.youtubeUrl || !data.difficulty) {
         showMessage('Please fill in all required fields', 'error');
         return;
     }
@@ -63,7 +63,8 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
         youtubeId: youtubeId,
         startTime: parseInt(data.startTime) || 0,
         duration: parseInt(data.duration) || 30,
-        verified: false, // Admin needs to verify
+        difficulty: data.difficulty,
+        verified: false,
         createdAt: Date.now(),
         updatedAt: Date.now()
     };
@@ -83,6 +84,41 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
     }
 });
 
+// Search and filter functionality
+let allSongs = [];
+
+function filterSongs() {
+    const searchText = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const difficultyFilter = document.getElementById('difficultyFilter')?.value || '';
+    const verifiedFilter = document.getElementById('verifiedFilter')?.value || '';
+
+    let filtered = allSongs;
+
+    // Search filter
+    if (searchText) {
+        filtered = filtered.filter(song =>
+            song.title.toLowerCase().includes(searchText) ||
+            song.specificGame.toLowerCase().includes(searchText) ||
+            song.artist.toLowerCase().includes(searchText) ||
+            song.developer.toLowerCase().includes(searchText)
+        );
+    }
+
+    // Difficulty filter
+    if (difficultyFilter) {
+        filtered = filtered.filter(song => song.difficulty === difficultyFilter);
+    }
+
+    // Verified filter
+    if (verifiedFilter === 'verified') {
+        filtered = filtered.filter(song => song.verified === true);
+    } else if (verifiedFilter === 'unverified') {
+        filtered = filtered.filter(song => song.verified === false);
+    }
+
+    displaySongs(filtered);
+}
+
 // Load and display songs
 async function loadSongs() {
     try {
@@ -93,41 +129,56 @@ async function loadSongs() {
 
         if (!songsData || Object.keys(songsData).length === 0) {
             container.innerHTML = '<p style="opacity: 0.7;">No songs added yet</p>';
+            allSongs = [];
             return;
         }
 
-        const songs = Object.entries(songsData)
+        allSongs = Object.entries(songsData)
             .map(([id, data]) => ({ id, ...data }))
             .sort((a, b) => b.createdAt - a.createdAt);
 
-        container.innerHTML = songs.map(song => `
-            <div class="song-card">
-                <div class="song-title">${song.title}</div>
-                <div class="song-details">
-                    <span>🎮 ${song.specificGame}</span>
-                    ${song.artist ? `<span>🎵 ${song.artist}</span>` : ''}
-                    ${song.developer ? `<span>🏢 ${song.developer}</span>` : ''}
-                    ${song.releaseYear ? `<span>📅 ${song.releaseYear}</span>` : ''}
-                </div>
-                <div class="song-details">
-                    <span>⏱️ ${song.startTime}s - ${song.duration}s</span>
-                    ${song.verified ? '<span style="color: #4CAF50;">✓ Verified</span>' : '<span style="color: #FFC107;">⏳ Pending</span>'}
-                </div>
-                <div class="song-actions">
-                    <button class="btn-secondary" onclick="verifySong('${song.id}')">
-                        ${song.verified ? 'Unverify' : 'Verify'}
-                    </button>
-                    <button class="btn-secondary" onclick="editSong('${song.id}')">Edit</button>
-                    <button class="btn-secondary" onclick="deleteSong('${song.id}')">Delete</button>
-                </div>
-            </div>
-        `).join('');
+        displaySongs(allSongs);
 
     } catch (error) {
         console.error('Error loading songs:', error);
         document.getElementById('songsList').innerHTML = 
             `<p style="color: #ff6b6b;">Error loading songs: ${error.message}</p>`;
     }
+}
+
+function displaySongs(songs) {
+    const container = document.getElementById('songsList');
+
+    if (!songs || songs.length === 0) {
+        container.innerHTML = '<p style="opacity: 0.7;">No songs match your filters</p>';
+        return;
+    }
+
+    container.innerHTML = songs.map(song => `
+        <div class="song-card">
+            <div class="song-title">${song.title}</div>
+            <div class="song-details">
+                <span>🎮 ${song.specificGame}</span>
+                ${song.artist ? `<span>🎵 ${song.artist}</span>` : ''}
+                ${song.developer ? `<span>🏢 ${song.developer}</span>` : ''}
+                ${song.releaseYear ? `<span>📅 ${song.releaseYear}</span>` : ''}
+            </div>
+            <div class="song-details">
+                <span>⏱️ ${song.startTime}s - ${song.duration}s</span>
+                <span>📊 ${song.difficulty}</span>
+                ${song.verified ? '<span style="color: #4CAF50;">✓ Verified</span>' : '<span style="color: #FFC107;">⏳ Pending</span>'}
+            </div>
+            <div class="song-url">
+                <small>🔗 <a href="${song.youtubeUrl}" target="_blank" rel="noopener noreferrer">View YouTube</a></small>
+            </div>
+            <div class="song-actions">
+                <button class="btn-secondary" onclick="verifySong('${song.id}')">
+                    ${song.verified ? 'Unverify' : 'Verify'}
+                </button>
+                <button class="btn-secondary" onclick="deleteSong('${song.id}')">Delete</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 // Verify/Unverify song
@@ -165,10 +216,10 @@ async function deleteSong(songId) {
     }
 }
 
-// Edit song (placeholder - could expand this)
-function editSong(songId) {
-    alert('Edit feature coming soon! For now, delete and re-add the song with updated info.');
-}
+// Setup search and filter listeners
+document.getElementById('searchInput')?.addEventListener('input', filterSongs);
+document.getElementById('difficultyFilter')?.addEventListener('change', filterSongs);
+document.getElementById('verifiedFilter')?.addEventListener('change', filterSongs);
 
 // Load songs on page load
 loadSongs();
