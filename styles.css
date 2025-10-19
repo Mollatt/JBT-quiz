@@ -983,12 +983,10 @@ button:active {
 }
 
 @keyframes pulse {
-
     0%,
     100% {
         transform: scale(1);
     }
-
     50% {
         transform: scale(1.1);
     }
@@ -1030,12 +1028,10 @@ button:active {
 }
 
 @keyframes flash {
-
     0%,
     100% {
         opacity: 1;
     }
-
     50% {
         opacity: 0.5;
     }
@@ -1060,10 +1056,12 @@ button:active {
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
+    flex-wrap: wrap;
 }
 
 .host-buttons button {
     flex: 1;
+    min-width: 140px;
 }
 
 .btn-correct {
@@ -1105,6 +1103,10 @@ button:active {
 
     .host-buttons {
         flex-direction: column;
+    }
+
+    .host-buttons button {
+        width: 100%;
     }
 }
 
@@ -1203,3 +1205,4 @@ select {
     background-position: right 0.8rem center;
     padding-right: 2rem;
 }
+
