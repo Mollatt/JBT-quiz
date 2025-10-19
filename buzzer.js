@@ -16,8 +16,8 @@ let musicPlayer = null;
 let isLockedOut = false;
 let lockoutTimer = null;
 let room = null;
-let isPaused = false;
 let musicTimerInterval = null;
+let lockoutDuration = 5; // Default, will be updated from game params
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -29,9 +29,15 @@ roomRef.once('value').then(snapshot => {
 
     document.getElementById('totalQ').textContent = room.questions.length;
     
+    // Load lockout duration from game params
+    if (room.gameParams && room.gameParams.buzzerLockoutTime) {
+        lockoutDuration = room.gameParams.buzzerLockoutTime;
+    }
+    
     setupQuestionListener(room);
     setupStatusListener();
     setupBuzzListener();
+    setupPauseStateListener();
 });
 
 function setupQuestionListener(room) {
@@ -50,10 +56,10 @@ function setupQuestionListener(room) {
         await roomRef.update({
             buzzedPlayer: null,
             buzzTime: null,
-            buzzerLocked: false
+            buzzerLocked: false,
+            gamePaused: false
         });
 
-        isPaused = false;
         isLockedOut = false;
         if (lockoutTimer) {
             clearInterval(lockoutTimer);
@@ -89,6 +95,32 @@ function setupBuzzListener() {
         } else {
             // No one buzzed - reset UI
             updateHostControlsForNoBuzz();
+        }
+    });
+}
+
+function setupPauseStateListener() {
+    roomRef.child('gamePaused').on('value', (snapshot) => {
+        const gamePaused = snapshot.val();
+        
+        if (gamePaused && musicPlayer) {
+            musicPlayer.pause();
+        } else if (!gamePaused && musicPlayer) {
+            musicPlayer.play();
+        }
+
+        // Disable buzzer if game is paused
+        const buzzerBtn = document.getElementById('buzzerBtn');
+        if (buzzerBtn) {
+            buzzerBtn.disabled = gamePaused || isLockedOut;
+        }
+
+        // Update pause button text for host
+        if (isHost) {
+            const pauseBtn = document.getElementById('pauseBtn');
+            if (pauseBtn) {
+                pauseBtn.textContent = gamePaused ? '▶️ Resume Music' : '⏸️ Pause Music';
+            }
         }
     });
 }
@@ -165,17 +197,21 @@ function startMusicTimer(duration) {
     if (musicPlayer) {
         musicPlayer.playClip(0, duration, () => {
             // Timer callback - only update if not paused
-            if (!isPaused) {
-                remaining--;
-                if (timeLeftEl) {
-                    timeLeftEl.textContent = Math.max(0, remaining);
-                }
+            roomRef.child('gamePaused').once('value', (snapshot) => {
+                const gamePaused = snapshot.val();
+                
+                if (!gamePaused) {
+                    remaining--;
+                    if (timeLeftEl) {
+                        timeLeftEl.textContent = Math.max(0, remaining);
+                    }
 
-                // Time's up
-                if (remaining <= 0) {
-                    handleTimeUp();
+                    // Time's up
+                    if (remaining <= 0) {
+                        handleTimeUp();
+                    }
                 }
-            }
+            });
         });
     }
 }
@@ -183,6 +219,12 @@ function startMusicTimer(duration) {
 // Player buzzes
 document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
     if (isLockedOut || isHost) return;
+
+    // Check if game is paused
+    const pauseSnapshot = await roomRef.child('gamePaused').once('value');
+    if (pauseSnapshot.val()) {
+        return; // Can't buzz if game is paused
+    }
 
     const buzzTime = Date.now();
     
@@ -201,15 +243,6 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
 });
 
 function handleBuzzed(buzzedPlayerName) {
-    // Pause music and timer
-    if (musicPlayer) {
-        musicPlayer.pause();
-    }
-    if (musicTimerInterval) {
-        clearInterval(musicTimerInterval);
-    }
-    isPaused = true;
-
     // Show who buzzed
     const buzzDisplay = document.getElementById('buzzDisplay');
     if (buzzDisplay) {
@@ -217,15 +250,21 @@ function handleBuzzed(buzzedPlayerName) {
         document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
     }
 
-    // Hide buzzer
+    // Hide buzzer for all players - but keep section visible for locked player
     const buzzerSection = document.getElementById('buzzerSection');
     if (buzzerSection) {
-        buzzerSection.style.display = 'none';
+        buzzerSection.style.display = 'block';
     }
 
-    // Show waiting message for non-hosts
+    // Disable buzzer button for everyone
+    const buzzerBtn = document.getElementById('buzzerBtn');
+    if (buzzerBtn) {
+        buzzerBtn.disabled = true;
+    }
+
+    // Show waiting message for non-hosts who didn't buzz
     const waitingMsg = document.getElementById('waitingMsg');
-    if (!isHost && waitingMsg) {
+    if (!isHost && playerName !== buzzedPlayerName && waitingMsg) {
         waitingMsg.style.display = 'block';
     }
 
@@ -247,49 +286,33 @@ function updateHostControlsForNoBuzz() {
     const hostBuzzControls = document.getElementById('hostBuzzControls');
     const buzzDisplay = document.getElementById('buzzDisplay');
     const waitingMsg = document.getElementById('waitingMsg');
+    const buzzerBtn = document.getElementById('buzzerBtn');
 
     if (hostControls) hostControls.style.display = 'block';
     if (hostBuzzControls) hostBuzzControls.style.display = 'none';
     if (buzzDisplay) buzzDisplay.style.display = 'none';
     if (waitingMsg) waitingMsg.style.display = 'none';
+    if (buzzerBtn) buzzerBtn.disabled = false;
 
     // Update pause button state
-    const pauseBtn = document.getElementById('pauseBtn');
-    if (pauseBtn) {
-        pauseBtn.textContent = isPaused ? '▶️ Resume Music' : '⏸️ Pause Music';
-    }
+    roomRef.child('gamePaused').once('value', (snapshot) => {
+        const gamePaused = snapshot.val();
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (pauseBtn) {
+            pauseBtn.textContent = gamePaused ? '▶️ Resume Music' : '⏸️ Pause Music';
+        }
+    });
 }
 
 // Host clicks Pause/Resume
 document.getElementById('pauseBtn')?.addEventListener('click', async () => {
-    isPaused = !isPaused;
-
-    if (isPaused) {
-        if (musicPlayer) musicPlayer.pause();
-        if (musicTimerInterval) clearInterval(musicTimerInterval);
-        document.getElementById('pauseBtn').textContent = '▶️ Resume Music';
-    } else {
-        if (musicPlayer) musicPlayer.play();
-        // Restart timer countdown
-        const timeLeftEl = document.getElementById('timeLeft');
-        let remaining = parseInt(timeLeftEl?.textContent || 0);
-        
-        if (musicTimerInterval) clearInterval(musicTimerInterval);
-        
-        musicTimerInterval = setInterval(() => {
-            remaining--;
-            if (timeLeftEl) {
-                timeLeftEl.textContent = Math.max(0, remaining);
-            }
-
-            if (remaining <= 0) {
-                clearInterval(musicTimerInterval);
-                handleTimeUp();
-            }
-        }, 1000);
-
-        document.getElementById('pauseBtn').textContent = '⏸️ Pause Music';
-    }
+    const pauseSnapshot = await roomRef.child('gamePaused').once('value');
+    const currentPauseState = pauseSnapshot.val() || false;
+    
+    // Toggle pause state in database (syncs to all players)
+    await roomRef.update({
+        gamePaused: !currentPauseState
+    });
 });
 
 // Host clicks Skip/Next Song (no points awarded)
@@ -302,7 +325,6 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
     
     if (buzzedPlayerName) {
-        // Award points
         try {
             const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
             const playerData = playerSnapshot.val();
@@ -359,9 +381,6 @@ async function resumeQuiz(lockedOutPlayer) {
         buzzerLocked: false
     });
 
-    // Reset pause state
-    isPaused = false;
-
     // Hide buzz display
     const buzzDisplay = document.getElementById('buzzDisplay');
     const hostBuzzControls = document.getElementById('hostBuzzControls');
@@ -381,7 +400,7 @@ async function resumeQuiz(lockedOutPlayer) {
                 lockoutMsg.style.display = 'block';
             }
             
-            let timeLeft = 5;
+            let timeLeft = lockoutDuration;
             const lockoutTimeEl = document.getElementById('lockoutTime');
             if (lockoutTimeEl) {
                 lockoutTimeEl.textContent = timeLeft;
@@ -398,37 +417,32 @@ async function resumeQuiz(lockedOutPlayer) {
                     lockoutTimer = null;
                     isLockedOut = false;
                     if (lockoutMsg) lockoutMsg.style.display = 'none';
-                    const buzzerSection = document.getElementById('buzzerSection');
-                    if (buzzerSection) buzzerSection.style.display = 'block';
+                    
+                    // Re-enable buzzer button
+                    const buzzerBtn = document.getElementById('buzzerBtn');
+                    if (buzzerBtn) {
+                        buzzerBtn.disabled = false;
+                    }
                 }
             }, 1000);
+            
+            // Disable buzzer button while locked
+            const buzzerBtn = document.getElementById('buzzerBtn');
+            if (buzzerBtn) {
+                buzzerBtn.disabled = true;
+            }
         } else {
             const buzzerSection = document.getElementById('buzzerSection');
-            if (buzzerSection) buzzerSection.style.display = 'block';
+            if (buzzerSection) {
+                buzzerSection.style.display = 'block';
+            }
+            
+            // Re-enable buzzer button
+            const buzzerBtn = document.getElementById('buzzerBtn');
+            if (buzzerBtn) {
+                buzzerBtn.disabled = false;
+            }
         }
-    }
-
-    // Resume music from where it paused
-    if (musicPlayer && currentQuestion.type === 'music') {
-        musicPlayer.play();
-        
-        // Resume timer
-        const timeLeftEl = document.getElementById('timeLeft');
-        let remaining = parseInt(timeLeftEl?.textContent || 0);
-        
-        if (musicTimerInterval) clearInterval(musicTimerInterval);
-        
-        musicTimerInterval = setInterval(() => {
-            remaining--;
-            if (timeLeftEl) {
-                timeLeftEl.textContent = Math.max(0, remaining);
-            }
-
-            if (remaining <= 0) {
-                clearInterval(musicTimerInterval);
-                handleTimeUp();
-            }
-        }, 1000);
     }
 
     // Update host controls
