@@ -64,7 +64,7 @@ class QuestionGenerator {
     }
 
     // Generate questions for a quiz
-    async generateQuestions(count, selectedTemplates = null, difficulty = null) {
+    async generateQuestions(count, selectedCategories = null, yearMin = null, yearMax = null) {
         try {
             // Get all verified songs from database
             const songsSnapshot = await db.ref('songs')
@@ -78,10 +78,32 @@ class QuestionGenerator {
                 return [];
             }
 
-            const songsList = Object.entries(songsData).map(([id, data]) => ({
+            let songsList = Object.entries(songsData).map(([id, data]) => ({
                 id,
                 ...data
             }));
+
+            // Filter by year range if specified
+            if (yearMin !== null || yearMax !== null) {
+                songsList = songsList.filter(song => {
+                    const year = song.releaseYear;
+                    
+                    // Skip songs without release year when filtering by year
+                    if (!year || year === "N/A" || year === null) {
+                        return false;
+                    }
+
+                    if (yearMin !== null && year < yearMin) return false;
+                    if (yearMax !== null && year > yearMax) return false;
+                    
+                    return true;
+                });
+            }
+
+            if (songsList.length === 0) {
+                console.error('No songs match the specified filters');
+                return [];
+            }
 
             if (songsList.length < count) {
                 console.warn(`Only ${songsList.length} songs available, requested ${count}`);
@@ -106,8 +128,12 @@ class QuestionGenerator {
 
                 usedSongs.add(song.id);
 
-                // Get applicable templates for this song
-                let templates = selectedTemplates || this.questionTemplates;
+                // Get applicable templates filtered by category if specified
+                let templates = this.questionTemplates;
+                
+                if (selectedCategories && selectedCategories.length > 0) {
+                    templates = templates.filter(t => selectedCategories.includes(t.category));
+                }
                 
                 const applicableTemplates = templates.filter(template => {
                     const value = song[template.field];
@@ -178,7 +204,7 @@ class QuestionGenerator {
             .sort(() => Math.random() - 0.5)
             .slice(0, count);
 
-        // If not enough unique wrong answers, pad with N/A
+        // If not enough unique wrong answers, pad with "Unknown"
         while (wrongAnswers.length < count) {
             wrongAnswers.push("Unknown");
         }
