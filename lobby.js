@@ -124,7 +124,7 @@ roomRef.child('mode').on('value', (snapshot) => {
         'everybody': '🎵 Everybody Plays',
         'buzzer': '🔴 Buzzer Mode'
     };
-    document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
+    document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Everybody Plays';
     
     // Update parameters display
     updateParametersDisplay(mode);
@@ -188,6 +188,13 @@ playersRef.on('value', (snapshot) => {
 
 // Save Parameters
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
+    // Validate at least one category is selected
+    const selectedCategories = getSelectedCategories();
+    if (!selectedCategories || selectedCategories.length === 0) {
+        alert('Please select at least one question category!');
+        return;
+    }
+
     const gameParams = currentMode === 'buzzer' 
         ? {
             buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints').value) || 1000,
@@ -197,7 +204,7 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             numQuestions: parseInt(document.getElementById('buzzerNumQuestions').value) || 10,
             releaseYearMin: parseInt(document.getElementById('buzzerReleaseYearMin').value) || null,
             releaseYearMax: parseInt(document.getElementById('buzzerReleaseYearMax').value) || null,
-            selectedCategories: getSelectedCategories()
+            selectedCategories: selectedCategories
         }
         : {
             correctPointsScale: [
@@ -209,7 +216,7 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             numQuestions: parseInt(document.getElementById('everybodyNumQuestions').value) || 10,
             releaseYearMin: parseInt(document.getElementById('everybodyReleaseYearMin').value) || null,
             releaseYearMax: parseInt(document.getElementById('everybodyReleaseYearMax').value) || null,
-            selectedCategories: getSelectedCategories()
+            selectedCategories: selectedCategories
         };
     
     await roomRef.update({ gameParams });
