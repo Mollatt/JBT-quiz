@@ -16,7 +16,7 @@ function sanitizeName(name) {
     return name.trim().replace(/[.#$/[\]]/g, '');
 }
 
-// Create Lobby (default to text mode, can change in lobby)
+// Create Lobby (default to everybody mode)
 if (document.getElementById('createLobbyBtn')) {
     document.getElementById('createLobbyBtn').addEventListener('click', async () => {
         const name = sanitizeName(document.getElementById('nameInput').value);
@@ -25,19 +25,18 @@ if (document.getElementById('createLobbyBtn')) {
         const code = generateCode();
         const roomData = {
             host: name,
-            mode: 'text',  // Default mode, can be changed in lobby
+            mode: 'everybody',  // Default to everybody plays mode
             status: 'lobby',
             currentQ: -1,
             created: Date.now(),
-            questions: [],  // Will be populated when game starts
+            questions: [],
             // Game parameters
             gameParams: {
                 correctPointsScale: [1000, 800, 600, 400],
-                buzzerCorrectPoints: 1000,
-                buzzerWrongPoints: -250,
-                buzzerLockoutTime: 5,
-                autoPlayDuration: 30,
-                hostTimerDuration: 60
+                numQuestions: 10,
+                selectedCategories: ['game', 'series', 'composer', 'developer', 'title', 'location', 'boss', 'year'],
+                releaseYearMin: null,
+                releaseYearMax: null
             },
             players: {
                 [name]: {
