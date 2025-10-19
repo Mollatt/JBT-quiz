@@ -15,10 +15,11 @@ let currentQuestion = null;
 let musicPlayer = null;
 let isLockedOut = false;
 let lockoutTimer = null;
+let room = null;
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
-    const room = snapshot.val();
+    room = snapshot.val();
     if (!room) {
         window.location.href = 'index.html';
         return;
@@ -90,17 +91,31 @@ function displayQuestion(question, index) {
     document.getElementById('questionText').textContent = question.text;
 
     // Hide all UI elements initially
-    document.getElementById('buzzerSection').style.display = 'none';
-    document.getElementById('buzzDisplay').style.display = 'none';
-    document.getElementById('hostControls').style.display = 'none';
-    document.getElementById('continueBtn').style.display = 'none';
-    document.getElementById('resultsBtn').style.display = 'none';
-    document.getElementById('lockoutMsg').style.display = 'none';
-    document.getElementById('waitingMsg').style.display = 'none';
+    const buzzerSection = document.getElementById('buzzerSection');
+    const buzzDisplay = document.getElementById('buzzDisplay');
+    const hostControls = document.getElementById('hostControls');
+    const continueBtn = document.getElementById('continueBtn');
+    const resultsBtn = document.getElementById('resultsBtn');
+    const lockoutMsg = document.getElementById('lockoutMsg');
+    const waitingMsg = document.getElementById('waitingMsg');
+
+    if (buzzerSection) buzzerSection.style.display = 'none';
+    if (buzzDisplay) buzzDisplay.style.display = 'none';
+    if (hostControls) hostControls.style.display = 'none';
+    if (continueBtn) continueBtn.style.display = 'none';
+    if (resultsBtn) resultsBtn.style.display = 'none';
+    if (lockoutMsg) lockoutMsg.style.display = 'none';
+    if (waitingMsg) waitingMsg.style.display = 'none';
 
     // Show buzzer for non-hosts
-    if (!isHost) {
-        document.getElementById('buzzerSection').style.display = 'block';
+    if (!isHost && buzzerSection) {
+        buzzerSection.style.display = 'block';
+    }
+
+    // Show answers for host
+    if (isHost && hostControls) {
+        document.getElementById('correctAnswer').textContent = question.options[question.correct];
+        hostControls.style.display = 'block';
     }
 
     // Initialize and play music
@@ -115,7 +130,10 @@ function displayQuestion(question, index) {
             
             // Play music with timer sync
             musicPlayer.playClip(question.startTime, duration, (remaining) => {
-                document.getElementById('timeLeft').textContent = remaining;
+                const timeLeftEl = document.getElementById('timeLeft');
+                if (timeLeftEl) {
+                    timeLeftEl.textContent = remaining;
+                }
                 
                 // Time's up
                 if (remaining <= 0) {
@@ -155,21 +173,30 @@ function handleBuzzed(buzzedPlayerName) {
     }
 
     // Show who buzzed
-    document.getElementById('buzzDisplay').style.display = 'block';
-    document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
+    const buzzDisplay = document.getElementById('buzzDisplay');
+    if (buzzDisplay) {
+        buzzDisplay.style.display = 'block';
+        document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
+    }
 
     // Hide buzzer
-    document.getElementById('buzzerSection').style.display = 'none';
+    const buzzerSection = document.getElementById('buzzerSection');
+    if (buzzerSection) {
+        buzzerSection.style.display = 'none';
+    }
 
     // Show waiting message for non-hosts
-    if (!isHost) {
-        document.getElementById('waitingMsg').style.display = 'block';
+    const waitingMsg = document.getElementById('waitingMsg');
+    if (!isHost && waitingMsg) {
+        waitingMsg.style.display = 'block';
     }
 
     // Show host controls
     if (isHost) {
-        document.getElementById('hostControls').style.display = 'block';
-        document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
+        const hostControls = document.getElementById('hostControls');
+        if (hostControls) {
+            hostControls.style.display = 'block';
+        }
     }
 }
 
@@ -223,34 +250,48 @@ async function resumeQuiz(lockedOutPlayer) {
     });
 
     // Hide buzz display
-    document.getElementById('buzzDisplay').style.display = 'none';
-    document.getElementById('hostControls').style.display = 'none';
-    document.getElementById('waitingMsg').style.display = 'none';
+    const buzzDisplay = document.getElementById('buzzDisplay');
+    const hostControls = document.getElementById('hostControls');
+    const waitingMsg = document.getElementById('waitingMsg');
+    
+    if (buzzDisplay) buzzDisplay.style.display = 'none';
+    if (hostControls) hostControls.style.display = 'none';
+    if (waitingMsg) waitingMsg.style.display = 'none';
 
     // Show buzzer again for non-locked players
     if (!isHost) {
         if (playerName === lockedOutPlayer) {
             // This player is locked out
             isLockedOut = true;
-            document.getElementById('lockoutMsg').style.display = 'block';
+            const lockoutMsg = document.getElementById('lockoutMsg');
+            if (lockoutMsg) {
+                lockoutMsg.style.display = 'block';
+            }
             
             let timeLeft = 5;
-            document.getElementById('lockoutTime').textContent = timeLeft;
+            const lockoutTimeEl = document.getElementById('lockoutTime');
+            if (lockoutTimeEl) {
+                lockoutTimeEl.textContent = timeLeft;
+            }
             
             lockoutTimer = setInterval(() => {
                 timeLeft--;
-                document.getElementById('lockoutTime').textContent = timeLeft;
+                if (lockoutTimeEl) {
+                    lockoutTimeEl.textContent = timeLeft;
+                }
                 
                 if (timeLeft <= 0) {
                     clearInterval(lockoutTimer);
                     lockoutTimer = null;
                     isLockedOut = false;
-                    document.getElementById('lockoutMsg').style.display = 'none';
-                    document.getElementById('buzzerSection').style.display = 'block';
+                    if (lockoutMsg) lockoutMsg.style.display = 'none';
+                    const buzzerSection = document.getElementById('buzzerSection');
+                    if (buzzerSection) buzzerSection.style.display = 'block';
                 }
             }, 1000);
         } else {
-            document.getElementById('buzzerSection').style.display = 'block';
+            const buzzerSection = document.getElementById('buzzerSection');
+            if (buzzerSection) buzzerSection.style.display = 'block';
         }
     }
 
@@ -267,23 +308,27 @@ function handleTimeUp() {
     }
 
     // Hide buzzer
-    document.getElementById('buzzerSection').style.display = 'none';
+    const buzzerSection = document.getElementById('buzzerSection');
+    if (buzzerSection) buzzerSection.style.display = 'none';
 
     // Show waiting message for non-hosts
-    if (!isHost) {
-        document.getElementById('waitingMsg').style.display = 'block';
+    const waitingMsg = document.getElementById('waitingMsg');
+    if (!isHost && waitingMsg) {
+        waitingMsg.style.display = 'block';
     }
 
     // Show continue button for host
     if (isHost) {
-        const room = roomRef.once('value').then(snapshot => {
+        roomRef.once('value').then(snapshot => {
             const roomData = snapshot.val();
             const nextQ = roomData.currentQ + 1;
             
             if (nextQ >= roomData.questions.length) {
-                document.getElementById('resultsBtn').style.display = 'block';
+                const resultsBtn = document.getElementById('resultsBtn');
+                if (resultsBtn) resultsBtn.style.display = 'block';
             } else {
-                document.getElementById('continueBtn').style.display = 'block';
+                const continueBtn = document.getElementById('continueBtn');
+                if (continueBtn) continueBtn.style.display = 'block';
             }
         });
     }
