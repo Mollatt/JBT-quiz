@@ -18,7 +18,6 @@ let answerCheckListener = null;
 let musicPlayer = null;
 let nextQuestionCountdown = null;
 let countdownActive = false;
-let nextButtonListeners = new WeakMap(); // Track listeners for buttons
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -31,9 +30,6 @@ roomRef.once('value').then(snapshot => {
     document.getElementById('totalQ').textContent = room.questions.length;
     setupQuestionListener(room);
     setupStatusListener();
-
-    // Check if player already answered current question (after page refresh)
-    checkPlayerAnswerStatus();
 });
 
 function setupQuestionListener(room) {
@@ -47,20 +43,18 @@ function setupQuestionListener(room) {
             return;
         }
 
-        // Clear previous timers
+        // Clear previous state
         if (window.currentTimerInterval) {
             clearInterval(window.currentTimerInterval);
             window.currentTimerInterval = null;
         }
 
-        // Cancel countdown
         cancelNextCountdown();
 
-        // Reset answer state for NEW question
+        // Reset for new question
         hasAnswered = false;
         selectedAnswer = null;
 
-        // Stop previous listener
         if (answerCheckListener) {
             playersRef.off('value', answerCheckListener);
             answerCheckListener = null;
@@ -80,27 +74,6 @@ function setupStatusListener() {
             window.location.href = 'scoreboard.html';
         }
     });
-}
-
-async function checkPlayerAnswerStatus() {
-    // After refresh, check if this player already answered the current question
-    const playerSnapshot = await playerRef.once('value');
-    const playerData = playerSnapshot.val();
-    
-    if (playerData && playerData.answered === true) {
-        hasAnswered = true;
-        selectedAnswer = playerData.answer;
-        
-        // Disable answer buttons
-        document.querySelectorAll('.answer-btn').forEach(btn => {
-            btn.disabled = true;
-        });
-        
-        // Highlight their answer
-        if (selectedAnswer !== null && selectedAnswer !== undefined) {
-            document.querySelectorAll('.answer-btn')[selectedAnswer].classList.add('selected');
-        }
-    }
 }
 
 function displayQuestion(question, index) {
@@ -161,10 +134,11 @@ function displayQuestion(question, index) {
         btn.addEventListener('click', () => handleAnswer(parseInt(btn.dataset.index)));
     });
 
-    // Check if already answered
+    // Check if already answered (after refresh)
     playerRef.once('value', snapshot => {
         const playerData = snapshot.val();
-        if (playerData && playerData.answered === true && playerData.answer !== null) {
+        
+        if (playerData && playerData.answered === true && playerData.answer !== null && playerData.answer !== undefined) {
             hasAnswered = true;
             selectedAnswer = playerData.answer;
 
@@ -176,6 +150,7 @@ function displayQuestion(question, index) {
                 document.querySelectorAll('.answer-btn')[selectedAnswer].classList.add('selected');
             }
 
+            // Check if all players answered
             checkAllAnswered();
         }
     });
@@ -192,12 +167,12 @@ function displayQuestion(question, index) {
 }
 
 async function handleAnswer(answerIndex) {
-    if (hasAnswered) return; // Prevent re-answering
+    if (hasAnswered) return;
 
     hasAnswered = true;
     selectedAnswer = answerIndex;
 
-    // Disable all buttons
+    // Disable all buttons immediately
     document.querySelectorAll('.answer-btn').forEach(btn => {
         btn.disabled = true;
     });
@@ -205,54 +180,68 @@ async function handleAnswer(answerIndex) {
     // Highlight selected answer
     document.querySelectorAll('.answer-btn')[answerIndex].classList.add('selected');
 
-    // Save to database - this is now COMMITTAL
+    // Save answer to database
     const answerTime = Date.now();
 
     try {
-        const playerSnapshot = await playerRef.once('value');
-        const playerData = playerSnapshot.val();
-
-        if (!playerData) {
-            console.error('Player data not found');
-            return;
-        }
-
         await playerRef.update({
             answer: answerIndex,
             answerTime: answerTime,
-            answered: true  // LOCKED IN - can't answer again
+            answered: true
         });
 
+        console.log('Answer saved:', { answerIndex, answerTime });
+
+        // Check if all answered
         checkAllAnswered();
 
     } catch (error) {
         console.error('Error saving answer:', error);
+        hasAnswered = false;
+        document.querySelectorAll('.answer-btn').forEach(btn => {
+            btn.disabled = false;
+        });
     }
 }
 
 function checkAllAnswered() {
+    // Listen for all players answering
     answerCheckListener = playersRef.on('value', async (snapshot) => {
         const players = snapshot.val();
-        if (!players) return;
+        
+        if (!players) {
+            console.log('No players found');
+            return;
+        }
 
         const playerArray = Object.values(players);
         const answeredCount = playerArray.filter(p => p.answered === true).length;
         const totalPlayers = playerArray.length;
+
+        console.log(`Progress: ${answeredCount}/${totalPlayers} answered`);
 
         const progressMsg = document.getElementById('answerProgress');
         if (progressMsg) {
             progressMsg.textContent = `${answeredCount}/${totalPlayers} players answered`;
         }
 
+        // All players answered
         if (answeredCount === totalPlayers) {
+            console.log('All players answered, calculating results');
             playersRef.off('value', answerCheckListener);
             answerCheckListener = null;
+            
+            // Delay to ensure all data is written
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             await calculateAndShowResults(players);
         }
     });
 }
 
 async function calculateAndShowResults(players) {
+    console.log('Calculating results...');
+    
     // Stop music
     if (musicPlayer && currentQuestion.type === 'music') {
         musicPlayer.stop();
@@ -263,7 +252,7 @@ async function calculateAndShowResults(players) {
         window.currentTimerInterval = null;
     }
 
-    // Calculate points based on speed ranking
+    // Get correct answers sorted by speed
     const correctAnswers = Object.entries(players)
         .filter(([name, data]) => {
             return data.answer === currentQuestion.correct &&
@@ -272,6 +261,9 @@ async function calculateAndShowResults(players) {
         })
         .sort((a, b) => (a[1].answerTime || Infinity) - (b[1].answerTime || Infinity));
 
+    console.log('Correct answers:', correctAnswers.length);
+
+    // Points for ranking
     const pointsScale = [1000, 800, 600, 400];
     const updates = {};
 
@@ -282,38 +274,71 @@ async function calculateAndShowResults(players) {
         const newScore = currentScore + points;
         const correctCount = (data.correctCount || 0) + 1;
 
+        console.log(`${name}: +${points} points (total: ${newScore})`);
+
         updates[`rooms/${gameCode}/players/${name}/score`] = newScore;
         updates[`rooms/${gameCode}/players/${name}/lastPoints`] = points;
         updates[`rooms/${gameCode}/players/${name}/correctCount`] = correctCount;
     }
 
-    if (Object.keys(updates).length > 0) {
-        await db.ref().update(updates);
+    // Penalize those who got it wrong
+    const wrongAnswers = Object.entries(players)
+        .filter(([name, data]) => {
+            return data.answered === true &&
+                (data.answer !== currentQuestion.correct || data.answer === null);
+        });
+
+    for (const [name, data] of wrongAnswers) {
+        const currentScore = data.score || 0;
+        const newScore = Math.max(0, currentScore); // Wrong answers don't lose points in Everybody Plays
+        
+        updates[`rooms/${gameCode}/players/${name}/score`] = newScore;
+        updates[`rooms/${gameCode}/players/${name}/lastPoints`] = 0;
     }
 
+    // Update all scores at once
+    if (Object.keys(updates).length > 0) {
+        await db.ref().update(updates);
+        console.log('Scores updated');
+    }
+
+    // Wait for updates to propagate
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    showFeedback(selectedAnswer === currentQuestion.correct);
+    // Show feedback
+    const isCorrect = selectedAnswer === currentQuestion.correct;
+    showFeedback(isCorrect);
 }
 
 function showFeedback(isCorrect) {
     const feedbackEl = document.getElementById('feedback');
     const buttons = document.querySelectorAll('.answer-btn');
 
+    // Highlight correct answer in green
     if (buttons[currentQuestion.correct]) {
         buttons[currentQuestion.correct].classList.add('correct');
     }
 
+    // Highlight wrong answer in red
     if (!isCorrect && selectedAnswer !== null && selectedAnswer !== undefined && buttons[selectedAnswer]) {
         buttons[selectedAnswer].classList.add('incorrect');
     }
 
     document.getElementById('answerProgress').style.display = 'none';
 
+    // Get this player's score
     playerRef.once('value', snapshot => {
         const playerData = snapshot.val();
+        
+        if (!playerData) {
+            console.error('Player data not found in feedback');
+            return;
+        }
+
         const points = playerData.lastPoints || 0;
         const currentScore = playerData.score || 0;
+
+        console.log(`Feedback - Points: ${points}, Total: ${currentScore}`);
 
         if (isCorrect) {
             feedbackEl.innerHTML = `✅ Correct! <strong>+${points} points</strong><br>Total: ${currentScore}`;
@@ -325,17 +350,28 @@ function showFeedback(isCorrect) {
         feedbackEl.style.display = 'block';
     });
 
+    // Show next button or results
     roomRef.once('value').then(snapshot => {
         const room = snapshot.val();
+        
+        if (!room) {
+            console.error('Room data not found');
+            return;
+        }
+
         const nextQ = room.currentQ + 1;
 
+        console.log(`Current Q: ${room.currentQ}, Next Q: ${nextQ}, Total: ${room.questions.length}`);
+
         if (nextQ >= room.questions.length) {
+            console.log('Showing results button');
             document.getElementById('resultsBtn').style.display = 'block';
         } else {
+            console.log('Showing next button');
             const nextBtn = document.getElementById('nextBtn');
             nextBtn.style.display = 'block';
             
-            // Create FRESH listener for this button
+            // Add fresh click listener
             const newNextBtn = nextBtn.cloneNode(true);
             nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
             
@@ -389,24 +425,31 @@ document.getElementById('cancelCountdownBtn')?.addEventListener('click', () => {
 });
 
 async function advanceToNextQuestion() {
+    console.log('Advancing to next question');
+    
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
     
     const nextQ = room.currentQ + 1;
     const totalQ = room.questions.length;
 
-    // Reset all players' answered status for next question
+    // Reset all players for next question
     const players = room.players;
+    const resets = {};
+    
     for (const name in players) {
-        await db.ref(`rooms/${gameCode}/players/${name}`).update({
-            answered: false,
-            answer: null
-        });
+        resets[`rooms/${gameCode}/players/${name}/answered`] = false;
+        resets[`rooms/${gameCode}/players/${name}/answer`] = null;
+        resets[`rooms/${gameCode}/players/${name}/answerTime`] = null;
     }
+    
+    await db.ref().update(resets);
 
     if (nextQ >= totalQ) {
+        console.log('Game finished');
         await roomRef.update({ status: 'finished' });
     } else {
+        console.log(`Moving to question ${nextQ}`);
         await roomRef.update({ currentQ: nextQ });
     }
 }
