@@ -441,6 +441,7 @@ async function advanceToNextQuestion() {
         resets[`rooms/${gameCode}/players/${name}/answered`] = false;
         resets[`rooms/${gameCode}/players/${name}/answer`] = null;
         resets[`rooms/${gameCode}/players/${name}/answerTime`] = null;
+        resets[`rooms/${gameCode}/players/${name}/lastPoints`] = 0;
     }
     
     await db.ref().update(resets);
