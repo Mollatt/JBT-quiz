@@ -17,6 +17,9 @@ let isLockedOut = false;
 let lockoutTimer = null;
 let room = null;
 let lockoutDuration = 5;
+let timerInterval = null;
+let timeRemaining = 0;
+let isPausedLocally = false;
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -49,21 +52,28 @@ function setupQuestionListener(room) {
             return;
         }
 
-        // Reset state for new question
-        await roomRef.update({
-            buzzedPlayer: null,
-            buzzTime: null,
-            buzzerLocked: false,
-            gamePaused: false
-        });
-
-        isLockedOut = false;
+        // Clear all timers
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
         if (lockoutTimer) {
             clearInterval(lockoutTimer);
             lockoutTimer = null;
         }
+        if (musicPlayer) {
+            musicPlayer.stop();
+        }
 
-        // Load and display question
+        // Reset state
+        await roomRef.update({
+            buzzedPlayer: null,
+            gamePaused: false
+        });
+
+        isLockedOut = false;
+        isPausedLocally = false;
+        
         displayQuestion(room.questions[qIndex], qIndex);
     });
 }
@@ -86,7 +96,6 @@ function setupBuzzListener() {
         if (buzzedPlayer) {
             handleBuzzed(buzzedPlayer);
         } else {
-            // No one buzzed - show appropriate UI
             if (isHost) {
                 showHostControls();
             } else {
@@ -103,30 +112,22 @@ function displayQuestion(question, index) {
     document.getElementById('questionText').textContent = question.text;
 
     // Hide all UI
-    const buzzerSection = document.getElementById('buzzerSection');
-    const hostControls = document.getElementById('hostControls');
-    const hostBuzzControls = document.getElementById('hostBuzzControls');
-    const buzzDisplay = document.getElementById('buzzDisplay');
-    const resultsBtn = document.getElementById('resultsBtn');
-    const waitingMsg = document.getElementById('waitingMsg');
-    const lockoutMsg = document.getElementById('lockoutMsg');
+    document.getElementById('buzzerSection').style.display = 'none';
+    document.getElementById('hostControls').style.display = 'none';
+    document.getElementById('hostBuzzControls').style.display = 'none';
+    document.getElementById('buzzDisplay').style.display = 'none';
+    document.getElementById('resultsBtn').style.display = 'none';
+    document.getElementById('waitingMsg').style.display = 'none';
+    document.getElementById('lockoutMsg').style.display = 'none';
 
-    if (buzzerSection) buzzerSection.style.display = 'none';
-    if (hostControls) hostControls.style.display = 'none';
-    if (hostBuzzControls) hostBuzzControls.style.display = 'none';
-    if (buzzDisplay) buzzDisplay.style.display = 'none';
-    if (resultsBtn) resultsBtn.style.display = 'none';
-    if (waitingMsg) waitingMsg.style.display = 'none';
-    if (lockoutMsg) lockoutMsg.style.display = 'none';
-
-    // Show appropriate UI based on role
+    // Show appropriate UI
     if (isHost) {
         showHostControls();
     } else {
         showPlayerBuzzer();
     }
 
-    // Initialize and play music
+    // Load and play music
     const musicPlayerEl = document.getElementById('musicPlayer');
     if (!musicPlayer) {
         musicPlayer = new YouTubePlayer('musicPlayer');
@@ -135,29 +136,32 @@ function displayQuestion(question, index) {
     if (question.type === 'music' && question.youtubeUrl) {
         musicPlayer.load(question.youtubeUrl).then(() => {
             const duration = question.duration || 30;
-            startMusic(duration);
+            timeRemaining = duration;
+            startTimer(duration);
         }).catch(error => {
             console.error('Failed to load music:', error);
         });
     }
 }
 
-function startMusic(duration) {
+function startTimer(duration) {
     const timeLeftEl = document.getElementById('timeLeft');
-    let remaining = duration;
+    timeRemaining = duration;
     
     if (timeLeftEl) {
-        timeLeftEl.textContent = remaining;
+        timeLeftEl.textContent = timeRemaining;
     }
 
+    // Start music
     if (musicPlayer) {
         musicPlayer.playClip(0, duration, () => {
-            remaining--;
+            // Callback from YouTube player - just update time
+            timeRemaining--;
             if (timeLeftEl) {
-                timeLeftEl.textContent = Math.max(0, remaining);
+                timeLeftEl.textContent = Math.max(0, timeRemaining);
             }
 
-            if (remaining <= 0) {
+            if (timeRemaining <= 0) {
                 handleTimeUp();
             }
         });
@@ -165,29 +169,30 @@ function startMusic(duration) {
 }
 
 function showHostControls() {
-    const hostControls = document.getElementById('hostControls');
-    const hostBuzzControls = document.getElementById('hostBuzzControls');
-    const buzzerSection = document.getElementById('buzzerSection');
+    document.getElementById('hostControls').style.display = 'block';
+    document.getElementById('hostBuzzControls').style.display = 'none';
+    document.getElementById('buzzerSection').style.display = 'none';
+    document.getElementById('waitingMsg').style.display = 'none';
     
-    if (hostControls) hostControls.style.display = 'block';
-    if (hostBuzzControls) hostBuzzControls.style.display = 'none';
-    if (buzzerSection) buzzerSection.style.display = 'none';
+    // Update pause button text
+    const pauseBtn = document.getElementById('pauseBtn');
+    if (pauseBtn) {
+        pauseBtn.textContent = isPausedLocally ? '▶️ Resume Music' : '⏸️ Pause Music';
+    }
 }
 
 function showPlayerBuzzer() {
     const buzzerSection = document.getElementById('buzzerSection');
-    const hostControls = document.getElementById('hostControls');
+    const buzzerBtn = document.getElementById('buzzerBtn');
+    const lockoutMsg = document.getElementById('lockoutMsg');
+    const waitingMsg = document.getElementById('waitingMsg');
     
     if (buzzerSection) buzzerSection.style.display = 'block';
-    if (hostControls) hostControls.style.display = 'none';
-
-    // Check if locked out on display
-    if (isLockedOut) {
-        const buzzerBtn = document.getElementById('buzzerBtn');
-        const lockoutMsg = document.getElementById('lockoutMsg');
-        
-        if (buzzerBtn) buzzerBtn.disabled = true;
-        if (lockoutMsg) lockoutMsg.style.display = 'block';
+    if (waitingMsg) waitingMsg.style.display = 'none';
+    if (lockoutMsg) lockoutMsg.style.display = 'none';
+    
+    if (buzzerBtn) {
+        buzzerBtn.disabled = isLockedOut;
     }
 }
 
@@ -197,22 +202,29 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
 
     const buzzTime = Date.now();
     
-    // Try to buzz (race condition handled by Firebase)
+    // Try to buzz
     const buzzedPlayerRef = roomRef.child('buzzedPlayer');
     const currentBuzz = await buzzedPlayerRef.once('value');
     
     if (!currentBuzz.val()) {
-        // First to buzz!
+        // First to buzz - pause for everyone
         await roomRef.update({
             buzzedPlayer: playerName,
             buzzTime: buzzTime,
             buzzerLocked: true,
-            gamePaused: true  // PAUSE MUSIC FOR EVERYONE
+            gamePaused: true
         });
     }
 });
 
 function handleBuzzed(buzzedPlayerName) {
+    // Pause music
+    if (musicPlayer) {
+        musicPlayer.pause();
+    }
+    
+    isPausedLocally = true;
+
     // Show who buzzed
     const buzzDisplay = document.getElementById('buzzDisplay');
     if (buzzDisplay) {
@@ -220,71 +232,45 @@ function handleBuzzed(buzzedPlayerName) {
         document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
     }
 
-    // For HOST: Show correct/wrong buttons
+    // HOST: Show correct/wrong buttons
     if (isHost) {
-        const hostControls = document.getElementById('hostControls');
-        const hostBuzzControls = document.getElementById('hostBuzzControls');
-        
-        if (hostControls) hostControls.style.display = 'none';
-        if (hostBuzzControls) {
-            hostBuzzControls.style.display = 'block';
-            document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
-        }
-        
-        // Pause music for host too
-        if (musicPlayer) {
-            musicPlayer.pause();
-        }
+        document.getElementById('hostControls').style.display = 'none';
+        document.getElementById('hostBuzzControls').style.display = 'block';
+        document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
     } 
-    // For PLAYERS: Show waiting or lockout
+    // PLAYERS: Disable buzzer
     else {
-        const buzzerSection = document.getElementById('buzzerSection');
-        if (buzzerSection) buzzerSection.style.display = 'block';
+        const buzzerBtn = document.getElementById('buzzerBtn');
+        if (buzzerBtn) buzzerBtn.disabled = true;
         
-        if (playerName === buzzedPlayerName) {
-            // This player buzzed - disable their button
-            const buzzerBtn = document.getElementById('buzzerBtn');
-            if (buzzerBtn) buzzerBtn.disabled = true;
-        } else {
-            // Another player buzzed - disable all buttons
-            const buzzerBtn = document.getElementById('buzzerBtn');
-            if (buzzerBtn) buzzerBtn.disabled = true;
-            
+        if (playerName !== buzzedPlayerName) {
             const waitingMsg = document.getElementById('waitingMsg');
             if (waitingMsg) waitingMsg.style.display = 'block';
         }
     }
 }
 
-// Host clicks Pause/Resume
+// Host Pause/Resume
 document.getElementById('pauseBtn')?.addEventListener('click', async () => {
-    const pauseSnapshot = await roomRef.child('gamePaused').once('value');
-    const currentPauseState = pauseSnapshot.val() || false;
+    isPausedLocally = !isPausedLocally;
     
-    await roomRef.update({
-        gamePaused: !currentPauseState
-    });
-
-    // Update music state locally
-    if (!currentPauseState && musicPlayer) {
-        musicPlayer.pause();
-    } else if (currentPauseState && musicPlayer) {
-        musicPlayer.play();
-    }
-
-    // Update button text
-    const pauseBtn = document.getElementById('pauseBtn');
-    if (pauseBtn) {
-        pauseBtn.textContent = currentPauseState ? '⏸️ Pause Music' : '▶️ Resume Music';
+    if (isPausedLocally) {
+        // Pause
+        if (musicPlayer) musicPlayer.pause();
+        document.getElementById('pauseBtn').textContent = '▶️ Resume Music';
+    } else {
+        // Resume
+        if (musicPlayer) musicPlayer.play();
+        document.getElementById('pauseBtn').textContent = '⏸️ Pause Music';
     }
 });
 
-// Host clicks Skip/Next Song (no points awarded)
+// Host Skip Song
 document.getElementById('skipBtn')?.addEventListener('click', async () => {
     await advanceQuestion();
 });
 
-// Host clicks Correct
+// Host Correct
 document.getElementById('correctBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
     
@@ -308,11 +294,10 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
         }
     }
 
-    // Advance to next question
     await advanceQuestion();
 });
 
-// Host clicks Wrong
+// Host Wrong
 document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
     
@@ -334,28 +319,24 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
         }
     }
 
-    // Resume and lock out player
     await resumeAfterWrong(buzzedPlayerName);
 });
 
 async function resumeAfterWrong(lockedOutPlayer) {
-    // Reset buzz state and unpause
+    // Reset buzz and unpause
     await roomRef.update({
         buzzedPlayer: null,
-        buzzerLocked: false,
         gamePaused: false
     });
 
-    // Hide buzz display
-    const buzzDisplay = document.getElementById('buzzDisplay');
-    const hostBuzzControls = document.getElementById('hostBuzzControls');
-    const waitingMsg = document.getElementById('waitingMsg');
-    
-    if (buzzDisplay) buzzDisplay.style.display = 'none';
-    if (hostBuzzControls) hostBuzzControls.style.display = 'none';
-    if (waitingMsg) waitingMsg.style.display = 'none';
+    isPausedLocally = false;
 
-    // Resume music for host
+    // Hide buzz display
+    document.getElementById('buzzDisplay').style.display = 'none';
+    document.getElementById('hostBuzzControls').style.display = 'none';
+    document.getElementById('waitingMsg').style.display = 'none';
+
+    // Resume music
     if (isHost && musicPlayer) {
         musicPlayer.play();
     }
@@ -363,7 +344,7 @@ async function resumeAfterWrong(lockedOutPlayer) {
     // Handle locked player
     if (!isHost) {
         if (playerName === lockedOutPlayer) {
-            // This player is locked out
+            // This player locked out
             isLockedOut = true;
             const buzzerBtn = document.getElementById('buzzerBtn');
             const lockoutMsg = document.getElementById('lockoutMsg');
@@ -396,43 +377,40 @@ async function resumeAfterWrong(lockedOutPlayer) {
         } else {
             // Other players can buzz again
             const buzzerBtn = document.getElementById('buzzerBtn');
-            const buzzerSection = document.getElementById('buzzerSection');
-            
-            if (buzzerSection) buzzerSection.style.display = 'block';
             if (buzzerBtn) buzzerBtn.disabled = false;
         }
+    }
+
+    // Show host controls
+    if (isHost) {
+        showHostControls();
     }
 }
 
 function handleTimeUp() {
-    // Stop music
     if (musicPlayer) {
         musicPlayer.stop();
     }
 
-    // Hide buzzer
-    const buzzerSection = document.getElementById('buzzerSection');
-    if (buzzerSection) buzzerSection.style.display = 'none';
+    document.getElementById('buzzerSection').style.display = 'none';
 
-    // Show waiting for host
-    const waitingMsg = document.getElementById('waitingMsg');
-    if (!isHost && waitingMsg) {
-        waitingMsg.textContent = "Time's up! Waiting for host...";
-        waitingMsg.style.display = 'block';
+    if (!isHost) {
+        const waitingMsg = document.getElementById('waitingMsg');
+        if (waitingMsg) {
+            waitingMsg.textContent = "Time's up! Waiting for host...";
+            waitingMsg.style.display = 'block';
+        }
     }
 
-    // Show next button for host
     if (isHost) {
         roomRef.once('value').then(snapshot => {
             const roomData = snapshot.val();
             const nextQ = roomData.currentQ + 1;
-            const hostControls = document.getElementById('hostControls');
-            const resultsBtn = document.getElementById('resultsBtn');
             
-            if (hostControls) hostControls.style.display = 'block';
+            document.getElementById('hostControls').style.display = 'block';
             
             if (nextQ >= roomData.questions.length) {
-                if (resultsBtn) resultsBtn.style.display = 'block';
+                document.getElementById('resultsBtn').style.display = 'block';
             } else {
                 const skipBtn = document.getElementById('skipBtn');
                 if (skipBtn) skipBtn.textContent = 'Next Question';
@@ -455,7 +433,6 @@ async function advanceQuestion() {
     }
 }
 
-// Results button (host only)
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
