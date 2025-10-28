@@ -150,11 +150,14 @@ function displayQuestion(question, index) {
     document.getElementById('resultsBtn').style.display = 'none';
     document.getElementById('lockoutMsg').style.display = 'none';
 
-    // Show pause button for host
+    // Show pause and skip buttons for host
     if (isHost) {
+        const hostButtons = document.getElementById('hostButtonsTop');
+        if (hostButtons) {
+            hostButtons.style.display = 'block';
+        }
         const pauseBtn = document.getElementById('pauseBtn');
         if (pauseBtn) {
-            pauseBtn.style.display = 'block';
             pauseBtn.textContent = '⏸️ Pause';
         }
     }
@@ -167,7 +170,7 @@ function displayQuestion(question, index) {
     // Initialize and play music
     const musicPlayerEl = document.getElementById('musicPlayer');
     if (!musicPlayer) {
-        musicPlayer = new YoutubePlayer('musicPlayer');
+        musicPlayer = new YouTubePlayer('musicPlayer');  // FIXED: Correct capitalization
     }
 
     if (question.type === 'music' && question.youtubeUrl) {
@@ -247,9 +250,9 @@ function handleBuzzed(buzzedPlayerName) {
 
     // Hide pause button for host
     if (isHost) {
-        const pauseBtn = document.getElementById('pauseBtn');
-        if (pauseBtn) {
-            pauseBtn.style.display = 'none';
+        const hostButtons = document.getElementById('hostButtonsTop');
+        if (hostButtons) {
+            hostButtons.style.display = 'none';
         }
     }
 
@@ -316,9 +319,12 @@ async function resumeQuiz(lockedOutPlayer) {
 
     // Show pause button again for host
     if (isHost) {
+        const hostButtons = document.getElementById('hostButtonsTop');
+        if (hostButtons) {
+            hostButtons.style.display = 'block';
+        }
         const pauseBtn = document.getElementById('pauseBtn');
         if (pauseBtn) {
-            pauseBtn.style.display = 'block';
             pauseBtn.textContent = '⏸️ Pause';
         }
     }
@@ -370,11 +376,11 @@ function handleTimeUp() {
     // Hide buzzer
     document.getElementById('buzzerSection').style.display = 'none';
 
-    // Hide pause button
+    // Hide pause and skip buttons
     if (isHost) {
-        const pauseBtn = document.getElementById('pauseBtn');
-        if (pauseBtn) {
-            pauseBtn.style.display = 'none';
+        const hostButtons = document.getElementById('hostButtonsTop');
+        if (hostButtons) {
+            hostButtons.style.display = 'none';
         }
     }
 
@@ -459,5 +465,14 @@ document.getElementById('pauseBtn')?.addEventListener('click', async () => {
         if (pauseBtn) {
             pauseBtn.textContent = '▶️ Resume';
         }
+    }
+});
+
+// Skip button (host only) - advances to next question without scoring
+document.getElementById('skipBtn')?.addEventListener('click', async () => {
+    if (!isHost) return;
+    
+    if (confirm('Skip this question without scoring?')) {
+        await advanceQuestion();
     }
 });
