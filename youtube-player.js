@@ -8,6 +8,11 @@ class YouTubePlayer {
         this.isReady = false;
         this.clipTimer = null;
         this.videoId = null;
+        this.clipStartTime = 0;
+        this.clipDuration = 0;
+        this.onTickCallback = null;
+        this.elapsedTime = 0;
+        this.isPaused = false;
     }
 
     // Load a YouTube video
@@ -57,7 +62,6 @@ class YouTubePlayer {
                 events: {
                     'onReady': () => {
                         this.isReady = true;
-                        // Mute to play in background (YouTube requires user interaction for audio)
                         this.player.setVolume(100);
                         resolve();
                     },
@@ -98,26 +102,32 @@ class YouTubePlayer {
             clearInterval(this.clipTimer);
         }
 
+        this.clipStartTime = startTime;
+        this.clipDuration = duration;
+        this.onTickCallback = onTick;
+        this.elapsedTime = 0;
+        this.isPaused = false;
+
         try {
             // Seek to start time and play
             this.player.seekTo(startTime, true);
             this.player.playVideo();
 
-            let elapsed = 0;
-            
             // Update timer every second
             this.clipTimer = setInterval(() => {
-                elapsed++;
-                const remaining = duration - elapsed;
-                
-                if (onTick) {
-                    onTick(remaining);
-                }
-                
-                if (elapsed >= duration) {
-                    clearInterval(this.clipTimer);
-                    this.clipTimer = null;
-                    this.pause();
+                if (!this.isPaused) {
+                    this.elapsedTime++;
+                    const remaining = duration - this.elapsedTime;
+                    
+                    if (this.onTickCallback) {
+                        this.onTickCallback(remaining);
+                    }
+                    
+                    if (this.elapsedTime >= duration) {
+                        clearInterval(this.clipTimer);
+                        this.clipTimer = null;
+                        this.pause();
+                    }
                 }
             }, 1000);
         } catch (e) {
@@ -129,6 +139,27 @@ class YouTubePlayer {
         if (this.player && this.isReady) {
             try {
                 this.player.playVideo();
+                this.isPaused = false;
+                
+                // Resume timer if it was stopped
+                if (!this.clipTimer && this.elapsedTime < this.clipDuration) {
+                    this.clipTimer = setInterval(() => {
+                        if (!this.isPaused) {
+                            this.elapsedTime++;
+                            const remaining = this.clipDuration - this.elapsedTime;
+                            
+                            if (this.onTickCallback) {
+                                this.onTickCallback(remaining);
+                            }
+                            
+                            if (this.elapsedTime >= this.clipDuration) {
+                                clearInterval(this.clipTimer);
+                                this.clipTimer = null;
+                                this.pause();
+                            }
+                        }
+                    }, 1000);
+                }
             } catch (e) {
                 console.error('Error playing:', e);
             }
@@ -139,6 +170,7 @@ class YouTubePlayer {
         if (this.player && this.isReady) {
             try {
                 this.player.pauseVideo();
+                this.isPaused = true;
             } catch (e) {
                 console.error('Error pausing:', e);
             }
@@ -150,6 +182,9 @@ class YouTubePlayer {
             clearInterval(this.clipTimer);
             this.clipTimer = null;
         }
+        
+        this.isPaused = false;
+        this.elapsedTime = 0;
         
         if (this.player && this.isReady) {
             try {
