@@ -35,7 +35,6 @@ roomRef.once('value').then(snapshot => {
     }
 });
 
-// Calculate scoreboard display points
 function shouldShowScoreboard(currentQ, totalQ) {
     if (totalQ <= 5) {
         return currentQ === Math.floor(totalQ * 0.5);
@@ -469,7 +468,7 @@ function showFeedback(isCorrect) {
 
     document.getElementById('answerProgress').style.display = 'none';
 
-    playerRef.once('value', snapshot => {
+    playerRef.once('value', async snapshot => {
         const playerData = snapshot.val();
         const points = playerData.lastPoints || 0;
         const currentScore = playerData.score || 0;
@@ -482,10 +481,9 @@ function showFeedback(isCorrect) {
             feedbackEl.className = 'feedback incorrect';
         }
         feedbackEl.style.display = 'block';
-    });
 
-    roomRef.once('value').then(snapshot => {
-        const room = snapshot.val();
+        // Now show buttons after feedback is displayed
+        const room = (await roomRef.once('value')).val();
         const nextQ = room.currentQ + 1;
 
         if (room.mode === 'host' && isHost) {
@@ -503,7 +501,7 @@ function showFeedback(isCorrect) {
     });
 }
 
-// Next button handler (host only) - FIXED
+// Next button handler (host only)
 document.getElementById('nextBtn')?.addEventListener('click', async () => {
     try {
         const snapshot = await roomRef.once('value');
@@ -512,6 +510,8 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
         const currentQ = room.currentQ;
         const nextQ = currentQ + 1;
         const totalQ = room.questions.length;
+
+        console.log('Next button clicked, advancing from Q', currentQ, 'to', nextQ);
 
         // Reset results flag for current question
         await roomRef.child(`resultsCalculated/${currentQ}`).remove();
@@ -526,6 +526,9 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
         }
         await db.ref().update(resetUpdates);
 
+        // Small delay to ensure updates propagate
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Check if we should show scoreboard
         if (shouldShowScoreboard(nextQ, totalQ)) {
             await roomRef.update({ 
@@ -537,6 +540,7 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
         }
     } catch (error) {
         console.error('Error advancing to next question:', error);
+        alert('Error advancing question. Please try again.');
     }
 });
 
