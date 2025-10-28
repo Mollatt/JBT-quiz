@@ -152,18 +152,30 @@ function startTimer(duration) {
         timeLeftEl.textContent = timeRemaining;
     }
 
-    // Start music
-    if (musicPlayer) {
-        musicPlayer.playClip(0, duration, () => {
-            // Callback from YouTube player - just update time
+    // Start timer that counts down
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    timerInterval = setInterval(() => {
+        if (!isPausedLocally) {
             timeRemaining--;
             if (timeLeftEl) {
                 timeLeftEl.textContent = Math.max(0, timeRemaining);
             }
 
             if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerInterval = null;
                 handleTimeUp();
             }
+        }
+    }, 1000);
+
+    // Also start music
+    if (musicPlayer) {
+        musicPlayer.playClip(0, duration, () => {
+            // Music callback - just for reference, timer is separate now
         });
     }
 }
