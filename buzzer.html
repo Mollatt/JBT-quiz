@@ -22,6 +22,9 @@
 
         <h2 class="question-text" id="questionText">Loading question...</h2>
 
+        <!-- Host Pause Button -->
+        <button id="pauseBtn" class="btn-secondary" style="display: none; margin: 1rem 0;">⏸️ Pause</button>
+
         <!-- Buzzer Button (for players) -->
         <div id="buzzerSection" style="display: none;">
             <button id="buzzerBtn" class="buzzer-btn">
@@ -39,16 +42,8 @@
             <div class="buzzed-player" id="buzzedPlayer"></div>
         </div>
 
-        <!-- Host Controls (Pause/Skip - when no one has buzzed) -->
+        <!-- Host Controls -->
         <div id="hostControls" style="display: none;">
-            <div class="host-buttons">
-                <button id="pauseBtn" class="btn-secondary">⏸️ Pause Music</button>
-                <button id="skipBtn" class="btn-secondary">⏭️ Skip Song</button>
-            </div>
-        </div>
-
-        <!-- Host Buzz Controls (Correct/Wrong - when someone has buzzed) -->
-        <div id="hostBuzzControls" style="display: none;">
             <div class="correct-answer">
                 Correct Answer: <strong id="correctAnswer"></strong>
             </div>
@@ -58,12 +53,11 @@
             </div>
         </div>
 
+        <!-- Continue Button (appears when time runs out) -->
+        <button id="continueBtn" class="btn-primary" style="display: none;">Continue</button>
+
         <!-- Results Button (last question) -->
         <button id="resultsBtn" class="btn-primary" style="display: none;">View Results</button>
-
-        <div id="waitingMsg" style="display: none; margin-top: 1rem; opacity: 0.8;">
-            Waiting for host...
-        </div>
     </div>
 
     <!-- SoundCloud Widget API -->
