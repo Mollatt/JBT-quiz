@@ -16,6 +16,7 @@ let selectedAnswer = null;
 let hasAnswered = false;
 let answerCheckListener = null;
 let musicPlayer = null;
+let currentRoom = null;
 
 // Load initial room data
 roomRef.once('value').then(snapshot => {
@@ -25,6 +26,7 @@ roomRef.once('value').then(snapshot => {
         return;
     }
 
+    currentRoom = room;
     document.getElementById('totalQ').textContent = room.questions.length;
 
     setupQuestionListener(room);
@@ -93,8 +95,12 @@ function setupQuestionListener(room) {
             answered: false
         });
 
+        // Reload room data
+        const roomSnap = await roomRef.once('value');
+        currentRoom = roomSnap.val();
+
         // Load and display question
-        displayQuestion(room.questions[qIndex], qIndex);
+        displayQuestion(currentRoom.questions[qIndex], qIndex);
     });
 }
 
@@ -243,22 +249,18 @@ function displayQuestion(question, index) {
         }
     });
 
-    roomRef.child('mode').once('value', snapshot => {
-        const mode = snapshot.val();
-        const timerDisplay = document.getElementById('timerDisplay');
-
-        if (question.type === 'music') {
-            timerDisplay.style.display = 'block';
-            const duration = question.duration || 30;
-            document.getElementById('timeLeft').textContent = duration;
-        } else if (mode === 'auto') {
-            timerDisplay.style.display = 'block';
-            startTimerDisplay();
-        } else {
-            timerDisplay.style.display = 'block';
-            startHostTimer();
-        }
-    });
+    const timerDisplay = document.getElementById('timerDisplay');
+    if (question.type === 'music') {
+        timerDisplay.style.display = 'block';
+        const duration = question.duration || 30;
+        document.getElementById('timeLeft').textContent = duration;
+    } else if (currentRoom.mode === 'auto') {
+        timerDisplay.style.display = 'block';
+        startTimerDisplay();
+    } else {
+        timerDisplay.style.display = 'block';
+        startHostTimer();
+    }
 }
 
 function startTimerDisplay() {
@@ -375,8 +377,8 @@ async function calculateAndShowResults(players) {
     window.resultsCalculated = true;
 
     const roomSnap = await roomRef.once('value');
-    const room = roomSnap.val();
-    const resultFlagRef = roomRef.child(`resultsCalculated/${room.currentQ}`);
+    currentRoom = roomSnap.val();
+    const resultFlagRef = roomRef.child(`resultsCalculated/${currentRoom.currentQ}`);
 
     const flagSnap = await resultFlagRef.once('value');
     if (flagSnap.exists()) {
@@ -432,13 +434,13 @@ async function calculateAndShowResults(players) {
     const isCorrect = selectedAnswer === currentQuestion.correct;
     showFeedback(isCorrect);
     
-    if (isHost && room.mode === 'auto') {
+    if (isHost && currentRoom.mode === 'auto') {
         setTimeout(async () => {
             const currentQCheck = await roomRef.child('currentQ').once('value');
             const currentQ = currentQCheck.val();
             
             const nextQ = currentQ + 1;
-            const totalQ = room.questions.length;
+            const totalQ = currentRoom.questions.length;
             
             if (nextQ >= totalQ) {
                 await roomRef.update({ status: 'finished' });
@@ -455,6 +457,8 @@ async function calculateAndShowResults(players) {
 }
 
 function showFeedback(isCorrect) {
+    console.log('showFeedback called, isHost:', isHost, 'mode:', currentRoom?.mode);
+    
     const feedbackEl = document.getElementById('feedback');
     const buttons = document.querySelectorAll('.answer-btn');
 
@@ -468,7 +472,7 @@ function showFeedback(isCorrect) {
 
     document.getElementById('answerProgress').style.display = 'none';
 
-    playerRef.once('value', async snapshot => {
+    playerRef.once('value', snapshot => {
         const playerData = snapshot.val();
         const points = playerData.lastPoints || 0;
         const currentScore = playerData.score || 0;
@@ -482,19 +486,23 @@ function showFeedback(isCorrect) {
         }
         feedbackEl.style.display = 'block';
 
-        // Now show buttons after feedback is displayed
-        const room = (await roomRef.once('value')).val();
-        const nextQ = room.currentQ + 1;
+        // Show buttons - use currentRoom which is already loaded
+        const nextQ = currentRoom.currentQ + 1;
+        console.log('Determining which button to show. NextQ:', nextQ, 'Total:', currentRoom.questions.length);
 
-        if (room.mode === 'host' && isHost) {
-            if (nextQ >= room.questions.length) {
+        if (currentRoom.mode === 'host' && isHost) {
+            if (nextQ >= currentRoom.questions.length) {
+                console.log('Showing results button');
                 document.getElementById('resultsBtn').style.display = 'block';
             } else {
+                console.log('Showing next button');
                 document.getElementById('nextBtn').style.display = 'block';
             }
-        } else if (room.mode === 'host' && !isHost) {
+        } else if (currentRoom.mode === 'host' && !isHost) {
+            console.log('Showing waiting message');
             document.getElementById('waitingMsg').style.display = 'block';
-        } else if (room.mode === 'auto') {
+        } else if (currentRoom.mode === 'auto') {
+            console.log('Auto mode - showing waiting message');
             document.getElementById('waitingMsg').textContent = 'Next question starting soon...';
             document.getElementById('waitingMsg').style.display = 'block';
         }
@@ -503,6 +511,7 @@ function showFeedback(isCorrect) {
 
 // Next button handler (host only)
 document.getElementById('nextBtn')?.addEventListener('click', async () => {
+    console.log('Next button clicked');
     try {
         const snapshot = await roomRef.once('value');
         const room = snapshot.val();
@@ -511,7 +520,7 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
         const nextQ = currentQ + 1;
         const totalQ = room.questions.length;
 
-        console.log('Next button clicked, advancing from Q', currentQ, 'to', nextQ);
+        console.log('Advancing from Q', currentQ, 'to', nextQ);
 
         // Reset results flag for current question
         await roomRef.child(`resultsCalculated/${currentQ}`).remove();
