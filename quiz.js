@@ -386,11 +386,20 @@ async function calculateAndShowResults(players) {
     currentRoom = roomSnap.val();
     const resultFlagRef = roomRef.child(`resultsCalculated/${currentRoom.currentQ}`);
 
-    const flagSnap = await resultFlagRef.once('value');
-    if (flagSnap.exists()) {
-        showFeedback(selectedAnswer === currentQuestion.correct);
-        return;
-    }
+const flagSnap = await resultFlagRef.once('value');
+if (flagSnap.exists()) {
+    // Wait briefly to ensure scoring updates propagate before showing feedback
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const playerSnap = await playerRef.once('value');
+    const playerData = playerSnap.val();
+    const isCorrectNow = playerData?.answer === currentQuestion.correct;
+    showFeedback(isCorrectNow);
+    // Ensure timers/music are stopped even if we hit this early return
+    if (window.currentTimerInterval) clearInterval(window.currentTimerInterval);
+    if (window.autoModeTimerInterval) clearInterval(window.autoModeTimerInterval);
+    if (musicPlayer && currentQuestion.type === 'music') musicPlayer.stop();
+    return;
+}
 
     await resultFlagRef.set(true);
 
@@ -532,19 +541,26 @@ function startLocalCountdownUI(msRemaining) {
         remainingSec -= 1;
         nextCountdownTime.textContent = String(Math.max(0, remainingSec));
         if (remainingSec <= 0) {
+            window.countdownJustFinished = true; // prevent button flash
             clearLocalCountdownUI();
-            // host performs the authoritative advance
             if (isHost) {
                 advanceQuestionAfterCountdown();
             }
         }
+
     }, 1000);
 }
 
 countdownRef.on('value', (snap) => {
     const c = snap.val();
-    if (!c || !c.active) {
+if (!c || !c.active) {
+    // Skip restoring buttons right after a finished countdown
+    if (window.countdownJustFinished) {
+        window.countdownJustFinished = false;
         clearLocalCountdownUI();
+        return;
+    }
+    clearLocalCountdownUI();
         // Redisplay Next button for everyone if results are calculated and we're not finished
         const nextBtn = document.getElementById('nextBtn');
         const resultsBtn = document.getElementById('resultsBtn');
@@ -678,7 +694,25 @@ document.getElementById('nextBtn')?.addEventListener('click', () => {
     requestStartCountdown(3);
 });
 
-// Results button handler (host only)
-document.getElementById('resultsBtn')?.addEventListener('click', async () => {
-    await roomRef.update({ status: 'finished' });
+// Results button handler (everybody) - shared countdown to finish
+document.getElementById('resultsBtn')?.addEventListener('click', () => {
+    requestStartCountdown(3); // same shared countdown behavior
 });
+
+// In countdown completion (inside startLocalCountdownUI)
+if (remainingSec <= 0) {
+    window.countdownJustFinished = true;
+    clearLocalCountdownUI();
+    if (isHost) {
+        const effMode = getEffectiveMode(currentRoom);
+        const nextQ = (currentRoom?.currentQ ?? 0) + 1;
+        const totalQ = currentRoom?.questions?.length ?? 0;
+        if (nextQ >= totalQ) {
+            // finished countdown for results
+            roomRef.update({ status: 'finished' });
+        } else {
+            advanceQuestionAfterCountdown();
+        }
+    }
+}
+
