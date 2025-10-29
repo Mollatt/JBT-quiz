@@ -488,72 +488,141 @@ function showFeedback(isCorrect) {
 
         // Show buttons - use currentRoom which is already loaded
         const nextQ = currentRoom.currentQ + 1;
-        console.log('Determining which button to show. NextQ:', nextQ, 'Total:', currentRoom.questions.length);
+        const totalQuestions = currentRoom.questions.length;
+        console.log('Determining which button to show. NextQ:', nextQ, 'Total:', totalQuestions);
 
-        if (currentRoom.mode === 'host' && isHost) {
-            if (nextQ >= currentRoom.questions.length) {
-                console.log('Showing results button');
-                document.getElementById('resultsBtn').style.display = 'block';
+        if (currentRoom.mode === 'host') {
+            if (nextQ >= totalQuestions) {
+                // Last question: only the host gets the results button, others wait
+                if (isHost) {
+                    console.log('Showing results button (host)');
+                    document.getElementById('resultsBtn').style.display = 'block';
+                } else {
+                    console.log('Showing waiting message (non-host, last question)');
+                    document.getElementById('waitingMsg').style.display = 'block';
+                }
             } else {
-                console.log('Showing next button');
+                // Not the last question: show NEXT to everyone (so any player may start the countdown)
+                console.log('Showing next button to everyone');
                 document.getElementById('nextBtn').style.display = 'block';
             }
-        } else if (currentRoom.mode === 'host' && !isHost) {
-            console.log('Showing waiting message');
-            document.getElementById('waitingMsg').style.display = 'block';
         } else if (currentRoom.mode === 'auto') {
             console.log('Auto mode - showing waiting message');
             document.getElementById('waitingMsg').textContent = 'Next question starting soon...';
             document.getElementById('waitingMsg').style.display = 'block';
         }
+
+
+    });
+}
+// ---------------- Shared countdown (all players) ----------------
+let countdownIntervalId = null;
+
+// Path under the room that stores countdown state for this question
+const countdownRef = roomRef.child('nextCountdown');
+
+/**
+ * Request to start the shared countdown (writes to DB).
+ * If a countdown already exists this will restart it (update endsAt).
+ */
+function requestStartCountdown(seconds = 3) {
+    const endsAt = Date.now() + seconds * 1000;
+    countdownRef.set({ active: true, endsAt, startedBy: playerName }).catch(err => {
+        console.error('Failed to write countdown state:', err);
     });
 }
 
-// Next button handler (host only)
-document.getElementById('nextBtn')?.addEventListener('click', async () => {
-    console.log('Next button clicked');
-    try {
-        const snapshot = await roomRef.once('value');
-        const room = snapshot.val();
-        
-        const currentQ = room.currentQ;
-        const nextQ = currentQ + 1;
-        const totalQ = room.questions.length;
+/** Request to stop (cancel) the shared countdown for everyone */
+function requestStopCountdown() {
+    countdownRef.set({ active: false }).catch(err => {
+        console.error('Failed to cancel countdown state:', err);
+    });
+}
 
-        console.log('Advancing from Q', currentQ, 'to', nextQ);
-
-        // Reset results flag for current question
-        await roomRef.child(`resultsCalculated/${currentQ}`).remove();
-
-        // Reset all players' answered status
-        const players = room.players;
-        const resetUpdates = {};
-        for (const name in players) {
-            resetUpdates[`rooms/${gameCode}/players/${name}/answered`] = false;
-            resetUpdates[`rooms/${gameCode}/players/${name}/answer`] = null;
-            resetUpdates[`rooms/${gameCode}/players/${name}/answerTime`] = null;
-        }
-        await db.ref().update(resetUpdates);
-
-        // Small delay to ensure updates propagate
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Check if we should show scoreboard
-        if (shouldShowScoreboard(nextQ, totalQ)) {
-            await roomRef.update({ 
-                currentQ: nextQ,
-                status: 'scoreboard'
-            });
-        } else {
-            await roomRef.update({ currentQ: nextQ });
-        }
-    } catch (error) {
-        console.error('Error advancing to next question:', error);
-        alert('Error advancing question. Please try again.');
+/** Clear local interval/UI for the countdown */
+function clearLocalCountdownUI() {
+    if (countdownIntervalId) {
+        clearInterval(countdownIntervalId);
+        countdownIntervalId = null;
     }
+    document.getElementById('nextCountdown').style.display = 'none';
+    // ensure nextBtn visibility re-evaluated by re-calling showFeedback? We keep UI simple:
+    // If the question results are still visible show nextBtn again (calculated in showFeedback),
+    // otherwise waitingMsg will appear based on other logic.
+}
+
+/** Start a local countdown UI using ms remaining */
+function startLocalCountdownUI(msRemaining) {
+    clearLocalCountdownUI();
+    const sec = Math.max(0, Math.ceil(msRemaining / 1000));
+    const nextCountdownEl = document.getElementById('nextCountdown');
+    const nextCountdownTime = document.getElementById('nextCountdownTime');
+
+    // Show countdown UI
+    nextCountdownTime.textContent = String(sec);
+    nextCountdownEl.style.display = 'block';
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('resultsBtn').style.display = 'none';
+    document.getElementById('waitingMsg').style.display = 'none';
+
+    let remainingSec = sec;
+    countdownIntervalId = setInterval(() => {
+        remainingSec -= 1;
+        nextCountdownTime.textContent = String(Math.max(0, remainingSec));
+        if (remainingSec <= 0) {
+            clearLocalCountdownUI();
+            // When countdown finishes, let the host perform the actual advance.
+            // Only the host will advance the DB currentQ to ensure a single authority.
+            if (isHost) {
+                // Re-use the same logic as the host Next button: advance the question.
+                // We'll call the same helper used by the old Next handler (advanceQuestion)
+                advanceQuestionAfterCountdown();
+            }
+        }
+    }, 1000);
+}
+
+// Listen for changes to the shared countdown state and update UI for everyone
+countdownRef.on('value', async (snap) => {
+    const c = snap.val();
+    if (!c || !c.active) {
+        clearLocalCountdownUI();
+        // Show the nextBtn again if we are in a state that should show it.
+        // The showFeedback logic already sets nextBtn when appropriate right after results,
+        // so to keep things simple we don't try to recalc here.
+        return;
+    }
+    const msLeft = (c.endsAt || 0) - Date.now();
+    if (msLeft <= 0) {
+        // countdown already reached or expired — clear UI and let host advance
+        clearLocalCountdownUI();
+        if (isHost) {
+            advanceQuestionAfterCountdown();
+        }
+        return;
+    }
+    // Start showing the countdown UI with msLeft
+    startLocalCountdownUI(msLeft);
+});
+
+// Wire the cancel button to stop the shared countdown
+const cancelCountdownBtn = document.getElementById('cancelCountdownBtn');
+if (cancelCountdownBtn) {
+    cancelCountdownBtn.addEventListener('click', () => {
+        requestStopCountdown();
+    });
+}
+
+// ---------------- End shared countdown ----------------
+
+// Next button handler for ALL players: starts/restarts shared countdown for everyone
+document.getElementById('nextBtn')?.addEventListener('click', () => {
+    // Start a 3 second countdown for everyone (restarts if already active)
+    requestStartCountdown(3);
 });
 
 // Results button handler (host only)
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
