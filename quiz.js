@@ -353,7 +353,8 @@ function checkAllAnswered() {
             progressMsg.textContent = `${answeredCount}/${totalPlayers} players answered`;
         }
 
-        if (answeredCount === totalPlayers) {
+       if (answeredCount === totalPlayers) {
+            console.log('[DEBUG] All players answered. Triggering calculateAndShowResults.');
             playersRef.off('value', answerCheckListener);
             answerCheckListener = null;
             await calculateAndShowResults(players);
@@ -370,6 +371,7 @@ async function forceShowResults() {
 }
 
 async function calculateAndShowResults(players) {
+    console.log('[DEBUG] calculateAndShowResults called. players:', Object.keys(players).length);
     if (window.resultsCalculated) {
         showFeedback(selectedAnswer === currentQuestion.correct);
         return;
@@ -432,6 +434,7 @@ async function calculateAndShowResults(players) {
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const isCorrect = selectedAnswer === currentQuestion.correct;
+    console.log('[DEBUG] Calling showFeedback, isCorrect:', isCorrect);
     showFeedback(isCorrect);
     
     if (isHost && currentRoom.mode === 'auto') {
@@ -457,6 +460,7 @@ async function calculateAndShowResults(players) {
 }
 
 function showFeedback(isCorrect) {
+    console.log('[DEBUG] showFeedback triggered. isCorrect:', isCorrect, 'isHost:', isHost, 'mode:', currentRoom?.mode);
     console.log('showFeedback called, isHost:', isHost, 'mode:', currentRoom?.mode);
     
     const feedbackEl = document.getElementById('feedback');
@@ -502,6 +506,7 @@ function showFeedback(isCorrect) {
                     document.getElementById('waitingMsg').style.display = 'block';
                 }
             } else {
+                console.log('[DEBUG] Showing NEXT button now');
                 // Not the last question: show NEXT to everyone (so any player may start the countdown)
                 console.log('Showing next button to everyone');
                 document.getElementById('nextBtn').style.display = 'block';
@@ -625,4 +630,5 @@ document.getElementById('nextBtn')?.addEventListener('click', () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
 
