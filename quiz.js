@@ -177,6 +177,7 @@ function setupAutoMode(room) {
 }
 
 function displayQuestion(question, index) {
+    console.log('[DEBUG] Current room mode:', currentRoom.mode);
     currentQuestion = question;
 
     document.getElementById('currentQ').textContent = index + 1;
@@ -630,5 +631,6 @@ document.getElementById('nextBtn')?.addEventListener('click', () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
 
 
