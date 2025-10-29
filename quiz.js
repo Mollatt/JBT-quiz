@@ -18,6 +18,20 @@ let answerCheckListener = null;
 let musicPlayer = null;
 let currentRoom = null;
 
+// --- Helper for mode normalization ---
+function getEffectiveMode(room) {
+    if (!room || !room.mode) return 'everybody';
+    switch (room.mode) {
+        case 'auto':
+            return 'everybody';
+        case 'host':
+        case 'manual':
+            return 'host';
+        default:
+            return room.mode;
+    }
+}
+
 // Load initial room data
 roomRef.once('value').then(snapshot => {
     const room = snapshot.val();
@@ -32,7 +46,7 @@ roomRef.once('value').then(snapshot => {
     setupQuestionListener(room);
     setupStatusListener();
 
-    if (room.mode === 'auto') {
+    if (getEffectiveMode(room) === 'everybody') {
         setupAutoMode(room);
     }
 });
@@ -62,32 +76,26 @@ function setupQuestionListener(room) {
 
         if (qIndex === -1) return;
 
-        // Check if quiz is finished
         if (qIndex >= room.questions.length) {
             await roomRef.update({ status: 'finished' });
             return;
         }
 
-        // Clear any existing timer
         if (window.currentTimerInterval) {
             clearInterval(window.currentTimerInterval);
             window.currentTimerInterval = null;
         }
 
-        // Reset calculation flag
         window.resultsCalculated = false;
 
-        // Reset state for new question
         hasAnswered = false;
         selectedAnswer = null;
 
-        // Stop previous answer listener if exists
         if (answerCheckListener) {
             playersRef.off('value', answerCheckListener);
             answerCheckListener = null;
         }
 
-        // Clear previous answer and timing data
         await playerRef.update({
             answer: null,
             answerTime: null,
@@ -95,11 +103,9 @@ function setupQuestionListener(room) {
             answered: false
         });
 
-        // Reload room data
         const roomSnap = await roomRef.once('value');
         currentRoom = roomSnap.val();
 
-        // Load and display question
         displayQuestion(currentRoom.questions[qIndex], qIndex);
     });
 }
@@ -177,7 +183,6 @@ function setupAutoMode(room) {
 }
 
 function displayQuestion(question, index) {
-    console.log('[DEBUG] Current room mode:', currentRoom.mode);
     currentQuestion = question;
 
     document.getElementById('currentQ').textContent = index + 1;
@@ -255,7 +260,7 @@ function displayQuestion(question, index) {
         timerDisplay.style.display = 'block';
         const duration = question.duration || 30;
         document.getElementById('timeLeft').textContent = duration;
-    } else if (currentRoom.mode === 'auto') {
+    } else if (getEffectiveMode(currentRoom) === 'everybody') {
         timerDisplay.style.display = 'block';
         startTimerDisplay();
     } else {
@@ -354,8 +359,7 @@ function checkAllAnswered() {
             progressMsg.textContent = `${answeredCount}/${totalPlayers} players answered`;
         }
 
-       if (answeredCount === totalPlayers) {
-            console.log('[DEBUG] All players answered. Triggering calculateAndShowResults.');
+        if (answeredCount === totalPlayers) {
             playersRef.off('value', answerCheckListener);
             answerCheckListener = null;
             await calculateAndShowResults(players);
@@ -372,7 +376,6 @@ async function forceShowResults() {
 }
 
 async function calculateAndShowResults(players) {
-    console.log('[DEBUG] calculateAndShowResults called. players:', Object.keys(players).length);
     if (window.resultsCalculated) {
         showFeedback(selectedAnswer === currentQuestion.correct);
         return;
@@ -435,33 +438,173 @@ async function calculateAndShowResults(players) {
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const isCorrect = selectedAnswer === currentQuestion.correct;
-    console.log('[DEBUG] Calling showFeedback, isCorrect:', isCorrect);
     showFeedback(isCorrect);
-    
-    if (isHost && currentRoom.mode === 'auto') {
-        setTimeout(async () => {
-            const currentQCheck = await roomRef.child('currentQ').once('value');
-            const currentQ = currentQCheck.val();
-            
-            const nextQ = currentQ + 1;
-            const totalQ = currentRoom.questions.length;
-            
-            if (nextQ >= totalQ) {
-                await roomRef.update({ status: 'finished' });
-            } else if (shouldShowScoreboard(nextQ, totalQ)) {
-                await roomRef.update({ 
-                    currentQ: nextQ,
-                    status: 'scoreboard'
-                });
-            } else {
-                await roomRef.update({ currentQ: nextQ });
-            }
-        }, 3000);
+}
+
+// --- Countdown advancement ---
+async function advanceQuestionAfterCountdown() {
+    try {
+        const snapshot = await roomRef.once('value');
+        const room = snapshot.val();
+
+        if (!room) return;
+
+        const currentQ = room.currentQ;
+        const nextQ = currentQ + 1;
+        const totalQ = room.questions.length;
+
+        await roomRef.child(`resultsCalculated/${currentQ}`).remove();
+
+        const players = room.players || {};
+        const resetUpdates = {};
+        for (const name in players) {
+            resetUpdates[`rooms/${gameCode}/players/${name}/answered`] = false;
+            resetUpdates[`rooms/${gameCode}/players/${name}/answer`] = null;
+            resetUpdates[`rooms/${gameCode}/players/${name}/answerTime`] = null;
+        }
+        await db.ref().update(resetUpdates);
+
+        await roomRef.child('nextCountdown').set({ active: false });
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (shouldShowScoreboard(nextQ, totalQ)) {
+            await roomRef.update({
+                currentQ: nextQ,
+                status: 'scoreboard'
+            });
+        } else if (nextQ >= totalQ) {
+            await roomRef.update({ status: 'finished' });
+        } else {
+            await roomRef.update({ currentQ: nextQ });
+        }
+    } catch (error) {
+        console.error('Error advancing to next question:', error);
     }
 }
 
+// --- Shared countdown ---
+let countdownIntervalId = null;
+const countdownRef = roomRef.child('nextCountdown');
+
+function requestStartCountdown(seconds = 3) {
+    const endsAt = Date.now() + seconds * 1000;
+    countdownRef.set({ active: true, endsAt, startedBy: playerName }).catch(err => {
+        console.error('Failed to write countdown state:', err);
+    });
+}
+
+function requestStopCountdown() {
+    countdownRef.set({ active: false }).catch(err => {
+        console.error('Failed to cancel countdown state:', err);
+    });
+}
+
+function clearLocalCountdownUI() {
+    if (countdownIntervalId) {
+        clearInterval(countdownIntervalId);
+        countdownIntervalId = null;
+    }
+    const nextCountdownEl = document.getElementById('nextCountdown');
+    if (nextCountdownEl) nextCountdownEl.style.display = 'none';
+}
+
+function startLocalCountdownUI(msRemaining) {
+    clearLocalCountdownUI();
+    const sec = Math.max(0, Math.ceil(msRemaining / 1000));
+    const nextCountdownEl = document.getElementById('nextCountdown');
+    const nextCountdownTime = document.getElementById('nextCountdownTime');
+
+    if (!nextCountdownEl || !nextCountdownTime) return;
+
+    nextCountdownTime.textContent = String(sec);
+    nextCountdownEl.style.display = 'block';
+    const nextBtnEl = document.getElementById('nextBtn');
+    const resultsBtnEl = document.getElementById('resultsBtn');
+    const waitingMsgEl = document.getElementById('waitingMsg');
+
+    if (nextBtnEl) nextBtnEl.style.display = 'none';
+    if (resultsBtnEl) resultsBtnEl.style.display = 'none';
+    if (waitingMsgEl) waitingMsgEl.style.display = 'none';
+
+    let remainingSec = sec;
+    countdownIntervalId = setInterval(() => {
+        remainingSec -= 1;
+        nextCountdownTime.textContent = String(Math.max(0, remainingSec));
+        if (remainingSec <= 0) {
+            clearLocalCountdownUI();
+            // host performs the authoritative advance
+            if (isHost) {
+                advanceQuestionAfterCountdown();
+            }
+        }
+    }, 1000);
+}
+
+countdownRef.on('value', (snap) => {
+    const c = snap.val();
+    if (!c || !c.active) {
+        clearLocalCountdownUI();
+        // Redisplay Next button for everyone if results are calculated and we're not finished
+        const nextBtn = document.getElementById('nextBtn');
+        const resultsBtn = document.getElementById('resultsBtn');
+        const waitingMsg = document.getElementById('waitingMsg');
+
+        const effMode = getEffectiveMode(currentRoom);
+        const nextQ = (currentRoom?.currentQ ?? 0) + 1;
+        const totalQ = currentRoom?.questions?.length ?? 0;
+
+        // If results are calculated (we are in feedback state), show appropriate button(s)
+        if (window.resultsCalculated) {
+            if (effMode === 'host') {
+                if (nextQ >= totalQ) {
+                    if (isHost) {
+                        if (resultsBtn) resultsBtn.style.display = 'block';
+                    } else {
+                        if (waitingMsg) waitingMsg.style.display = 'block';
+                    }
+                } else {
+                    if (isHost) {
+                        if (nextBtn) nextBtn.style.display = 'block';
+                    } else {
+                        if (waitingMsg) waitingMsg.style.display = 'block';
+                    }
+                }
+            } else {
+                // everybody mode or others: show next to all when not final question
+                if (nextQ >= totalQ) {
+                    if (isHost) {
+                        if (resultsBtn) resultsBtn.style.display = 'block';
+                    } else {
+                        if (waitingMsg) waitingMsg.style.display = 'block';
+                    }
+                } else {
+                    if (nextBtn) nextBtn.style.display = 'block';
+                }
+            }
+        }
+        return;
+    }
+    const msLeft = (c.endsAt || 0) - Date.now();
+    if (msLeft <= 0) {
+        clearLocalCountdownUI();
+        if (isHost) {
+            advanceQuestionAfterCountdown();
+        }
+        return;
+    }
+    startLocalCountdownUI(msLeft);
+});
+
+const cancelCountdownBtn = document.getElementById('cancelCountdownBtn');
+if (cancelCountdownBtn) {
+    cancelCountdownBtn.addEventListener('click', () => {
+        requestStopCountdown();
+    });
+}
+
+// --- Feedback + button logic ---
 function showFeedback(isCorrect) {
-    console.log('[DEBUG] showFeedback triggered. isCorrect:', isCorrect, 'isHost:', isHost, 'mode:', currentRoom?.mode);
     console.log('showFeedback called, isHost:', isHost, 'mode:', currentRoom?.mode);
     
     const feedbackEl = document.getElementById('feedback');
@@ -479,8 +622,8 @@ function showFeedback(isCorrect) {
 
     playerRef.once('value', snapshot => {
         const playerData = snapshot.val();
-        const points = playerData.lastPoints || 0;
-        const currentScore = playerData.score || 0;
+        const points = (playerData && playerData.lastPoints) || 0;
+        const currentScore = (playerData && playerData.score) || 0;
 
         if (isCorrect) {
             feedbackEl.innerHTML = `✅ Correct! <strong>+${points} points</strong><br>Total: ${currentScore}`;
@@ -491,135 +634,43 @@ function showFeedback(isCorrect) {
         }
         feedbackEl.style.display = 'block';
 
-        // Show buttons - use currentRoom which is already loaded
+        // Show buttons based on effective mode
         const nextQ = currentRoom.currentQ + 1;
         const totalQuestions = currentRoom.questions.length;
-        console.log('Determining which button to show. NextQ:', nextQ, 'Total:', totalQuestions);
+        const effMode = getEffectiveMode(currentRoom);
 
-        if (currentRoom.mode !== 'auto') {
+        if (effMode === 'host') {
+            // Host-controlled mode: only host gets the Next/Results button
             if (nextQ >= totalQuestions) {
-                // Last question: only the host gets the results button, others wait
                 if (isHost) {
-                    console.log('Showing results button (host)');
                     document.getElementById('resultsBtn').style.display = 'block';
                 } else {
-                    console.log('Showing waiting message (non-host, last question)');
                     document.getElementById('waitingMsg').style.display = 'block';
                 }
             } else {
-                console.log('[DEBUG] Showing NEXT button now');
-                // Not the last question: show NEXT to everyone (so any player may start the countdown)
-                console.log('Showing next button to everyone');
+                if (isHost) {
+                    document.getElementById('nextBtn').style.display = 'block';
+                } else {
+                    document.getElementById('waitingMsg').style.display = 'block';
+                }
+            }
+        } else {
+            // everybody (auto/legacy) mode: Next shown to everyone (unless final question)
+            if (nextQ >= totalQuestions) {
+                if (isHost) {
+                    document.getElementById('resultsBtn').style.display = 'block';
+                } else {
+                    document.getElementById('waitingMsg').style.display = 'block';
+                }
+            } else {
                 document.getElementById('nextBtn').style.display = 'block';
             }
-        } else if (currentRoom.mode === 'auto') {
-            console.log('Auto mode - showing waiting message');
-            document.getElementById('waitingMsg').textContent = 'Next question starting soon...';
-            document.getElementById('waitingMsg').style.display = 'block';
         }
 
-
+        // mark that results are shown so countdown cancel can restore UI appropriately
+        window.resultsCalculated = true;
     });
 }
-// ---------------- Shared countdown (all players) ----------------
-let countdownIntervalId = null;
-
-// Path under the room that stores countdown state for this question
-const countdownRef = roomRef.child('nextCountdown');
-
-/**
- * Request to start the shared countdown (writes to DB).
- * If a countdown already exists this will restart it (update endsAt).
- */
-function requestStartCountdown(seconds = 3) {
-    const endsAt = Date.now() + seconds * 1000;
-    countdownRef.set({ active: true, endsAt, startedBy: playerName }).catch(err => {
-        console.error('Failed to write countdown state:', err);
-    });
-}
-
-/** Request to stop (cancel) the shared countdown for everyone */
-function requestStopCountdown() {
-    countdownRef.set({ active: false }).catch(err => {
-        console.error('Failed to cancel countdown state:', err);
-    });
-}
-
-/** Clear local interval/UI for the countdown */
-function clearLocalCountdownUI() {
-    if (countdownIntervalId) {
-        clearInterval(countdownIntervalId);
-        countdownIntervalId = null;
-    }
-    document.getElementById('nextCountdown').style.display = 'none';
-    // ensure nextBtn visibility re-evaluated by re-calling showFeedback? We keep UI simple:
-    // If the question results are still visible show nextBtn again (calculated in showFeedback),
-    // otherwise waitingMsg will appear based on other logic.
-}
-
-/** Start a local countdown UI using ms remaining */
-function startLocalCountdownUI(msRemaining) {
-    clearLocalCountdownUI();
-    const sec = Math.max(0, Math.ceil(msRemaining / 1000));
-    const nextCountdownEl = document.getElementById('nextCountdown');
-    const nextCountdownTime = document.getElementById('nextCountdownTime');
-
-    // Show countdown UI
-    nextCountdownTime.textContent = String(sec);
-    nextCountdownEl.style.display = 'block';
-    document.getElementById('nextBtn').style.display = 'none';
-    document.getElementById('resultsBtn').style.display = 'none';
-    document.getElementById('waitingMsg').style.display = 'none';
-
-    let remainingSec = sec;
-    countdownIntervalId = setInterval(() => {
-        remainingSec -= 1;
-        nextCountdownTime.textContent = String(Math.max(0, remainingSec));
-        if (remainingSec <= 0) {
-            clearLocalCountdownUI();
-            // When countdown finishes, let the host perform the actual advance.
-            // Only the host will advance the DB currentQ to ensure a single authority.
-            if (isHost) {
-                // Re-use the same logic as the host Next button: advance the question.
-                // We'll call the same helper used by the old Next handler (advanceQuestion)
-                advanceQuestionAfterCountdown();
-            }
-        }
-    }, 1000);
-}
-
-// Listen for changes to the shared countdown state and update UI for everyone
-countdownRef.on('value', async (snap) => {
-    const c = snap.val();
-    if (!c || !c.active) {
-        clearLocalCountdownUI();
-        // Show the nextBtn again if we are in a state that should show it.
-        // The showFeedback logic already sets nextBtn when appropriate right after results,
-        // so to keep things simple we don't try to recalc here.
-        return;
-    }
-    const msLeft = (c.endsAt || 0) - Date.now();
-    if (msLeft <= 0) {
-        // countdown already reached or expired — clear UI and let host advance
-        clearLocalCountdownUI();
-        if (isHost) {
-            advanceQuestionAfterCountdown();
-        }
-        return;
-    }
-    // Start showing the countdown UI with msLeft
-    startLocalCountdownUI(msLeft);
-});
-
-// Wire the cancel button to stop the shared countdown
-const cancelCountdownBtn = document.getElementById('cancelCountdownBtn');
-if (cancelCountdownBtn) {
-    cancelCountdownBtn.addEventListener('click', () => {
-        requestStopCountdown();
-    });
-}
-
-// ---------------- End shared countdown ----------------
 
 // Next button handler for ALL players: starts/restarts shared countdown for everyone
 document.getElementById('nextBtn')?.addEventListener('click', () => {
@@ -631,7 +682,3 @@ document.getElementById('nextBtn')?.addEventListener('click', () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
-
-
-
-
