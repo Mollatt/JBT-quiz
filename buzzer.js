@@ -29,6 +29,40 @@ roomRef.once('value').then(snapshot => {
 
     document.getElementById('totalQ').textContent = room.questions.length;
     
+    // Check if we're in the middle of a question
+    if (room.currentQ >= 0 && room.currentQ < room.questions.length) {
+        currentQuestion = room.questions[room.currentQ];
+        remainingTime = room.remainingTime || (currentQuestion.duration || 30);
+        
+        // Check if someone has already buzzed
+        if (room.buzzedPlayer) {
+            // Display the question first
+            document.getElementById('currentQ').textContent = room.currentQ + 1;
+            document.getElementById('questionText').textContent = currentQuestion.text;
+            
+            // Show remaining time
+            document.getElementById('timeLeft').textContent = remainingTime;
+            
+            // Then show buzzer state
+            handleBuzzed(room.buzzedPlayer);
+        } else {
+            // Normal question display
+            displayQuestion(currentQuestion, room.currentQ);
+        }
+        
+        // Check pause state
+        if (room.isPaused) {
+            isPaused = true;
+            if (!isHost) {
+                const buzzerBtn = document.getElementById('buzzerBtn');
+                if (buzzerBtn) {
+                    buzzerBtn.disabled = true;
+                    buzzerBtn.style.opacity = '0.5';
+                }
+            }
+        }
+    }
+    
     setupQuestionListener(room);
     setupStatusListener();
     setupBuzzListener();
@@ -238,6 +272,8 @@ function handleBuzzed(buzzedPlayerName) {
     if (questionTimer) {
         clearInterval(questionTimer);
         questionTimer = null;
+        // Save remaining time to database so it persists on refresh
+        roomRef.update({ remainingTime: remainingTime });
     }
     isPaused = true;
 
@@ -271,6 +307,12 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
         // Award points
         const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
         const playerData = playerSnapshot.val();
+        
+        if (!playerData) {
+            console.error('Player data not found for', buzzedPlayerName);
+            return;
+        }
+        
         const newScore = (playerData.score || 0) + 1000;
         const correctCount = (playerData.correctCount || 0) + 1;
         
@@ -293,6 +335,12 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
         // Deduct points
         const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
         const playerData = playerSnapshot.val();
+        
+        if (!playerData) {
+            console.error('Player data not found for', buzzedPlayerName);
+            return;
+        }
+        
         const newScore = (playerData.score || 0) - 250;
         
         await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
