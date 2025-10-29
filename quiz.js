@@ -496,7 +496,7 @@ function showFeedback(isCorrect) {
         const totalQuestions = currentRoom.questions.length;
         console.log('Determining which button to show. NextQ:', nextQ, 'Total:', totalQuestions);
 
-        if (currentRoom.mode === 'host') {
+        if (currentRoom.mode !== 'auto') {
             if (nextQ >= totalQuestions) {
                 // Last question: only the host gets the results button, others wait
                 if (isHost) {
@@ -631,6 +631,7 @@ document.getElementById('nextBtn')?.addEventListener('click', () => {
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     await roomRef.update({ status: 'finished' });
 });
+
 
 
 
