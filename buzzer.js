@@ -358,7 +358,6 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
             score: newScore,
             lastPoints: -250
         });
-    }
 
     // Resume quiz with lockout
     await resumeQuiz(buzzedPlayerName);
