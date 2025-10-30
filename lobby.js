@@ -11,38 +11,7 @@ const roomRef = db.ref(`rooms/${gameCode}`);
 const playersRef = db.ref(`rooms/${gameCode}/players`);
 const playerRef = db.ref(`rooms/${gameCode}/players/${playerName}`);
 
-let currentMode = 'everybody'; // Default to 'everybody' plays
-let totalSongsCount = 0;
-
-// Load total songs count
-async function loadTotalSongsCount() {
-    try {
-        const snapshot = await db.ref('songs').orderByChild('verified').equalTo(true).once('value');
-        const songs = snapshot.val();
-        totalSongsCount = songs ? Object.keys(songs).length : 0;
-        
-        // Update UI with total count
-        updateQuestionCountLabels();
-    } catch (error) {
-        console.error('Error loading songs count:', error);
-        totalSongsCount = 0;
-    }
-}
-
-function updateQuestionCountLabels() {
-    const everybodyLabel = document.querySelector('label[for="everybodyNumQuestions"]');
-    const buzzerLabel = document.querySelector('label[for="buzzerNumQuestions"]');
-    
-    if (everybodyLabel) {
-        everybodyLabel.textContent = `Number of Questions (1-${totalSongsCount}):`;
-    }
-    if (buzzerLabel) {
-        buzzerLabel.textContent = `Number of Questions (1-${totalSongsCount}):`;
-    }
-}
-
-// Load songs count on page load
-loadTotalSongsCount();
+let currentMode = 'everybody';
 
 // Display game code
 document.getElementById('gameCode').textContent = gameCode;
@@ -57,6 +26,38 @@ document.getElementById('toggleGameModeBtn')?.addEventListener('click', () => {
 document.getElementById('toggleParametersBtn')?.addEventListener('click', () => {
     const section = document.getElementById('parametersSection');
     section.style.display = section.style.display === 'none' ? 'block' : 'none';
+});
+
+// Load and populate current parameters from database when page loads
+roomRef.once('value', snapshot => {
+    const room = snapshot.val();
+    if (room && room.gameParams) {
+        const params = room.gameParams;
+        
+        // Standard mode parameters
+        if (params.correctPointsScale) {
+            document.getElementById('firstPlacePoints').value = params.correctPointsScale[0] || 1000;
+            document.getElementById('secondPlacePoints').value = params.correctPointsScale[1] || 800;
+            document.getElementById('thirdPlacePoints').value = params.correctPointsScale[2] || 600;
+        }
+        if (params.autoPlayDuration) {
+            document.getElementById('questionDuration').value = params.autoPlayDuration;
+        }
+        
+        // Buzzer mode parameters
+        if (params.buzzerCorrectPoints !== undefined) {
+            document.getElementById('buzzerCorrectPoints').value = params.buzzerCorrectPoints;
+        }
+        if (params.buzzerWrongPoints !== undefined) {
+            document.getElementById('buzzerWrongPoints').value = params.buzzerWrongPoints;
+        }
+        if (params.buzzerLockoutTime !== undefined) {
+            document.getElementById('buzzerLockoutTime').value = params.buzzerLockoutTime;
+        }
+        if (params.musicDuration !== undefined) {
+            document.getElementById('buzzerMusicDuration').value = params.musicDuration;
+        }
+    }
 });
 
 // Game Mode Selection with Buttons
@@ -121,24 +122,24 @@ roomRef.child('mode').on('value', (snapshot) => {
     
     // Update current mode display
     const modeMap = {
-        'everybody': '🎵 Everybody Plays',
+        'everybody': '🎮 Everybody Plays',
         'buzzer': '🔴 Buzzer Mode'
     };
-    document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Everybody Plays';
+    document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
     
     // Update parameters display
     updateParametersDisplay(mode);
 });
 
 function updateParametersDisplay(mode) {
-    const everybodyParams = document.getElementById('everybodyModeParams');
+    const standardParams = document.getElementById('standardModeParams');
     const buzzerParams = document.getElementById('buzzerModeParams');
     
     if (mode === 'buzzer') {
-        everybodyParams.style.display = 'none';
+        standardParams.style.display = 'none';
         buzzerParams.style.display = 'block';
     } else {
-        everybodyParams.style.display = 'block';
+        standardParams.style.display = 'block';
         buzzerParams.style.display = 'none';
     }
 }
@@ -188,35 +189,22 @@ playersRef.on('value', (snapshot) => {
 
 // Save Parameters
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
-    // Validate at least one category is selected
-    const selectedCategories = getSelectedCategories();
-    if (!selectedCategories || selectedCategories.length === 0) {
-        alert('Please select at least one question category!');
-        return;
-    }
-
     const gameParams = currentMode === 'buzzer' 
         ? {
             buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints').value) || 1000,
             buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints').value) || -250,
             buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime').value) || 5,
-            musicDuration: parseInt(document.getElementById('buzzerMusicDuration').value) || 30,
-            numQuestions: parseInt(document.getElementById('buzzerNumQuestions').value) || 10,
-            releaseYearMin: parseInt(document.getElementById('buzzerReleaseYearMin').value) || null,
-            releaseYearMax: parseInt(document.getElementById('buzzerReleaseYearMax').value) || null,
-            selectedCategories: selectedCategories
+            musicDuration: parseInt(document.getElementById('buzzerMusicDuration').value) || 30
         }
         : {
             correctPointsScale: [
-                parseInt(document.getElementById('everybodyFirstPlacePoints').value) || 1000,
-                parseInt(document.getElementById('everybodySecondPlacePoints').value) || 800,
-                parseInt(document.getElementById('everybodyThirdPlacePoints').value) || 600,
+                parseInt(document.getElementById('firstPlacePoints').value) || 1000,
+                parseInt(document.getElementById('secondPlacePoints').value) || 800,
+                parseInt(document.getElementById('thirdPlacePoints').value) || 600,
                 400
             ],
-            numQuestions: parseInt(document.getElementById('everybodyNumQuestions').value) || 10,
-            releaseYearMin: parseInt(document.getElementById('everybodyReleaseYearMin').value) || null,
-            releaseYearMax: parseInt(document.getElementById('everybodyReleaseYearMax').value) || null,
-            selectedCategories: selectedCategories
+            autoPlayDuration: parseInt(document.getElementById('questionDuration').value) || 30,
+            hostTimerDuration: 60
         };
     
     await roomRef.update({ gameParams });
@@ -225,15 +213,6 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
     // Auto-close parameters section
     document.getElementById('parametersSection').style.display = 'none';
 });
-
-function getSelectedCategories() {
-    const checkboxes = document.querySelectorAll('.category-checkbox:checked');
-    const categories = [];
-    checkboxes.forEach(cb => {
-        categories.push(cb.value);
-    });
-    return categories.length > 0 ? categories : null;
-}
 
 // Listen for game start
 roomRef.child('status').on('value', (snapshot) => {
@@ -279,22 +258,9 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
     btn.textContent = 'Generating questions...';
 
     try {
-        // Get current game parameters
-        const roomSnapshot = await roomRef.once('value');
-        const room = roomSnapshot.val();
-        const gameParams = room.gameParams || {};
-        
-        // Get number of questions (default 10)
-        const numQuestions = gameParams.numQuestions || 10;
-        
         // Generate questions from database
         const generator = new QuestionGenerator();
-        const questions = await generator.generateQuestions(
-            numQuestions,
-            gameParams.selectedCategories,
-            gameParams.releaseYearMin,
-            gameParams.releaseYearMax
-        );
+        const questions = await generator.generateQuestions(10);
 
         if (questions.length === 0) {
             alert('Error: Could not generate questions. Please check that songs have been added to the database.');
@@ -303,11 +269,28 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             return;
         }
 
+        // Get current room to check existing params
+        const roomSnapshot = await roomRef.once('value');
+        const room = roomSnapshot.val();
+        
+        // Use existing gameParams or set defaults
+        // This ensures the displayed values match what's actually used
+        const finalGameParams = room.gameParams || {
+            correctPointsScale: [1000, 800, 600, 400],
+            buzzerCorrectPoints: 1000,
+            buzzerWrongPoints: -250,
+            buzzerLockoutTime: 5,
+            autoPlayDuration: 30,
+            hostTimerDuration: 60,
+            musicDuration: 30
+        };
+
         // Start game with generated questions
         await roomRef.update({
             status: 'playing',
             currentQ: 0,
-            questions: questions
+            questions: questions,
+            gameParams: finalGameParams
         });
 
     } catch (error) {
