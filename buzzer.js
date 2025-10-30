@@ -27,6 +27,14 @@ roomRef.once('value').then(snapshot => {
         return;
     }
 
+    // Check if questions exist
+    if (!room.questions || room.questions.length === 0) {
+        console.error('No questions found in room');
+        alert('Error: No questions found. Returning to lobby.');
+        window.location.href = 'lobby.html';
+        return;
+    }
+
     document.getElementById('totalQ').textContent = room.questions.length;
     
     // Check if we're in the middle of a question
@@ -359,6 +367,7 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
             lastPoints: -250
         });
 
+
     // Resume quiz with lockout
     await resumeQuiz(buzzedPlayerName);
 });
@@ -389,29 +398,34 @@ async function resumeQuiz(lockedOutPlayer) {
 
     // Show buzzer again for non-locked players
     if (!isHost) {
-        if (playerName === lockedOutPlayer) {
-            // This player is locked out
-            isLockedOut = true;
-            document.getElementById('lockoutMsg').style.display = 'block';
-            
-            // Get lockout time from game params
-            const roomSnap = await roomRef.once('value');
-            const room = roomSnap.val();
-            let timeLeft = room.gameParams?.buzzerLockoutTime || 5;
-            document.getElementById('lockoutTime').textContent = timeLeft;
-            
-            lockoutTimer = setInterval(() => {
-                timeLeft--;
+        // If no lockedOutPlayer specified (player left), show buzzer for everyone
+        if (!lockedOutPlayer || playerName === lockedOutPlayer) {
+            // This player is locked out (or was the one who left)
+            if (lockedOutPlayer && playerName === lockedOutPlayer) {
+                isLockedOut = true;
+                document.getElementById('lockoutMsg').style.display = 'block';
+                
+                // Get lockout time from game params
+                const roomSnap = await roomRef.once('value');
+                const room = roomSnap.val();
+                let timeLeft = room.gameParams?.buzzerLockoutTime || 5;
                 document.getElementById('lockoutTime').textContent = timeLeft;
                 
-                if (timeLeft <= 0) {
-                    clearInterval(lockoutTimer);
-                    lockoutTimer = null;
-                    isLockedOut = false;
-                    document.getElementById('lockoutMsg').style.display = 'none';
-                    document.getElementById('buzzerSection').style.display = 'block';
-                }
-            }, 1000);
+                lockoutTimer = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById('lockoutTime').textContent = timeLeft;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(lockoutTimer);
+                        lockoutTimer = null;
+                        isLockedOut = false;
+                        document.getElementById('lockoutMsg').style.display = 'none';
+                        document.getElementById('buzzerSection').style.display = 'block';
+                    }
+                }, 1000);
+            } else {
+                document.getElementById('buzzerSection').style.display = 'block';
+            }
         } else {
             document.getElementById('buzzerSection').style.display = 'block';
         }
