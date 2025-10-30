@@ -303,25 +303,30 @@ function handleBuzzed(buzzedPlayerName) {
 document.getElementById('correctBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
     
-    if (buzzedPlayerName) {
-        // Award points
-        const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
-        const playerData = playerSnapshot.val();
-        
-        if (!playerData) {
-            console.error('Player data not found for', buzzedPlayerName);
-            return;
-        }
-        
-        const newScore = (playerData.score || 0) + 1000;
-        const correctCount = (playerData.correctCount || 0) + 1;
-        
-        await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
-            score: newScore,
-            correctCount: correctCount,
-            lastPoints: 1000
-        });
+    if (!buzzedPlayerName) {
+        console.error('No player has buzzed');
+        return;
     }
+    
+    // Check if player still exists in the room
+    const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
+    const playerData = playerSnapshot.val();
+    
+    if (!playerData) {
+        console.error('Player', buzzedPlayerName, 'has left the game');
+        alert('Player has left the game. Skipping to next question.');
+        await advanceQuestion();
+        return;
+    }
+    
+    const newScore = (playerData.score || 0) + 1000;
+    const correctCount = (playerData.correctCount || 0) + 1;
+    
+    await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
+        score: newScore,
+        correctCount: correctCount,
+        lastPoints: 1000
+    });
 
     // Move to next question
     await advanceQuestion();
@@ -331,17 +336,23 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
 document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
     
-    if (buzzedPlayerName) {
-        // Deduct points
-        const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
-        const playerData = playerSnapshot.val();
-        
-        if (!playerData) {
-            console.error('Player data not found for', buzzedPlayerName);
-            return;
-        }
-        
-        const newScore = (playerData.score || 0) - 250;
+    if (!buzzedPlayerName) {
+        console.error('No player has buzzed');
+        return;
+    }
+    
+    // Check if player still exists in the room
+    const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
+    const playerData = playerSnapshot.val();
+    
+    if (!playerData) {
+        console.error('Player', buzzedPlayerName, 'has left the game');
+        alert('Player has left the game. Resuming quiz.');
+        await resumeQuiz(null); // Pass null since player is gone
+        return;
+    }
+    
+    const newScore = (playerData.score || 0) - 250;
         
         await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
             score: newScore,
