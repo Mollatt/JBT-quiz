@@ -12,12 +12,19 @@ const playersRef = db.ref(`rooms/${gameCode}/players`);
 
 let countdownInterval = null;
 
-// Listen for status changes
+// Listen for status changes - UPDATED TO CHECK MODE
 roomRef.child('status').on('value', (snapshot) => {
     const status = snapshot.val();
     if (status === 'playing') {
-        // Resume quiz
-        window.location.href = 'quiz.html';
+        // Check mode and go to correct page
+        roomRef.child('mode').once('value', modeSnapshot => {
+            const mode = modeSnapshot.val();
+            if (mode === 'buzzer') {
+                window.location.href = 'buzzer.html';
+            } else {
+                window.location.href = 'quiz.html';
+            }
+        });
     } else if (status === 'finished') {
         // Go to final results
         window.location.href = 'results.html';
@@ -188,7 +195,7 @@ function cancelCountdown() {
 }
 
 async function continueQuiz() {
-    // Check if quiz is finished
+    // Check mode and status
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
     
@@ -196,5 +203,6 @@ async function continueQuiz() {
         await roomRef.update({ status: 'finished' });
     } else {
         await roomRef.update({ status: 'playing' });
+        // Will redirect via status listener based on mode
     }
 }
