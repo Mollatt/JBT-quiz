@@ -218,6 +218,9 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
 roomRef.child('status').on('value', (snapshot) => {
     const status = snapshot.val();
     if (status === 'playing') {
+        // Set flag so beforeunload doesn't remove player
+        isStartingGame = true;
+        
         roomRef.child('mode').once('value', modeSnapshot => {
             const mode = modeSnapshot.val();
             if (mode === 'buzzer') {
@@ -308,9 +311,12 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
     const snapshot = await playersRef.once('value');
     const players = snapshot.val();
     
+    // If no players left, delete the entire room
     if (!players || Object.keys(players).length === 0) {
+        console.log('No players left, deleting room');
         await roomRef.remove();
     } else if (isHost) {
+        // Transfer host to first remaining player
         const remainingPlayers = Object.keys(players);
         await db.ref(`rooms/${gameCode}/players/${remainingPlayers[0]}/isHost`).set(true);
         await db.ref(`rooms/${gameCode}/host`).set(remainingPlayers[0]);
@@ -320,7 +326,15 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
     window.location.href = 'index.html';
 });
 
-// Handle page unload
-window.addEventListener('beforeunload', async () => {
+// Handle page unload - only remove player if actually leaving (not starting game)
+let isStartingGame = false;
+
+window.addEventListener('beforeunload', async (e) => {
+    // Don't remove player if they're starting/joining the game
+    if (isStartingGame) {
+        return;
+    }
+    
+    // Only remove if truly leaving
     await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
 });
