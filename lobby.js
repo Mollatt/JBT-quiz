@@ -265,21 +265,33 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
+    // Get number of questions from input (default 10)
+    const numQuestions = parseInt(document.getElementById('numQuestions')?.value) || 10;
+    
+    if (numQuestions < 1 || numQuestions > 100) {
+        alert('Please enter a number of questions between 1 and 100');
+        return;
+    }
+
     // Disable button while generating
     const btn = document.getElementById('startBtn');
     btn.disabled = true;
-    btn.textContent = 'Generating questions...';
+    btn.textContent = `Generating ${numQuestions} questions...`;
 
     try {
         // Generate questions from database
         const generator = new QuestionGenerator();
-        const questions = await generator.generateQuestions(10);
+        const questions = await generator.generateQuestions(numQuestions);
 
         if (questions.length === 0) {
             alert('Error: Could not generate questions. Please check that songs have been added to the database.');
             btn.disabled = false;
             btn.textContent = 'Start Game';
             return;
+        }
+        
+        if (questions.length < numQuestions) {
+            alert(`Only ${questions.length} questions available. Starting with ${questions.length} questions.`);
         }
 
         // Use existing gameParams or set defaults
