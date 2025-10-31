@@ -12,6 +12,37 @@ const playersRef = db.ref(`rooms/${gameCode}/players`);
 
 let countdownInterval = null;
 
+// Listen for countdown state in Firebase
+roomRef.child('scoreboardCountdown').on('value', (snapshot) => {
+    const countdownData = snapshot.val();
+    
+    if (countdownData && countdownData.active) {
+        // Someone started countdown, show it for everyone
+        const continueBtn = document.getElementById('continueBtn');
+        const autoCountdown = document.getElementById('autoCountdown');
+        
+        if (continueBtn) continueBtn.style.display = 'none';
+        if (autoCountdown) autoCountdown.style.display = 'block';
+        
+        // Don't start a new interval if one exists
+        if (!countdownInterval) {
+            startCountdownDisplay(countdownData.timeLeft);
+        }
+    } else {
+        // Countdown cancelled or finished
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+        
+        const continueBtn = document.getElementById('continueBtn');
+        const autoCountdown = document.getElementById('autoCountdown');
+        
+        if (continueBtn) continueBtn.style.display = 'block';
+        if (autoCountdown) autoCountdown.style.display = 'none';
+    }
+});
+
 // Listen for status changes - UPDATED TO CHECK MODE
 roomRef.child('status').on('value', (snapshot) => {
     const status = snapshot.val();
@@ -158,39 +189,48 @@ function setupContinueButton(mode) {
 }
 
 function startCountdown() {
-    const continueBtn = document.getElementById('continueBtn');
-    const autoCountdown = document.getElementById('autoCountdown');
+    // Set countdown state in Firebase so all players see it
+    roomRef.update({
+        scoreboardCountdown: {
+            active: true,
+            timeLeft: 3,
+            startedBy: playerName,
+            startedAt: Date.now()
+        }
+    });
+}
+
+function startCountdownDisplay(initialTime) {
     const countdownEl = document.getElementById('countdownTime');
     
-    // Hide continue button, show countdown
-    continueBtn.style.display = 'none';
-    autoCountdown.style.display = 'block';
+    let timeLeft = initialTime;
+    if (countdownEl) countdownEl.textContent = timeLeft;
     
-    let timeLeft = 3; // Changed to 3 seconds
-    countdownEl.textContent = timeLeft;
-    
-    countdownInterval = setInterval(() => {
+    countdownInterval = setInterval(async () => {
         timeLeft--;
-        countdownEl.textContent = timeLeft;
+        if (countdownEl) countdownEl.textContent = timeLeft;
         
-        if (timeLeft <= 0) {
+        // Update Firebase so all players stay synced
+        if (timeLeft > 0) {
+            await roomRef.child('scoreboardCountdown').update({ timeLeft });
+        } else {
             clearInterval(countdownInterval);
+            countdownInterval = null;
+            // Clear countdown and continue
+            await roomRef.child('scoreboardCountdown').remove();
             continueQuiz();
         }
     }, 1000);
 }
 
 function cancelCountdown() {
+    // Clear countdown in Firebase so all players see it cancelled
+    roomRef.child('scoreboardCountdown').remove();
+    
     if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
     }
-    
-    const continueBtn = document.getElementById('continueBtn');
-    const autoCountdown = document.getElementById('autoCountdown');
-    
-    continueBtn.style.display = 'block';
-    autoCountdown.style.display = 'none';
 }
 
 async function continueQuiz() {
