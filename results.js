@@ -18,14 +18,29 @@ roomRef.child('status').on('value', (snapshot) => {
         window.location.href = 'lobby.html';
     }
 });
-
 // Load and display results
-playersRef.once('value').then(snapshot => {
-    const players = snapshot.val();
-    if (!players) return;
+Promise.all([
+    roomRef.once('value'),
+    playersRef.once('value')
+]).then(([roomSnapshot, playersSnapshot]) => {
+    const room = roomSnapshot.val();
+    const players = playersSnapshot.val();
+    
+    if (!room || !players) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    // Filter out host if in buzzer mode
+    let filteredPlayers = players;
+    if (room.mode === 'buzzer') {
+        filteredPlayers = Object.fromEntries(
+            Object.entries(players).filter(([name, data]) => !data.isHost)
+        );
+    }
 
     // Convert to array and sort by score
-    const leaderboard = Object.entries(players)
+    const leaderboard = Object.entries(filteredPlayers)
         .map(([name, data]) => ({
             name,
             score: data.score || 0,
@@ -34,10 +49,8 @@ playersRef.once('value').then(snapshot => {
         .sort((a, b) => b.score - a.score);
 
     // Get total questions
-    roomRef.child('questions').once('value', qSnapshot => {
-        const totalQuestions = qSnapshot.val().length;
-        displayLeaderboard(leaderboard, totalQuestions);
-    });
+    const totalQuestions = room.questions.length;
+    displayLeaderboard(leaderboard, totalQuestions);
 });
 
 function displayLeaderboard(leaderboard, totalQuestions) {
@@ -141,3 +154,4 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
