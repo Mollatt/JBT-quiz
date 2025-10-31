@@ -255,6 +255,16 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
+    // Get current room to check mode
+    const roomSnapshot = await roomRef.once('value');
+    const room = roomSnapshot.val();
+    
+    // For buzzer mode, require at least 2 players (host + 1 player)
+    if (room.mode === 'buzzer' && Object.keys(players).length < 2) {
+        alert('Buzzer mode requires at least 2 players (host + 1 player)!');
+        return;
+    }
+
     // Disable button while generating
     const btn = document.getElementById('startBtn');
     btn.disabled = true;
@@ -272,10 +282,6 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             return;
         }
 
-        // Get current room to check existing params
-        const roomSnapshot = await roomRef.once('value');
-        const room = roomSnapshot.val();
-        
         // Use existing gameParams or set defaults
         // This ensures the displayed values match what's actually used
         const finalGameParams = room.gameParams || {
