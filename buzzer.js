@@ -289,8 +289,10 @@ function handleBuzzed(buzzedPlayerName) {
     document.getElementById('buzzDisplay').style.display = 'block';
     document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
 
-    // Hide buzzer
-    document.getElementById('buzzerSection').style.display = 'none';
+    // Hide buzzer for all non-host players
+    if (!isHost) {
+        document.getElementById('buzzerSection').style.display = 'none';
+    }
 
     // Hide pause button for host
     if (isHost) {
@@ -366,7 +368,7 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
             score: newScore,
             lastPoints: -250
         });
-
+    
 
     // Resume quiz with lockout
     await resumeQuiz(buzzedPlayerName);
@@ -380,7 +382,7 @@ async function resumeQuiz(lockedOutPlayer) {
         isPaused: false
     });
 
-    // Hide buzz display
+    // Hide buzz display for ALL players
     document.getElementById('buzzDisplay').style.display = 'none';
     document.getElementById('hostControls').style.display = 'none';
 
@@ -398,6 +400,9 @@ async function resumeQuiz(lockedOutPlayer) {
 
     // Show buzzer again for non-locked players
     if (!isHost) {
+        // Hide buzz display first
+        document.getElementById('buzzDisplay').style.display = 'none';
+        
         // If no lockedOutPlayer specified (player left), show buzzer for everyone
         if (!lockedOutPlayer || playerName === lockedOutPlayer) {
             // This player is locked out (or was the one who left)
