@@ -116,6 +116,21 @@
     margin-top: 1rem;
 }
 
+.num-questions-section {
+    margin: 1.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.num-questions-section input:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.8);
+    background: rgba(255, 255, 255, 0.15);
+}
+
 /* Lobby Actions */
 * {
     box-sizing: border-box;
@@ -1360,4 +1375,5 @@ select option {
         font-size: 1.5rem;
     }
 }
+
 
