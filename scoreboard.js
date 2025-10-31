@@ -136,38 +136,25 @@ function setupContinueButton(mode) {
     const autoCountdown = document.getElementById('autoCountdown');
     const cancelBtn = document.getElementById('cancelBtn');
     
-    if (mode === 'host') {
-        // Only host can continue
-        if (isHost) {
-            continueBtn.style.display = 'block';
-            continueBtn.textContent = 'Continue';
-        } else {
-            continueBtn.style.display = 'none';
-            // Show waiting message for non-hosts
-            const waitMsg = document.createElement('div');
-            waitMsg.textContent = 'Waiting for host to continue...';
-            waitMsg.style.marginTop = '1rem';
-            waitMsg.style.opacity = '0.8';
-            document.querySelector('.container').appendChild(waitMsg);
-        }
-    } else {
-        // Auto mode: anyone can continue with countdown
-        continueBtn.style.display = 'block';
-        continueBtn.textContent = 'Continue (5s)';
+    // Always show the continue button
+    continueBtn.style.display = 'block';
+    continueBtn.textContent = 'Continue';
+    
+    // Hide countdown initially
+    if (autoCountdown) {
+        autoCountdown.style.display = 'none';
     }
     
     continueBtn.addEventListener('click', () => {
-        if (mode === 'auto') {
-            startCountdown();
-        } else {
-            // Host mode: continue immediately
-            continueQuiz();
-        }
+        // Start countdown (3 seconds for all modes)
+        startCountdown();
     });
     
-    cancelBtn.addEventListener('click', () => {
-        cancelCountdown();
-    });
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            cancelCountdown();
+        });
+    }
 }
 
 function startCountdown() {
@@ -179,7 +166,7 @@ function startCountdown() {
     continueBtn.style.display = 'none';
     autoCountdown.style.display = 'block';
     
-    let timeLeft = 5;
+    let timeLeft = 3; // Changed to 3 seconds
     countdownEl.textContent = timeLeft;
     
     countdownInterval = setInterval(() => {
