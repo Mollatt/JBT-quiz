@@ -51,8 +51,16 @@ Promise.all([
     document.getElementById('progressQ').textContent = currentQ;
     document.getElementById('progressTotal').textContent = totalQ;
     
+    // Filter out host if in buzzer mode
+    let filteredPlayers = players;
+    if (room.mode === 'buzzer') {
+        filteredPlayers = Object.fromEntries(
+            Object.entries(players).filter(([name, data]) => !data.isHost)
+        );
+    }
+    
     // Sort players by score
-    const leaderboard = Object.entries(players)
+    const leaderboard = Object.entries(filteredPlayers)
         .map(([name, data]) => ({
             name,
             score: data.score || 0
@@ -62,11 +70,15 @@ Promise.all([
     // Display top 3
     displayTopPlayers(leaderboard.slice(0, 3));
     
-    // Show current player's position
-    const playerRank = leaderboard.findIndex(p => p.name === playerName) + 1;
-    const playerScore = leaderboard.find(p => p.name === playerName)?.score || 0;
-    
-    displayYourPosition(playerRank, playerScore, leaderboard.length);
+    // Show current player's position (skip if host in buzzer mode)
+    if (room.mode === 'buzzer' && isHost) {
+        // Don't show position for host in buzzer mode
+        document.getElementById('yourPosition').style.display = 'none';
+    } else {
+        const playerRank = leaderboard.findIndex(p => p.name === playerName) + 1;
+        const playerScore = leaderboard.find(p => p.name === playerName)?.score || 0;
+        displayYourPosition(playerRank, playerScore, leaderboard.length);
+    }
     
     // Setup continue button
     setupContinueButton(room.mode);
