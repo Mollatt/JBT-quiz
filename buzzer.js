@@ -36,28 +36,28 @@ roomRef.once('value').then(snapshot => {
     }
 
     document.getElementById('totalQ').textContent = room.questions.length;
-    
+
     // Check if we're in the middle of a question
     if (room.currentQ >= 0 && room.currentQ < room.questions.length) {
         currentQuestion = room.questions[room.currentQ];
         remainingTime = room.remainingTime || (currentQuestion.duration || 30);
-        
+
         // Check if someone has already buzzed
         if (room.buzzedPlayer) {
             // Display the question first
             document.getElementById('currentQ').textContent = room.currentQ + 1;
             document.getElementById('questionText').textContent = currentQuestion.text;
-            
+
             // Show remaining time
             document.getElementById('timeLeft').textContent = remainingTime;
-            
+
             // Then show buzzer state
             handleBuzzed(room.buzzedPlayer);
         } else {
             // Normal question display
             displayQuestion(currentQuestion, room.currentQ);
         }
-        
+
         // Check pause state
         if (room.isPaused) {
             isPaused = true;
@@ -70,7 +70,7 @@ roomRef.once('value').then(snapshot => {
             }
         }
     }
-    
+
     setupQuestionListener(room);
     setupStatusListener();
     setupBuzzListener();
@@ -124,12 +124,23 @@ function setupStatusListener() {
     });
 }
 
+// Listen for buzz state changes
 function setupBuzzListener() {
     roomRef.child('buzzedPlayer').on('value', (snapshot) => {
         const buzzedPlayer = snapshot.val();
-        
+
+        console.log('Buzz state changed:', buzzedPlayer, 'Current player:', playerName);
+
         if (buzzedPlayer) {
+            // Someone buzzed
             handleBuzzed(buzzedPlayer);
+        } else {
+            // Buzz cleared - hide buzz display for everyone
+            console.log('Buzz cleared, hiding buzz display');
+            const buzzDisplay = document.getElementById('buzzDisplay');
+            if (buzzDisplay) {
+                buzzDisplay.style.display = 'none';
+            }
         }
     });
 }
@@ -137,7 +148,7 @@ function setupBuzzListener() {
 function setupPauseListener() {
     roomRef.child('isPaused').on('value', (snapshot) => {
         const pausedState = snapshot.val();
-        
+
         if (pausedState === true && !isPaused) {
             // Pause music and timer
             if (musicPlayer) {
@@ -148,7 +159,7 @@ function setupPauseListener() {
                 questionTimer = null;
             }
             isPaused = true;
-            
+
             // Gray out buzzer for all non-host players
             if (!isHost) {
                 const buzzerBtn = document.getElementById('buzzerBtn');
@@ -164,7 +175,7 @@ function setupPauseListener() {
                 startQuestionTimer();
             }
             isPaused = false;
-            
+
             // Re-enable buzzer for non-locked players
             if (!isHost && !isLockedOut) {
                 const buzzerBtn = document.getElementById('buzzerBtn');
@@ -219,7 +230,7 @@ function displayQuestion(question, index) {
         musicPlayer.load(question.youtubeUrl).then(() => {
             const duration = question.duration || 30;
             remainingTime = duration;
-            
+
             // Play music with timer sync
             musicPlayer.playClip(question.startTime, duration, (remaining) => {
                 // This callback is handled by the music player, but we'll use our own timer
@@ -241,7 +252,7 @@ function startQuestionTimer() {
     questionTimer = setInterval(() => {
         remainingTime--;
         document.getElementById('timeLeft').textContent = remainingTime;
-        
+
         // Time's up
         if (remainingTime <= 0) {
             clearInterval(questionTimer);
@@ -256,11 +267,11 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
     if (isLockedOut || isHost || isPaused) return;
 
     const buzzTime = Date.now();
-    
+
     // Try to set buzz (race condition handled by Firebase)
     const buzzedPlayerRef = roomRef.child('buzzedPlayer');
     const currentBuzz = await buzzedPlayerRef.once('value');
-    
+
     if (!currentBuzz.val()) {
         // First to buzz!
         await roomRef.update({
@@ -273,6 +284,8 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
 });
 
 function handleBuzzed(buzzedPlayerName) {
+    console.log('handleBuzzed called for:', buzzedPlayerName, 'isHost:', isHost);
+
     // Pause music and timer
     if (musicPlayer) {
         musicPlayer.pause();
@@ -286,12 +299,24 @@ function handleBuzzed(buzzedPlayerName) {
     isPaused = true;
 
     // Show who buzzed
-    document.getElementById('buzzDisplay').style.display = 'block';
-    document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
+    const buzzDisplay = document.getElementById('buzzDisplay');
+    const buzzedPlayerEl = document.getElementById('buzzedPlayer');
+
+    if (buzzDisplay) {
+        buzzDisplay.style.display = 'block';
+        console.log('Showing buzz display');
+    }
+    if (buzzedPlayerEl) {
+        buzzedPlayerEl.textContent = buzzedPlayerName;
+    }
 
     // Hide buzzer for all non-host players
     if (!isHost) {
-        document.getElementById('buzzerSection').style.display = 'none';
+        const buzzerSection = document.getElementById('buzzerSection');
+        if (buzzerSection) {
+            buzzerSection.style.display = 'none';
+            console.log('Hiding buzzer section for player');
+        }
     }
 
     // Hide pause button for host
@@ -312,26 +337,26 @@ function handleBuzzed(buzzedPlayerName) {
 // Host clicks Correct
 document.getElementById('correctBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
-    
+
     if (!buzzedPlayerName) {
         console.error('No player has buzzed');
         return;
     }
-    
+
     // Check if player still exists in the room
     const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
     const playerData = playerSnapshot.val();
-    
+
     if (!playerData) {
         console.error('Player', buzzedPlayerName, 'has left the game');
         alert('Player has left the game. Skipping to next question.');
         await advanceQuestion();
         return;
     }
-    
+
     const newScore = (playerData.score || 0) + 1000;
     const correctCount = (playerData.correctCount || 0) + 1;
-    
+
     await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
         score: newScore,
         correctCount: correctCount,
@@ -345,30 +370,30 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
 // Host clicks Wrong
 document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
-    
+
     if (!buzzedPlayerName) {
         console.error('No player has buzzed');
         return;
     }
-    
+
     // Check if player still exists in the room
     const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
     const playerData = playerSnapshot.val();
-    
+
     if (!playerData) {
         console.error('Player', buzzedPlayerName, 'has left the game');
         alert('Player has left the game. Resuming quiz.');
         await resumeQuiz(null); // Pass null since player is gone
         return;
     }
-    
+
     const newScore = (playerData.score || 0) - 250;
-        
-        await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
-            score: newScore,
-            lastPoints: -250
-        });
-    
+
+    await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
+        score: newScore,
+        lastPoints: -250
+    });
+
 
     // Resume quiz with lockout
     await resumeQuiz(buzzedPlayerName);
@@ -402,24 +427,24 @@ async function resumeQuiz(lockedOutPlayer) {
     if (!isHost) {
         // Hide buzz display first
         document.getElementById('buzzDisplay').style.display = 'none';
-        
+
         // If no lockedOutPlayer specified (player left), show buzzer for everyone
         if (!lockedOutPlayer || playerName === lockedOutPlayer) {
             // This player is locked out (or was the one who left)
             if (lockedOutPlayer && playerName === lockedOutPlayer) {
                 isLockedOut = true;
                 document.getElementById('lockoutMsg').style.display = 'block';
-                
+
                 // Get lockout time from game params
                 const roomSnap = await roomRef.once('value');
                 const room = roomSnap.val();
                 let timeLeft = room.gameParams?.buzzerLockoutTime || 5;
                 document.getElementById('lockoutTime').textContent = timeLeft;
-                
+
                 lockoutTimer = setInterval(() => {
                     timeLeft--;
                     document.getElementById('lockoutTime').textContent = timeLeft;
-                    
+
                     if (timeLeft <= 0) {
                         clearInterval(lockoutTimer);
                         lockoutTimer = null;
@@ -466,7 +491,7 @@ function handleTimeUp() {
         roomRef.once('value').then(snapshot => {
             const roomData = snapshot.val();
             const nextQ = roomData.currentQ + 1;
-            
+
             if (nextQ >= roomData.questions.length) {
                 document.getElementById('resultsBtn').style.display = 'block';
             } else {
@@ -479,14 +504,14 @@ function handleTimeUp() {
 async function advanceQuestion() {
     const snapshot = await roomRef.once('value');
     const room = snapshot.val();
-    
+
     const nextQ = room.currentQ + 1;
     const totalQ = room.questions.length;
-    
+
     if (nextQ >= totalQ) {
         await roomRef.update({ status: 'finished' });
     } else if (shouldShowScoreboard(nextQ, totalQ)) {
-        await roomRef.update({ 
+        await roomRef.update({
             currentQ: nextQ,
             status: 'scoreboard'
         });
@@ -529,7 +554,7 @@ document.getElementById('resultsBtn')?.addEventListener('click', async () => {
 document.getElementById('pauseBtn')?.addEventListener('click', async () => {
     const currentPauseState = (await roomRef.child('isPaused').once('value')).val();
     const pauseBtn = document.getElementById('pauseBtn');
-    
+
     if (currentPauseState) {
         // Currently paused, so resume
         await roomRef.update({ isPaused: false });
@@ -548,7 +573,7 @@ document.getElementById('pauseBtn')?.addEventListener('click', async () => {
 // Skip button (host only) - advances to next question without scoring
 document.getElementById('skipBtn')?.addEventListener('click', async () => {
     if (!isHost) return;
-    
+
     if (confirm('Skip this question without scoring?')) {
         await advanceQuestion();
     }
