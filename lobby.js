@@ -34,28 +34,55 @@ roomRef.once('value', snapshot => {
     if (room && room.gameParams) {
         const params = room.gameParams;
         
+        // Load number of questions
+        if (params.numQuestions) {
+            const numQuestionsInput = document.getElementById('numQuestions');
+            if (numQuestionsInput) {
+                numQuestionsInput.value = params.numQuestions;
+            }
+        }
+        
         // Standard mode parameters
         if (params.correctPointsScale) {
-            document.getElementById('firstPlacePoints').value = params.correctPointsScale[0] || 1000;
-            document.getElementById('secondPlacePoints').value = params.correctPointsScale[1] || 800;
-            document.getElementById('thirdPlacePoints').value = params.correctPointsScale[2] || 600;
+            const firstPlace = document.getElementById('firstPlacePoints');
+            const secondPlace = document.getElementById('secondPlacePoints');
+            const thirdPlace = document.getElementById('thirdPlacePoints');
+            
+            if (firstPlace) firstPlace.value = params.correctPointsScale[0] || 1000;
+            if (secondPlace) secondPlace.value = params.correctPointsScale[1] || 800;
+            if (thirdPlace) thirdPlace.value = params.correctPointsScale[2] || 600;
         }
         if (params.autoPlayDuration) {
-            document.getElementById('questionDuration').value = params.autoPlayDuration;
+            const questionDuration = document.getElementById('questionDuration');
+            if (questionDuration) {
+                questionDuration.value = params.autoPlayDuration;
+            }
         }
         
         // Buzzer mode parameters
         if (params.buzzerCorrectPoints !== undefined) {
-            document.getElementById('buzzerCorrectPoints').value = params.buzzerCorrectPoints;
+            const buzzerCorrect = document.getElementById('buzzerCorrectPoints');
+            if (buzzerCorrect) {
+                buzzerCorrect.value = params.buzzerCorrectPoints;
+            }
         }
         if (params.buzzerWrongPoints !== undefined) {
-            document.getElementById('buzzerWrongPoints').value = params.buzzerWrongPoints;
+            const buzzerWrong = document.getElementById('buzzerWrongPoints');
+            if (buzzerWrong) {
+                buzzerWrong.value = params.buzzerWrongPoints;
+            }
         }
         if (params.buzzerLockoutTime !== undefined) {
-            document.getElementById('buzzerLockoutTime').value = params.buzzerLockoutTime;
+            const buzzerLockout = document.getElementById('buzzerLockoutTime');
+            if (buzzerLockout) {
+                buzzerLockout.value = params.buzzerLockoutTime;
+            }
         }
         if (params.musicDuration !== undefined) {
-            document.getElementById('buzzerMusicDuration').value = params.musicDuration;
+            const buzzerMusicDuration = document.getElementById('buzzerMusicDuration');
+            if (buzzerMusicDuration) {
+                buzzerMusicDuration.value = params.musicDuration;
+            }
         }
     }
 });
@@ -135,6 +162,12 @@ function updateParametersDisplay(mode) {
     const standardParams = document.getElementById('standardModeParams');
     const buzzerParams = document.getElementById('buzzerModeParams');
     
+    // Check if elements exist before trying to modify
+    if (!standardParams || !buzzerParams) {
+        console.warn('Parameter sections not found in DOM');
+        return;
+    }
+    
     if (mode === 'buzzer') {
         standardParams.style.display = 'none';
         buzzerParams.style.display = 'block';
@@ -187,31 +220,39 @@ playersRef.on('value', (snapshot) => {
     }
 });
 
-// Save Parameters
+// Save Parameters - NOW SAVES numQuestions TOO
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
+    // Get number of questions
+    const numQuestions = parseInt(document.getElementById('numQuestions')?.value) || 10;
+    
     const gameParams = currentMode === 'buzzer' 
         ? {
-            buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints').value) || 1000,
-            buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints').value) || -250,
-            buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime').value) || 5,
-            musicDuration: parseInt(document.getElementById('buzzerMusicDuration').value) || 30
+            buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints')?.value) || 1000,
+            buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints')?.value) || -250,
+            buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime')?.value) || 5,
+            musicDuration: parseInt(document.getElementById('buzzerMusicDuration')?.value) || 30,
+            numQuestions: numQuestions
         }
         : {
             correctPointsScale: [
-                parseInt(document.getElementById('firstPlacePoints').value) || 1000,
-                parseInt(document.getElementById('secondPlacePoints').value) || 800,
-                parseInt(document.getElementById('thirdPlacePoints').value) || 600,
+                parseInt(document.getElementById('firstPlacePoints')?.value) || 1000,
+                parseInt(document.getElementById('secondPlacePoints')?.value) || 800,
+                parseInt(document.getElementById('thirdPlacePoints')?.value) || 600,
                 400
             ],
-            autoPlayDuration: parseInt(document.getElementById('questionDuration').value) || 30,
-            hostTimerDuration: 60
+            autoPlayDuration: parseInt(document.getElementById('questionDuration')?.value) || 30,
+            hostTimerDuration: 60,
+            numQuestions: numQuestions
         };
     
     await roomRef.update({ gameParams });
     alert('Parameters saved!');
     
     // Auto-close parameters section
-    document.getElementById('parametersSection').style.display = 'none';
+    const paramsSection = document.getElementById('parametersSection');
+    if (paramsSection) {
+        paramsSection.style.display = 'none';
+    }
 });
 
 // Listen for game start
@@ -265,8 +306,8 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
-    // Get number of questions from input (default 10)
-    const numQuestions = parseInt(document.getElementById('numQuestions')?.value) || 10;
+    // Get number of questions - check saved params first, then input field
+    let numQuestions = room.gameParams?.numQuestions || parseInt(document.getElementById('numQuestions')?.value) || 10;
     
     if (numQuestions < 1 || numQuestions > 100) {
         alert('Please enter a number of questions between 1 and 100');
