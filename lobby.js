@@ -42,38 +42,6 @@ roomRef.once('value', snapshot => {
             }
         }
         
-        // Load selected question categories - map back to YOUR values
-        if (params.selectedCategories && Array.isArray(params.selectedCategories)) {
-            // Reverse map from q-game to game, etc
-            const reverseMap = {
-                'q-game': 'game',
-                'q-series': 'series',
-                'q-artist': 'composer',
-                'q-developer': 'developer',
-                'q-title': 'title',
-                'q-area': 'location',
-                'q-boss': 'boss',
-                'q-year': 'year'
-            };
-            
-            const yourCategoryValues = params.selectedCategories.map(cat => reverseMap[cat] || cat);
-            
-            console.log('Loading saved categories:', yourCategoryValues);
-            
-            // First uncheck all using YOUR class name
-            document.querySelectorAll('.category-checkbox').forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            
-            // Then check only the saved ones
-            yourCategoryValues.forEach(categoryValue => {
-                const checkbox = document.querySelector(`.category-checkbox[value="${categoryValue}"]`);
-                if (checkbox) {
-                    checkbox.checked = true;
-                }
-            });
-        }
-        
         // Standard mode parameters
         if (params.correctPointsScale) {
             const firstPlace = document.getElementById('firstPlacePoints');
@@ -252,35 +220,10 @@ playersRef.on('value', (snapshot) => {
     }
 });
 
-// Save Parameters - Works with YOUR existing category checkboxes
+// Save Parameters - NOW SAVES numQuestions TOO
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
     // Get number of questions
     const numQuestions = parseInt(document.getElementById('numQuestions')?.value) || 10;
-    
-    // Get selected question categories using YOUR existing class name
-    const categoryCheckboxes = document.querySelectorAll('.category-checkbox:checked');
-    const selectedCategories = Array.from(categoryCheckboxes).map(checkbox => {
-        // Map YOUR values to question generator IDs
-        const valueMap = {
-            'game': 'q-game',
-            'series': 'q-series',
-            'composer': 'q-artist',
-            'developer': 'q-developer',
-            'title': 'q-title',
-            'location': 'q-area',
-            'boss': 'q-boss',
-            'year': 'q-year'
-        };
-        return valueMap[checkbox.value] || checkbox.value;
-    });
-    
-    // Require at least one category
-    if (selectedCategories.length === 0) {
-        alert('Please select at least one question category!');
-        return;
-    }
-    
-    console.log('Saving categories:', selectedCategories);
     
     const gameParams = currentMode === 'buzzer' 
         ? {
@@ -288,8 +231,7 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints')?.value) || -250,
             buzzerLockoutTime: parseInt(document.getElementById('buzzerLockoutTime')?.value) || 5,
             musicDuration: parseInt(document.getElementById('buzzerMusicDuration')?.value) || 30,
-            numQuestions: numQuestions,
-            selectedCategories: selectedCategories
+            numQuestions: numQuestions
         }
         : {
             correctPointsScale: [
@@ -300,8 +242,7 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             ],
             autoPlayDuration: parseInt(document.getElementById('questionDuration')?.value) || 30,
             hostTimerDuration: 60,
-            numQuestions: numQuestions,
-            selectedCategories: selectedCategories
+            numQuestions: numQuestions
         };
     
     await roomRef.update({ gameParams });
@@ -381,11 +322,7 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
     try {
         // Generate questions from database
         const generator = new QuestionGenerator();
-        
-        // Get selected question categories if any
-        const selectedCategories = room.gameParams?.selectedCategories || null;
-        
-        const questions = await generator.generateQuestions(numQuestions, selectedCategories);
+        const questions = await generator.generateQuestions(numQuestions);
 
         if (questions.length === 0) {
             alert('Error: Could not generate questions. Please check that songs have been added to the database.');
