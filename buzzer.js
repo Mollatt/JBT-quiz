@@ -128,25 +128,19 @@ function setupStatusListener() {
 function setupBuzzListener() {
     roomRef.child('buzzedPlayer').on('value', (snapshot) => {
         const buzzedPlayer = snapshot.val();
-
-        console.log('Buzz state changed:', buzzedPlayer, 'Current player:', playerName);
-
+        
         if (buzzedPlayer) {
-            // Someone buzzed
             handleBuzzed(buzzedPlayer);
         } else {
-            // Buzz cleared - hide buzz display for everyone
-            console.log('Buzz cleared, hiding buzz display');
-            const buzzDisplay = document.getElementById('buzzDisplay');
-            if (buzzDisplay) {
-                buzzDisplay.style.display = 'none';
-            }
-
-            // For non-host players, check if they should see buzzer or lockout
-            if (!isHost) {
-                console.log('Non-host: checking if should show buzzer');
-                // Don't show buzzer immediately - wait for resumeQuiz to handle it
-                // This prevents race condition with lockout logic
+            // Buzz was cleared - check if we should show buzzer again
+            if (!isHost && !isLockedOut) {
+                document.getElementById('buzzDisplay').style.display = 'none';
+                document.getElementById('buzzerSection').style.display = 'block';
+                
+                // Resume music if applicable
+                if (musicPlayer && currentQuestion && currentQuestion.type === 'music') {
+                    musicPlayer.play();
+                }
             }
         }
     });
@@ -376,42 +370,62 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
 
 // Host clicks Wrong
 document.getElementById('wrongBtn')?.addEventListener('click', async () => {
-    console.log('Wrong button clicked');
-    
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
-    console.log('Buzzed player:', buzzedPlayerName);
     
-    if (!buzzedPlayerName) {
-        console.error('No player has buzzed');
-        return;
+    if (buzzedPlayerName) {
+        // Deduct points
+        const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
+        const playerData = playerSnapshot.val();
+        const newScore = (playerData.score || 0) - 250;
+        
+        await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
+            score: newScore,
+            lastPoints: -250
+        });
+        
+        // Start lockout for this specific player
+        await startPlayerLockout(buzzedPlayerName);
     }
-    
-    // Check if player still exists in the room
-    const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
-    const playerData = playerSnapshot.val();
-    
-    if (!playerData) {
-        console.error('Player', buzzedPlayerName, 'has left the game');
-        alert('Player has left the game. Resuming quiz.');
-        await resumeQuiz(null); // Pass null since player is gone
-        return;
-    }
-    
-    console.log('Deducting points from', buzzedPlayerName);
-    
-    const newScore = (playerData.score || 0) - 250;
-    
-    await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
-        score: newScore,
-        lastPoints: -250
-    });
-
-    console.log('Points deducted, calling resumeQuiz');
-
-    // Resume quiz with lockout
-    await resumeQuiz(buzzedPlayerName);
 });
 
+async function startPlayerLockout(lockedPlayerName) {
+    // For the locked-out player, trigger their lockout
+    if (playerName === lockedPlayerName) {
+        isLockedOut = true;
+        document.getElementById('lockoutMsg').style.display = 'block';
+        document.getElementById('buzzerSection').style.display = 'none';
+        
+        let timeLeft = 5;
+        document.getElementById('lockoutTime').textContent = timeLeft;
+        
+        if (lockoutTimer) {
+            clearInterval(lockoutTimer);
+        }
+        
+        lockoutTimer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('lockoutTime').textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(lockoutTimer);
+                lockoutTimer = null;
+                isLockedOut = false;
+                document.getElementById('lockoutMsg').style.display = 'none';
+                // Buzzer will reappear when buzz state is cleared
+            }
+        }, 1000);
+    }
+    
+    // Clear buzz state (this will trigger setupBuzzListener for all players)
+    await roomRef.update({
+        buzzedPlayer: null,
+        buzzerLocked: false
+    });
+    
+    // Hide host controls
+    document.getElementById('buzzDisplay').style.display = 'none';
+    document.getElementById('hostControls').style.display = 'none';
+}
 
 async function resumeQuiz(lockedOutPlayer) {
     // Reset buzz state but keep paused false to resume
