@@ -1228,7 +1228,6 @@ button:active {
 #everybodyReleaseYearMax,
 #buzzerReleaseYearMin,
 #buzzerReleaseYearMax {
-    position: relative;
     padding: 0.6rem;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
@@ -1244,6 +1243,10 @@ button:active {
     outline: none;
     border-color: rgba(76, 175, 80, 0.8);
     background: rgba(255, 255, 255, 0.15);
+}
+
+#buzzerSection {
+    position: relative;
 }
 
 /* Admin Panel Select Styling */
