@@ -132,21 +132,18 @@ function setupBuzzListener() {
         if (buzzedPlayer) {
             handleBuzzed(buzzedPlayer);
         } else {
-            // Buzz was cleared - check if we should show buzzer again
+            // Buzz was cleared - let the pause listener handle resuming
             document.getElementById('buzzDisplay').style.display = 'none';
             document.getElementById('hostControls').style.display = 'none';
 
+            // Show buzzer section for non-host, non-locked players
+            // (pause listener will handle enabling/disabling)
             if (!isHost && !isLockedOut) {
                 document.getElementById('buzzerSection').style.display = 'block';
             }
 
             if (isHost) {
                 document.getElementById('hostButtonsTop').style.display = 'block';
-            }
-
-            // Resume music if applicable
-            if (musicPlayer && currentQuestion && currentQuestion.type === 'music') {
-                musicPlayer.play();
             }
         }
     });
@@ -294,24 +291,47 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
 });
 
 function handleBuzzed(buzzedPlayerName) {
-    // Pause music
+    console.log('handleBuzzed called for:', buzzedPlayerName, 'isHost:', isHost);
+    // Pause music and timer
     if (musicPlayer) {
         musicPlayer.pause();
     }
-
+    if (questionTimer) {
+        clearInterval(questionTimer);
+        questionTimer = null;
+        // Save remaining time to database so it persists on refresh
+        roomRef.update({ remainingTime: remainingTime });
+    }
+    isPaused = true;
     // Show who buzzed
-    document.getElementById('buzzDisplay').style.display = 'block';
-    document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
-
-    // Hide buzzer
-    document.getElementById('buzzerSection').style.display = 'none';
-
+    const buzzDisplay = document.getElementById('buzzDisplay');
+    const buzzedPlayerEl = document.getElementById('buzzedPlayer');
+    if (buzzDisplay) {
+        buzzDisplay.style.display = 'block';
+        console.log('Showing buzz display');
+    }
+    if (buzzedPlayerEl) {
+        buzzedPlayerEl.textContent = buzzedPlayerName;
+    }
+    // Hide buzzer for all non-host players
+    if (!isHost) {
+        const buzzerSection = document.getElementById('buzzerSection');
+        if (buzzerSection) {
+            buzzerSection.style.display = 'none';
+            console.log('Hiding buzzer section for player');
+        }
+    }
+    // Hide pause button for host
+    if (isHost) {
+        const hostButtons = document.getElementById('hostButtonsTop');
+        if (hostButtons) {
+            hostButtons.style.display = 'none';
+        }
+    }
     // Show host controls
     if (isHost) {
         document.getElementById('hostControls').style.display = 'block';
         document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
-        // Hide the pause/skip buttons while judging
-        document.getElementById('hostButtonsTop').style.display = 'none';
     }
 }
 
@@ -369,10 +389,11 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
 });
 
 async function startPlayerLockout(lockedPlayerName) {
-    // Clear buzz state first (this will trigger setupBuzzListener for all players)
+    // Clear buzz state first
     await roomRef.update({
         buzzedPlayer: null,
-        buzzerLocked: false
+        buzzerLocked: false,
+        isPaused: false  // This will trigger the pause listener to resume
     });
 
     // Hide buzz display for everyone
@@ -382,12 +403,13 @@ async function startPlayerLockout(lockedPlayerName) {
     // Show host control buttons again
     if (isHost) {
         document.getElementById('hostButtonsTop').style.display = 'block';
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (pauseBtn) {
+            pauseBtn.textContent = '⏸️ Pause';
+        }
     }
 
-    // Resume music
-    if (musicPlayer && currentQuestion && currentQuestion.type === 'music') {
-        musicPlayer.play();
-    }
+    // The pause listener will handle resuming music and timer via isPaused: false
 
     // For the locked-out player ONLY, trigger their lockout
     if (playerName === lockedPlayerName && !isHost) {
@@ -421,8 +443,11 @@ async function startPlayerLockout(lockedPlayerName) {
                 lockoutTimer = null;
                 isLockedOut = false;
                 lockoutMsg.style.display = 'none';
-                buzzerBtn.disabled = false;
-                buzzerBtn.style.opacity = '1';
+                // Only re-enable if not paused
+                if (!isPaused) {
+                    buzzerBtn.disabled = false;
+                    buzzerBtn.style.opacity = '1';
+                }
             }
         }, 1000);
     }
