@@ -153,10 +153,10 @@ function setupPauseListener() {
     roomRef.child('isPaused').on('value', (snapshot) => {
         const pausedState = snapshot.val();
 
-        if (pausedState === true && !isPaused) {
-            // Pause music and timer
-            if (musicPlayer) {
-                musicPlayer.pause();
+        if (pausedState === true) {
+            // Pause music and timer (always perform)
+            if (musicPlayer && typeof musicPlayer.pause === 'function') {
+                try { musicPlayer.pause(); } catch (e) { console.warn('musicPlayer.pause failed', e); }
             }
             if (questionTimer) {
                 clearInterval(questionTimer);
@@ -172,12 +172,22 @@ function setupPauseListener() {
                     buzzerBtn.style.opacity = '0.5';
                 }
             }
-        } else if (pausedState === false && isPaused) {
-            // Resume music and timer
+        } else { // pausedState === false (resume) — don't depend on local isPaused
+            // Resume music and timer only if needed
             if (musicPlayer && currentQuestion && currentQuestion.type === 'music') {
-                musicPlayer.play();
-                startQuestionTimer();
+                try {
+                    // Try to play (some players may auto-resume; that's ok)
+                    musicPlayer.play();
+                } catch (e) {
+                    console.warn('musicPlayer.play failed', e);
+                }
+
+                // Start timer only if there isn't already one running
+                if (!questionTimer) {
+                    startQuestionTimer();
+                }
             }
+
             isPaused = false;
 
             // Re-enable buzzer for non-locked players
@@ -191,6 +201,7 @@ function setupPauseListener() {
         }
     });
 }
+
 
 function displayQuestion(question, index) {
     currentQuestion = question;
@@ -434,7 +445,7 @@ async function startPlayerLockout(lockedPlayerName) {
             clearInterval(lockoutTimer);
         }
 
-        lockoutTimer = setInterval(() => {
+        lockoutTimer = setInterval(async () => {
             timeLeft--;
             document.getElementById('lockoutTime').textContent = timeLeft;
 
@@ -443,13 +454,48 @@ async function startPlayerLockout(lockedPlayerName) {
                 lockoutTimer = null;
                 isLockedOut = false;
                 lockoutMsg.style.display = 'none';
-                // Only re-enable if not paused
-                if (!isPaused) {
-                    buzzerBtn.disabled = false;
-                    buzzerBtn.style.opacity = '1';
+
+                // Check authoritative pause state from DB before re-enabling
+                try {
+                    const snap = await roomRef.child('isPaused').once('value');
+                    const authoritativePaused = !!snap.val();
+
+                    const buzzerBtn = document.getElementById('buzzerBtn');
+                    if (buzzerBtn) {
+                        // If the room is not paused, enable now; otherwise leave enabling to pause listener
+                        if (!authoritativePaused) {
+                            buzzerBtn.disabled = false;
+                            buzzerBtn.style.opacity = '1';
+                        } else {
+                            // If room still paused, keep buzzer disabled and rely on the pause listener to re-enable
+                            buzzerBtn.disabled = true;
+                            buzzerBtn.style.opacity = '0.5';
+                        }
+                    }
+
+                    // Also ensure the buzzerSection visibility is correct
+                    if (document.getElementById('buzzerSection')) {
+                        if (!authoritativePaused) {
+                            document.getElementById('buzzerSection').style.display = 'block';
+                        } else {
+                            document.getElementById('buzzerSection').style.display = 'none';
+                        }
+                    }
+                } catch (e) {
+                    // If DB check fails for any reason, fall back to enabling the buzzer
+                    console.warn('Failed to read isPaused on lockout end, enabling buzzer as fallback', e);
+                    const buzzerBtn = document.getElementById('buzzerBtn');
+                    if (buzzerBtn) {
+                        buzzerBtn.disabled = false;
+                        buzzerBtn.style.opacity = '1';
+                    }
+                    if (document.getElementById('buzzerSection')) {
+                        document.getElementById('buzzerSection').style.display = 'block';
+                    }
                 }
             }
         }, 1000);
+
     }
 }
 
