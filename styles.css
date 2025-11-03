@@ -953,6 +953,7 @@ button:active {
 
 
 .buzzer-container {
+    position: relative;
     max-width: 500px;
 }
 
@@ -998,10 +999,12 @@ button:active {
 }
 
 @keyframes pulse {
+
     0%,
     100% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.1);
     }
@@ -1016,13 +1019,17 @@ button:active {
 
 .lockout-msg {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     background: rgba(255, 107, 107, 0.95);
     border: 3px solid rgba(255, 107, 107, 1);
-    padding: 1.5rem;
-    border-radius: 12px;
+    border-radius: 50%;
     font-size: 1.2rem;
     font-weight: 700;
     z-index: 10;
@@ -1048,10 +1055,12 @@ button:active {
 }
 
 @keyframes flash {
+
     0%,
     100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.5;
     }
@@ -1381,6 +1390,3 @@ select option {
         font-size: 1.5rem;
     }
 }
-
-
-
