@@ -40,18 +40,36 @@ roomRef.once('value').then(async snapshot => {
     // Check if we're in the middle of a question
     if (room.currentQ >= 0 && room.currentQ < room.questions.length) {
         currentQuestion = room.questions[room.currentQ];
-        remainingTime = room.remainingTime || (currentQuestion.duration || 30);
 
+        const duration = currentQuestion.duration || 30;
         const isPausedAtLoad = !!room.isPaused;
+        const questionStartTime = room.questionStartTime || null;
+        const roomRemaining = room.remainingTime || duration;
 
+        let elapsed = 0;
+        if (questionStartTime && !isPausedAtLoad) {
+            elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
+        }
+
+        // Calculate remaining time and playback start position
+        const effectiveRemaining = Math.max(roomRemaining - elapsed, 0);
+        const playbackStartAt = (currentQuestion.startTime || 0) + elapsed;
+
+        // Update global remaining time tracker
+        remainingTime = effectiveRemaining;
+
+        // Determine playback behavior
         if (room.buzzedPlayer) {
             handleBuzzed(room.buzzedPlayer);
         } else {
-            // Only auto-play if not paused
-            displayQuestion(currentQuestion, room.currentQ, { autoPlay: !isPausedAtLoad });
+            displayQuestion(currentQuestion, room.currentQ, {
+                autoPlay: !isPausedAtLoad,
+                startAt: playbackStartAt,
+                remainingTime: effectiveRemaining
+            });
         }
 
-        // Update local pause flag
+        // Update pause logic
         isPaused = isPausedAtLoad;
 
         if (isPausedAtLoad) {
@@ -69,6 +87,7 @@ roomRef.once('value').then(async snapshot => {
             }
         }
     }
+
 
 
     setupQuestionListener(room);
@@ -314,23 +333,21 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
     }
 
     if (question.type === 'music' && question.youtubeUrl && opts.autoPlay) {
-        musicPlayer.load(question.youtubeUrl).then(async () => {
-            const duration = question.duration || 30;
+        musicPlayer.load(question.youtubeUrl).then(() => {
+            const duration = opts.remainingTime || question.duration || 30;
             remainingTime = duration;
-            await roomRef.child('remainingTime').set(duration);
-            // Play music with timer sync
+
             if (opts.autoPlay && !isPaused) {
-                musicPlayer.playClip(question.startTime, duration, (remaining) => {
-                    // This callback is handled by the music player, but we'll use our own timer
-                });
+                const startAt = opts.startAt || question.startTime || 0;
+                musicPlayer.playClip(startAt, duration, () => { });
             }
 
-            // Start our own timer
-            startQuestionTimer();
+            startQuestionTimer(duration);
         }).catch(error => {
             console.error('Failed to load music:', error);
         });
     }
+
 }
 
 let syncTimerInterval = null;
@@ -485,107 +502,6 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     });
 });
 
-/*
-async function startPlayerLockout(lockedPlayerName) {
-    // Clear buzz state first
-    await roomRef.update({
-        buzzedPlayer: null,
-        buzzerLocked: false,
-        isPaused: false  // This will trigger the pause listener to resume
-    });
-
-    // Hide buzz display for everyone
-    document.getElementById('buzzDisplay').style.display = 'none';
-    document.getElementById('hostControls').style.display = 'none';
-
-    // Show host control buttons again
-    if (isHost) {
-        document.getElementById('hostButtonsTop').style.display = 'block';
-        const pauseBtn = document.getElementById('pauseBtn');
-        if (pauseBtn) {
-            pauseBtn.textContent = '⏸️ Pause';
-        }
-    }
-
-    // The pause listener will handle resuming music and timer via isPaused: false
-
-    // For the locked-out player ONLY, trigger their lockout
-    if (playerName === lockedPlayerName && !isHost) {
-        isLockedOut = true;
-
-        // Show lockout overlay
-        const buzzerSection = document.getElementById('buzzerSection');
-        const lockoutMsg = document.getElementById('lockoutMsg');
-
-        buzzerSection.style.display = 'block';
-        lockoutMsg.style.display = 'block';
-
-        // Disable the buzzer button
-        const buzzerBtn = document.getElementById('buzzerBtn');
-        buzzerBtn.disabled = true;
-        buzzerBtn.style.opacity = '0.3';
-
-        let timeLeft = 5;
-        document.getElementById('lockoutTime').textContent = timeLeft;
-
-        if (lockoutTimer) {
-            clearInterval(lockoutTimer);
-        }
-
-        lockoutTimer = setInterval(async () => {
-            timeLeft--;
-            document.getElementById('lockoutTime').textContent = timeLeft;
-
-            if (timeLeft <= 0) {
-                clearInterval(lockoutTimer);
-                lockoutTimer = null;
-                isLockedOut = false;
-                lockoutMsg.style.display = 'none';
-
-                // Check authoritative pause state from DB before re-enabling
-                try {
-                    const snap = await roomRef.child('isPaused').once('value');
-                    const authoritativePaused = !!snap.val();
-
-                    const buzzerBtn = document.getElementById('buzzerBtn');
-                    if (buzzerBtn) {
-                        // If the room is not paused, enable now; otherwise leave enabling to pause listener
-                        if (!authoritativePaused) {
-                            buzzerBtn.disabled = false;
-                            buzzerBtn.style.opacity = '1';
-                        } else {
-                            // If room still paused, keep buzzer disabled and rely on the pause listener to re-enable
-                            buzzerBtn.disabled = true;
-                            buzzerBtn.style.opacity = '0.5';
-                        }
-                    }
-
-                    // Also ensure the buzzerSection visibility is correct
-                    if (document.getElementById('buzzerSection')) {
-                        if (!authoritativePaused) {
-                            document.getElementById('buzzerSection').style.display = 'block';
-                        } else {
-                            document.getElementById('buzzerSection').style.display = 'none';
-                        }
-                    }
-                } catch (e) {
-                    // If DB check fails for any reason, fall back to enabling the buzzer
-                    console.warn('Failed to read isPaused on lockout end, enabling buzzer as fallback', e);
-                    const buzzerBtn = document.getElementById('buzzerBtn');
-                    if (buzzerBtn) {
-                        buzzerBtn.disabled = false;
-                        buzzerBtn.style.opacity = '1';
-                    }
-                    if (document.getElementById('buzzerSection')) {
-                        document.getElementById('buzzerSection').style.display = 'block';
-                    }
-                }
-            }
-        }, 1000);
-
-    }
-}*/
-
 async function resumeQuiz(lockedOutPlayer) {
     // Reset buzz state but keep paused false to resume
     await roomRef.update({
@@ -696,16 +612,28 @@ async function advanceQuestion() {
     const totalQ = room.questions.length;
 
     if (nextQ >= totalQ) {
+        // Game finished
         await roomRef.update({ status: 'finished' });
     } else if (shouldShowScoreboard(nextQ, totalQ)) {
+        // Mid-game scoreboard
         await roomRef.update({
             currentQ: nextQ,
             status: 'scoreboard'
         });
     } else {
-        await roomRef.update({ currentQ: nextQ });
+        // Advance to next question
+        const nextQuestion = room.questions[nextQ];
+        const duration = nextQuestion?.duration || 30;
+
+        await roomRef.update({
+            currentQ: nextQ,
+            questionStartTime: Date.now(),
+            remainingTime: duration,
+            isPaused: false // make sure to unpause at start of next question
+        });
     }
 }
+
 
 // Calculate scoreboard display points
 function shouldShowScoreboard(currentQ, totalQ) {
