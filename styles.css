@@ -953,7 +953,6 @@ button:active {
 
 
 .buzzer-container {
-    position: relative;
     max-width: 500px;
 }
 
@@ -1236,10 +1235,6 @@ button:active {
     background: rgba(255, 255, 255, 0.15);
 }
 
-#buzzerSection {
-    position: relative;
-}
-
 /* Admin Panel Select Styling */
 select {
     appearance: none;
@@ -1384,4 +1379,3 @@ select option {
         font-size: 1.5rem;
     }
 }
-
