@@ -369,34 +369,7 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
 });
 
 async function startPlayerLockout(lockedPlayerName) {
-    // For the locked-out player, trigger their lockout
-    if (playerName === lockedPlayerName) {
-        isLockedOut = true;
-        document.getElementById('lockoutMsg').style.display = 'block';
-        document.getElementById('buzzerSection').style.display = 'none';
-
-        let timeLeft = 5;
-        document.getElementById('lockoutTime').textContent = timeLeft;
-
-        if (lockoutTimer) {
-            clearInterval(lockoutTimer);
-        }
-
-        lockoutTimer = setInterval(() => {
-            timeLeft--;
-            document.getElementById('lockoutTime').textContent = timeLeft;
-
-            if (timeLeft <= 0) {
-                clearInterval(lockoutTimer);
-                lockoutTimer = null;
-                isLockedOut = false;
-                document.getElementById('lockoutMsg').style.display = 'none';
-                document.getElementById('buzzerSection').style.display = 'block';
-            }
-        }, 1000);
-    }
-
-    // Clear buzz state (this will trigger setupBuzzListener for all players)
+    // Clear buzz state first (this will trigger setupBuzzListener for all players)
     await roomRef.update({
         buzzedPlayer: null,
         buzzerLocked: false
@@ -414,6 +387,44 @@ async function startPlayerLockout(lockedPlayerName) {
     // Resume music
     if (musicPlayer && currentQuestion && currentQuestion.type === 'music') {
         musicPlayer.play();
+    }
+
+    // For the locked-out player ONLY, trigger their lockout
+    if (playerName === lockedPlayerName && !isHost) {
+        isLockedOut = true;
+
+        // Show lockout overlay
+        const buzzerSection = document.getElementById('buzzerSection');
+        const lockoutMsg = document.getElementById('lockoutMsg');
+
+        buzzerSection.style.display = 'block';
+        lockoutMsg.style.display = 'block';
+
+        // Disable the buzzer button
+        const buzzerBtn = document.getElementById('buzzerBtn');
+        buzzerBtn.disabled = true;
+        buzzerBtn.style.opacity = '0.3';
+
+        let timeLeft = 5;
+        document.getElementById('lockoutTime').textContent = timeLeft;
+
+        if (lockoutTimer) {
+            clearInterval(lockoutTimer);
+        }
+
+        lockoutTimer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('lockoutTime').textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(lockoutTimer);
+                lockoutTimer = null;
+                isLockedOut = false;
+                lockoutMsg.style.display = 'none';
+                buzzerBtn.disabled = false;
+                buzzerBtn.style.opacity = '1';
+            }
+        }, 1000);
     }
 }
 
