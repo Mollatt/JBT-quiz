@@ -149,6 +149,55 @@ function setupBuzzListener() {
     });
 }
 
+function setupLockoutListener() {
+    playerRef.child('lockoutUntil').on('value', (snapshot) => {
+        const lockoutUntil = snapshot.val();
+        const buzzerBtn = document.getElementById('buzzerBtn');
+        const lockoutMsg = document.getElementById('lockoutMsg');
+
+        if (!buzzerBtn || !lockoutMsg) return;
+
+        if (lockoutUntil && Date.now() < lockoutUntil) {
+            // actively locked
+            isLockedOut = true;
+            let remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+            lockoutMsg.style.display = 'block';
+            document.getElementById('lockoutTime').textContent = remaining;
+            buzzerBtn.disabled = true;
+            buzzerBtn.style.opacity = '0.3';
+
+            if (lockoutTimer) clearInterval(lockoutTimer);
+            lockoutTimer = setInterval(() => {
+                const now = Date.now();
+                remaining = Math.ceil((lockoutUntil - now) / 1000);
+                if (remaining <= 0) {
+                    clearInterval(lockoutTimer);
+                    lockoutTimer = null;
+                    playerRef.update({ lockoutUntil: null });
+                    isLockedOut = false;
+                    lockoutMsg.style.display = 'none';
+                    if (!isPaused) {
+                        buzzerBtn.disabled = false;
+                        buzzerBtn.style.opacity = '1';
+                    }
+                } else {
+                    document.getElementById('lockoutTime').textContent = remaining;
+                }
+            }, 1000);
+        } else {
+            // not locked
+            isLockedOut = false;
+            lockoutMsg.style.display = 'none';
+            if (!isPaused) {
+                buzzerBtn.disabled = false;
+                buzzerBtn.style.opacity = '1';
+            }
+        }
+    });
+}
+setupLockoutListener();
+
+
 function setupPauseListener() {
     roomRef.child('isPaused').on('value', (snapshot) => {
         const pausedState = snapshot.val();
@@ -262,23 +311,29 @@ function displayQuestion(question, index) {
     }
 }
 
+let syncTimerInterval = null;
+
 function startQuestionTimer() {
-    if (questionTimer) {
-        clearInterval(questionTimer);
-    }
+    if (questionTimer) clearInterval(questionTimer);
+    if (syncTimerInterval) clearInterval(syncTimerInterval);
 
     questionTimer = setInterval(() => {
         remainingTime--;
         document.getElementById('timeLeft').textContent = remainingTime;
-
-        // Time's up
         if (remainingTime <= 0) {
             clearInterval(questionTimer);
             questionTimer = null;
+            if (syncTimerInterval) clearInterval(syncTimerInterval);
             handleTimeUp();
         }
     }, 1000);
+
+    // periodically sync remaining time
+    syncTimerInterval = setInterval(() => {
+        roomRef.update({ remainingTime });
+    }, 3000);
 }
+
 
 // Player buzzes
 document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
@@ -382,23 +437,33 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
 // Host clicks Wrong
 document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     const buzzedPlayerName = (await roomRef.child('buzzedPlayer').once('value')).val();
+    if (!buzzedPlayerName) return;
 
-    if (buzzedPlayerName) {
-        // Deduct points
-        const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
-        const playerData = playerSnapshot.val();
-        const newScore = (playerData.score || 0) - 250;
+    const playerSnapshot = await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).once('value');
+    const playerData = playerSnapshot.val();
+    const newScore = (playerData.score || 0) - 250;
+    await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
+        score: newScore,
+        lastPoints: -250
+    });
 
-        await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({
-            score: newScore,
-            lastPoints: -250
-        });
+    // Get lockout duration from gameParams or default 3 s
+    const roomSnap = await roomRef.once('value');
+    const lockoutSec = roomSnap.val()?.gameParams?.buzzerLockoutTime ?? 3;
+    const lockoutUntil = Date.now() + lockoutSec * 1000;
 
-        // Start lockout for this specific player
-        await startPlayerLockout(buzzedPlayerName);
-    }
+    // Write to DB so the player knows when they’re free again
+    await db.ref(`rooms/${gameCode}/players/${buzzedPlayerName}`).update({ lockoutUntil });
+
+    // Clear buzz state + resume game
+    await roomRef.update({
+        buzzedPlayer: null,
+        buzzerLocked: false,
+        isPaused: false
+    });
 });
 
+/*
 async function startPlayerLockout(lockedPlayerName) {
     // Clear buzz state first
     await roomRef.update({
@@ -497,7 +562,7 @@ async function startPlayerLockout(lockedPlayerName) {
         }, 1000);
 
     }
-}
+}*/
 
 async function resumeQuiz(lockedOutPlayer) {
     // Reset buzz state but keep paused false to resume
