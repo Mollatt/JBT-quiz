@@ -20,7 +20,7 @@ let remainingTime = 0;
 let isPaused = false;
 
 // Load initial room data
-roomRef.once('value').then(snapshot => {
+roomRef.once('value').then(async snapshot => {
     const room = snapshot.val();
     if (!room) {
         window.location.href = 'index.html';
@@ -70,13 +70,15 @@ roomRef.once('value').then(snapshot => {
     setupStatusListener();
     setupBuzzListener();
     setupPauseListener();
+
+    // Detect reload mid-session (non-host only)
+    if (!isHost && room.status === 'playing' && room.currentQ !== undefined) {
+        const reloadLockout = Date.now() + 3000; // 3s reload cooldown
+        await playerRef.update({ lockoutUntil: reloadLockout });
+    }
 });
 
-// Detect reload mid-session (non-host only)
-if (!isHost && room.status === 'playing' && room.currentQ !== undefined) {
-    const reloadLockout = Date.now() + 3000; // 3s reload cooldown
-    await playerRef.update({ lockoutUntil: reloadLockout });
-}
+
 
 
 function setupQuestionListener(room) {
