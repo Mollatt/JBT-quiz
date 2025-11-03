@@ -294,53 +294,24 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
 });
 
 function handleBuzzed(buzzedPlayerName) {
-    console.log('handleBuzzed called for:', buzzedPlayerName, 'isHost:', isHost);
-
-    // Pause music and timer
+    // Pause music
     if (musicPlayer) {
         musicPlayer.pause();
     }
-    if (questionTimer) {
-        clearInterval(questionTimer);
-        questionTimer = null;
-        // Save remaining time to database so it persists on refresh
-        roomRef.update({ remainingTime: remainingTime });
-    }
-    isPaused = true;
 
     // Show who buzzed
-    const buzzDisplay = document.getElementById('buzzDisplay');
-    const buzzedPlayerEl = document.getElementById('buzzedPlayer');
+    document.getElementById('buzzDisplay').style.display = 'block';
+    document.getElementById('buzzedPlayer').textContent = buzzedPlayerName;
 
-    if (buzzDisplay) {
-        buzzDisplay.style.display = 'block';
-        console.log('Showing buzz display');
-    }
-    if (buzzedPlayerEl) {
-        buzzedPlayerEl.textContent = buzzedPlayerName;
-    }
-
-    // Hide buzzer for all non-host players
-    if (!isHost) {
-        const buzzerSection = document.getElementById('buzzerSection');
-        if (buzzerSection) {
-            buzzerSection.style.display = 'none';
-            console.log('Hiding buzzer section for player');
-        }
-    }
-
-    // Hide pause button for host
-    if (isHost) {
-        const hostButtons = document.getElementById('hostButtonsTop');
-        if (hostButtons) {
-            hostButtons.style.display = 'none';
-        }
-    }
+    // Hide buzzer
+    document.getElementById('buzzerSection').style.display = 'none';
 
     // Show host controls
     if (isHost) {
         document.getElementById('hostControls').style.display = 'block';
         document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
+        // Hide the pause/skip buttons while judging
+        document.getElementById('hostButtonsTop').style.display = 'none';
     }
 }
 
