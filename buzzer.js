@@ -42,25 +42,18 @@ roomRef.once('value').then(snapshot => {
         currentQuestion = room.questions[room.currentQ];
         remainingTime = room.remainingTime || (currentQuestion.duration || 30);
 
-        // Check if someone has already buzzed
+        const isPausedAtLoad = !!room.isPaused;
+
         if (room.buzzedPlayer) {
-            // Display the question first
-            document.getElementById('currentQ').textContent = room.currentQ + 1;
-            document.getElementById('questionText').textContent = currentQuestion.text;
-
-            // Show remaining time
-            document.getElementById('timeLeft').textContent = remainingTime;
-
-            // Then show buzzer state
             handleBuzzed(room.buzzedPlayer);
         } else {
-            // Normal question display
-            displayQuestion(currentQuestion, room.currentQ);
+            displayQuestion(currentQuestion, room.currentQ, { autoPlay: !isPausedAtLoad });
         }
 
-        // Check pause state
-        if (room.isPaused) {
+        if (isPausedAtLoad) {
             isPaused = true;
+            if (musicPlayer) musicPlayer.pause();
+            if (questionTimer) { clearInterval(questionTimer); questionTimer = null; }
             if (!isHost) {
                 const buzzerBtn = document.getElementById('buzzerBtn');
                 if (buzzerBtn) {
@@ -69,13 +62,22 @@ roomRef.once('value').then(snapshot => {
                 }
             }
         }
+
     }
+
 
     setupQuestionListener(room);
     setupStatusListener();
     setupBuzzListener();
     setupPauseListener();
 });
+
+// Detect reload mid-session (non-host only)
+if (!isHost && room.status === 'playing' && room.currentQ !== undefined) {
+    const reloadLockout = Date.now() + 3000; // 3s reload cooldown
+    await playerRef.update({ lockoutUntil: reloadLockout });
+}
+
 
 function setupQuestionListener(room) {
     roomRef.child('currentQ').on('value', async (snapshot) => {
@@ -161,6 +163,7 @@ function setupLockoutListener() {
             // actively locked
             isLockedOut = true;
             let remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+            document.getElementById('buzzerSection').style.display = 'block';
             lockoutMsg.style.display = 'block';
             document.getElementById('lockoutTime').textContent = remaining;
             buzzerBtn.disabled = true;
@@ -252,7 +255,7 @@ function setupPauseListener() {
 }
 
 
-function displayQuestion(question, index) {
+function displayQuestion(question, index, opts = { autoPlay: true }) {
     currentQuestion = question;
 
     // Update question number
@@ -293,7 +296,7 @@ function displayQuestion(question, index) {
         musicPlayer = new YouTubePlayer('musicPlayer');  // FIXED: Correct capitalization
     }
 
-    if (question.type === 'music' && question.youtubeUrl) {
+    if (question.type === 'music' && question.youtubeUrl && opts.autoPlay) {
         musicPlayer.load(question.youtubeUrl).then(() => {
             const duration = question.duration || 30;
             remainingTime = duration;
@@ -337,7 +340,7 @@ function startQuestionTimer() {
 
 // Player buzzes
 document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
-    if (isLockedOut || isHost || isPaused) return;
+    if (isLockedOut || isHost || isPaused || remainingTime <= 0) return;
 
     const buzzTime = Date.now();
 
