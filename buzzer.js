@@ -47,13 +47,19 @@ roomRef.once('value').then(async snapshot => {
         if (room.buzzedPlayer) {
             handleBuzzed(room.buzzedPlayer);
         } else {
+            // Only auto-play if not paused
             displayQuestion(currentQuestion, room.currentQ, { autoPlay: !isPausedAtLoad });
         }
 
+        // Update local pause flag
+        isPaused = isPausedAtLoad;
+
         if (isPausedAtLoad) {
-            isPaused = true;
             if (musicPlayer) musicPlayer.pause();
-            if (questionTimer) { clearInterval(questionTimer); questionTimer = null; }
+            if (questionTimer) {
+                clearInterval(questionTimer);
+                questionTimer = null;
+            }
             if (!isHost) {
                 const buzzerBtn = document.getElementById('buzzerBtn');
                 if (buzzerBtn) {
@@ -62,7 +68,6 @@ roomRef.once('value').then(async snapshot => {
                 }
             }
         }
-
     }
 
 
@@ -100,6 +105,12 @@ function setupQuestionListener(room) {
             buzzerLocked: false,
             isPaused: false
         });
+
+        const playersSnap = await playersRef.once('value');
+        const players = playersSnap.val() || {};
+        for (const pName in players) {
+            db.ref(`rooms/${gameCode}/players/${pName}/lockoutUntil`).set(null);
+        }
 
         isLockedOut = false;
         isPaused = false;
@@ -156,31 +167,34 @@ function setupBuzzListener() {
 function setupLockoutListener() {
     playerRef.child('lockoutUntil').on('value', (snapshot) => {
         const lockoutUntil = snapshot.val();
+        const now = Date.now();
         const buzzerBtn = document.getElementById('buzzerBtn');
         const lockoutMsg = document.getElementById('lockoutMsg');
-
         if (!buzzerBtn || !lockoutMsg) return;
 
-        if (lockoutUntil && Date.now() < lockoutUntil) {
-            // actively locked
+        // clear any previous interval
+        if (lockoutTimer) { clearInterval(lockoutTimer); lockoutTimer = null; }
+
+        if (lockoutUntil && now < lockoutUntil) {
+            // active lockout
             isLockedOut = true;
-            let remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
-            document.getElementById('buzzerSection').style.display = 'block';
+            const buzzerSection = document.getElementById('buzzerSection');
+            if (buzzerSection) buzzerSection.style.display = 'block';
+
+            let remaining = Math.ceil((lockoutUntil - now) / 1000);
             lockoutMsg.style.display = 'block';
             document.getElementById('lockoutTime').textContent = remaining;
             buzzerBtn.disabled = true;
             buzzerBtn.style.opacity = '0.3';
 
-            if (lockoutTimer) clearInterval(lockoutTimer);
             lockoutTimer = setInterval(() => {
-                const now = Date.now();
-                remaining = Math.ceil((lockoutUntil - now) / 1000);
+                remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
                 if (remaining <= 0) {
                     clearInterval(lockoutTimer);
                     lockoutTimer = null;
-                    playerRef.update({ lockoutUntil: null });
                     isLockedOut = false;
                     lockoutMsg.style.display = 'none';
+                    playerRef.update({ lockoutUntil: null });
                     if (!isPaused) {
                         buzzerBtn.disabled = false;
                         buzzerBtn.style.opacity = '1';
@@ -190,7 +204,7 @@ function setupLockoutListener() {
                 }
             }, 1000);
         } else {
-            // not locked
+            // no lockout
             isLockedOut = false;
             lockoutMsg.style.display = 'none';
             if (!isPaused) {
@@ -199,6 +213,7 @@ function setupLockoutListener() {
             }
         }
     });
+
 }
 setupLockoutListener();
 
@@ -299,14 +314,16 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
     }
 
     if (question.type === 'music' && question.youtubeUrl && opts.autoPlay) {
-        musicPlayer.load(question.youtubeUrl).then(() => {
+        musicPlayer.load(question.youtubeUrl).then(async () => {
             const duration = question.duration || 30;
             remainingTime = duration;
-
+            await roomRef.child('remainingTime').set(duration);
             // Play music with timer sync
-            musicPlayer.playClip(question.startTime, duration, (remaining) => {
-                // This callback is handled by the music player, but we'll use our own timer
-            });
+            if (opts.autoPlay && !isPaused) {
+                musicPlayer.playClip(question.startTime, duration, (remaining) => {
+                    // This callback is handled by the music player, but we'll use our own timer
+                });
+            }
 
             // Start our own timer
             startQuestionTimer();
