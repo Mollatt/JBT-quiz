@@ -33,7 +33,7 @@ roomRef.once('value', snapshot => {
     const room = snapshot.val();
     if (room && room.gameParams) {
         const params = room.gameParams;
-        
+
         // Load number of questions
         if (params.numQuestions) {
             const numQuestionsInput = document.getElementById('numQuestions');
@@ -41,13 +41,13 @@ roomRef.once('value', snapshot => {
                 numQuestionsInput.value = params.numQuestions;
             }
         }
-        
+
         // Standard mode parameters
         if (params.correctPointsScale) {
             const firstPlace = document.getElementById('firstPlacePoints');
             const secondPlace = document.getElementById('secondPlacePoints');
             const thirdPlace = document.getElementById('thirdPlacePoints');
-            
+
             if (firstPlace) firstPlace.value = params.correctPointsScale[0] || 1000;
             if (secondPlace) secondPlace.value = params.correctPointsScale[1] || 800;
             if (thirdPlace) thirdPlace.value = params.correctPointsScale[2] || 600;
@@ -58,7 +58,7 @@ roomRef.once('value', snapshot => {
                 questionDuration.value = params.autoPlayDuration;
             }
         }
-        
+
         // Buzzer mode parameters
         if (params.buzzerCorrectPoints !== undefined) {
             const buzzerCorrect = document.getElementById('buzzerCorrectPoints');
@@ -92,23 +92,23 @@ const modeButtons = document.querySelectorAll('.mode-btn');
 modeButtons.forEach(btn => {
     btn.addEventListener('click', async () => {
         if (!isHost) return;
-        
+
         const mode = btn.getAttribute('data-mode');
-        
+
         // Only allow click if not already selected
         if (btn.classList.contains('active')) return;
-        
+
         // Update all buttons
         modeButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
+
         // Update database
         currentMode = mode;
         await roomRef.update({ mode });
-        
+
         // Show/hide appropriate parameters
         updateParametersDisplay(mode);
-        
+
         // Auto-close mode selection after choosing
         document.getElementById('gameModeSection').style.display = 'none';
     });
@@ -138,7 +138,7 @@ playerRef.child('isHost').on('value', (snapshot) => {
 roomRef.child('mode').on('value', (snapshot) => {
     const mode = snapshot.val() || 'everybody';
     currentMode = mode;
-    
+
     // Update button states
     modeButtons.forEach(btn => {
         btn.classList.remove('active');
@@ -146,14 +146,14 @@ roomRef.child('mode').on('value', (snapshot) => {
             btn.classList.add('active');
         }
     });
-    
+
     // Update current mode display
     const modeMap = {
         'everybody': '🎮 Everybody Plays',
         'buzzer': '🔴 Buzzer Mode'
     };
     document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
-    
+
     // Update parameters display
     updateParametersDisplay(mode);
 });
@@ -161,13 +161,13 @@ roomRef.child('mode').on('value', (snapshot) => {
 function updateParametersDisplay(mode) {
     const standardParams = document.getElementById('standardModeParams');
     const buzzerParams = document.getElementById('buzzerModeParams');
-    
+
     // Check if elements exist before trying to modify
     if (!standardParams || !buzzerParams) {
         console.warn('Parameter sections not found in DOM');
         return;
     }
-    
+
     if (mode === 'buzzer') {
         standardParams.style.display = 'none';
         buzzerParams.style.display = 'block';
@@ -206,12 +206,12 @@ playersRef.on('value', (snapshot) => {
         <div class="player-item">
             <span class="player-name">${player.name}</span>
             ${player.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
-            ${isHost && !player.isHost ? 
-                `<button class="transfer-host-btn" data-player="${player.name}">Make Host</button>` 
-                : ''}
+            ${isHost && !player.isHost ?
+            `<button class="transfer-host-btn" data-player="${player.name}">Make Host</button>`
+            : ''}
         </div>
     `).join('');
-    
+
     // Add transfer host button handlers
     if (isHost) {
         document.querySelectorAll('.transfer-host-btn').forEach(btn => {
@@ -224,8 +224,8 @@ playersRef.on('value', (snapshot) => {
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
     // Get number of questions
     const numQuestions = parseInt(document.getElementById('numQuestions')?.value) || 10;
-    
-    const gameParams = currentMode === 'buzzer' 
+
+    const gameParams = currentMode === 'buzzer'
         ? {
             buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints')?.value) || 1000,
             buzzerWrongPoints: parseInt(document.getElementById('buzzerWrongPoints')?.value) || -250,
@@ -244,10 +244,13 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             hostTimerDuration: 60,
             numQuestions: numQuestions
         };
-    
+    const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
+        .map(cb => cb.value);
+    gameParams.categories = selectedCategories;
+
     await roomRef.update({ gameParams });
     alert('Parameters saved!');
-    
+
     // Auto-close parameters section
     const paramsSection = document.getElementById('parametersSection');
     if (paramsSection) {
@@ -261,7 +264,7 @@ roomRef.child('status').on('value', (snapshot) => {
     if (status === 'playing') {
         // Set flag so beforeunload doesn't remove player
         isStartingGame = true;
-        
+
         roomRef.child('mode').once('value', modeSnapshot => {
             const mode = modeSnapshot.val();
             if (mode === 'buzzer') {
@@ -276,12 +279,12 @@ roomRef.child('status').on('value', (snapshot) => {
 // Transfer host function
 async function transferHost(newHostName) {
     if (!isHost) return;
-    
+
     const updates = {};
     updates[`rooms/${gameCode}/host`] = newHostName;
     updates[`rooms/${gameCode}/players/${playerName}/isHost`] = false;
     updates[`rooms/${gameCode}/players/${newHostName}/isHost`] = true;
-    
+
     await db.ref().update(updates);
     alert(`${newHostName} is now the host!`);
 }
@@ -290,7 +293,7 @@ async function transferHost(newHostName) {
 document.getElementById('startBtn')?.addEventListener('click', async () => {
     const snapshot = await playersRef.once('value');
     const players = snapshot.val();
-    
+
     if (!players || Object.keys(players).length < 1) {
         alert('Need at least 1 player to start!');
         return;
@@ -299,7 +302,7 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
     // Get current room to check mode
     const roomSnapshot = await roomRef.once('value');
     const room = roomSnapshot.val();
-    
+
     // For buzzer mode, require at least 2 players (host + 1 player)
     if (room.mode === 'buzzer' && Object.keys(players).length < 2) {
         alert('Buzzer mode requires at least 2 players (host + 1 player)!');
@@ -308,7 +311,7 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
 
     // Get number of questions - check saved params first, then input field
     let numQuestions = room.gameParams?.numQuestions || parseInt(document.getElementById('numQuestions')?.value) || 10;
-    
+
     if (numQuestions < 1 || numQuestions > 100) {
         alert('Please enter a number of questions between 1 and 100');
         return;
@@ -322,7 +325,14 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
     try {
         // Generate questions from database
         const generator = new QuestionGenerator();
-        const questions = await generator.generateQuestions(numQuestions);
+        const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
+            .map(cb => cb.value);
+
+        const yearMin = parseInt(document.getElementById(`${currentMode}ReleaseYearMin`)?.value) || null;
+        const yearMax = parseInt(document.getElementById(`${currentMode}ReleaseYearMax`)?.value) || null;
+
+        const questions = await generator.generateQuestions(numQuestions, selectedCategories, yearMin, yearMax);
+
 
         if (questions.length === 0) {
             alert('Error: Could not generate questions. Please check that songs have been added to the database.');
@@ -330,7 +340,7 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             btn.textContent = 'Start Game';
             return;
         }
-        
+
         if (questions.length < numQuestions) {
             alert(`Only ${questions.length} questions available. Starting with ${questions.length} questions.`);
         }
@@ -369,7 +379,7 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
 
     const snapshot = await playersRef.once('value');
     const players = snapshot.val();
-    
+
     // If no players left, delete the entire room
     if (!players || Object.keys(players).length === 0) {
         console.log('No players left, deleting room');
@@ -393,7 +403,7 @@ window.addEventListener('beforeunload', async (e) => {
     if (isStartingGame) {
         return;
     }
-    
+
     // Only remove if truly leaving
     await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
 });
