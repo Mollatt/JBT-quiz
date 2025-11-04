@@ -95,6 +95,16 @@ roomRef.once('value').then(async snapshot => {
     setupBuzzListener();
     setupPauseListener();
 
+    if (!isHost) {
+        roomRef.child('remainingTime').on('value', snapshot => {
+            const newRemaining = snapshot.val();
+            if (typeof newRemaining === 'number') {
+                remainingTime = newRemaining;
+                document.getElementById('timeLeft').textContent = newRemaining;
+            }
+        });
+    }
+
     // Detect reload mid-session (non-host only)
     if (!isHost && room.status === 'playing' && room.currentQ !== undefined) {
         const reloadLockout = Date.now() + 3000; // 3s reload cooldown
@@ -145,6 +155,7 @@ function setupQuestionListener(room) {
         // Load and display question
         displayQuestion(room.questions[qIndex], qIndex);
     });
+
 }
 
 function setupStatusListener() {
@@ -327,17 +338,12 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
     }
 
     // Initialize and play music
-    const musicPlayerEl = document.getElementById('musicPlayer');
-    if (!musicPlayer) {
-        musicPlayer = new YouTubePlayer('musicPlayer');  // FIXED: Correct capitalization
-    }
-
-    if (question.type === 'music' && question.youtubeUrl && opts.autoPlay) {
+    if (isHost && question.type === 'music' && question.youtubeUrl && opts.autoPlay) {
         musicPlayer.load(question.youtubeUrl).then(() => {
             const duration = opts.remainingTime || question.duration || 30;
             remainingTime = duration;
 
-            if (opts.autoPlay && !isPaused) {
+            if (!isPaused) {
                 const startAt = opts.startAt || question.startTime || 0;
                 musicPlayer.playClip(startAt, duration, () => { });
             }
@@ -346,32 +352,47 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
         }).catch(error => {
             console.error('Failed to load music:', error);
         });
+    } else if (!isHost) {
+        // Players only run a visual timer synced to Firebase
+        if (typeof opts.remainingTime === 'number') {
+            remainingTime = opts.remainingTime;
+            startQuestionTimer(opts.remainingTime);
+        }
     }
+
 
 }
 
 let syncTimerInterval = null;
 
-function startQuestionTimer() {
-    if (questionTimer) clearInterval(questionTimer);
-    if (syncTimerInterval) clearInterval(syncTimerInterval);
+function startQuestionTimer(duration) {
+    clearInterval(questionTimer);
+    remainingTime = duration;
 
-    questionTimer = setInterval(() => {
-        remainingTime--;
-        document.getElementById('timeLeft').textContent = remainingTime;
-        if (remainingTime <= 0) {
-            clearInterval(questionTimer);
-            questionTimer = null;
-            if (syncTimerInterval) clearInterval(syncTimerInterval);
-            handleTimeUp();
+    questionTimer = setInterval(async () => {
+        if (!isPaused) {
+            remainingTime--;
+            document.getElementById('timeLeft').textContent = remainingTime;
+
+            // Only host writes to Firebase to stay the single source of truth
+            if (isHost) {
+                await roomRef.child('remainingTime').set(remainingTime);
+            }
+
+            if (remainingTime <= 0) {
+                clearInterval(questionTimer);
+                questionTimer = null;
+
+                if (isHost) {
+                    advanceQuestion();
+                }
+            }
         }
     }, 1000);
-
-    // periodically sync remaining time
-    syncTimerInterval = setInterval(() => {
-        roomRef.update({ remainingTime });
-    }, 3000);
 }
+
+
+
 
 
 // Player buzzes
