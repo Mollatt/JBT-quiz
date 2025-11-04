@@ -97,7 +97,7 @@ roomRef.once('value').then(async snapshot => {
 
     // Detect reload mid-session (non-host only)
     if (!isHost && room.status === 'playing' && room.currentQ !== undefined) {
-        const reloadLockout = Date.now() + 3000; // 3s reload cooldown
+        const reloadLockout = Date.now() + 5000; // 3s reload cooldown
         await playerRef.update({ lockoutUntil: reloadLockout });
     }
 });
@@ -370,7 +370,7 @@ function startQuestionTimer() {
     // periodically sync remaining time
     syncTimerInterval = setInterval(() => {
         roomRef.update({ remainingTime });
-    }, 3000);
+    }, 1000);
 }
 
 
