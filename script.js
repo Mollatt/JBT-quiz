@@ -1,4 +1,4 @@
-// Utility Functions
+// Utility Functions - UNCHANGED
 function generateCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
@@ -16,54 +16,29 @@ function sanitizeName(name) {
     return name.trim().replace(/[.#$/[\]]/g, '');
 }
 
-// Create Lobby (default to everybody mode)
+// Create Lobby - Supabase helper functions
 if (document.getElementById('createLobbyBtn')) {
     document.getElementById('createLobbyBtn').addEventListener('click', async () => {
         const name = sanitizeName(document.getElementById('nameInput').value);
         if (!name) return showError('Please enter your name!');
 
         const code = generateCode();
-        const roomData = {
-            host: name,
-            mode: 'everybody',  // Default to everybody plays mode
-            status: 'lobby',
-            currentQ: -1,
-            created: Date.now(),
-            questions: [],
-            // Game parameters
-            gameParams: {
-                correctPointsScale: [1000, 800, 600, 400],
-                numQuestions: 10,
-                selectedCategories: ['game', 'series', 'composer', 'developer', 'title', 'location', 'boss', 'year'],
-                releaseYearMin: null,
-                releaseYearMax: null
-            },
-            players: {
-                [name]: {
-                    score: 0,
-                    answer: null,
-                    answered: false,
-                    correctCount: 0,
-                    isHost: true,
-                    joined: Date.now()
-                }
-            }
-        };
 
-        try {
-            await db.ref(`rooms/${code}`).set(roomData);
+        //  Using createRoom() instead of Firebase db.ref().set()
+        const result = await createRoom(code, name, 'everybody');
+
+        if (result.success) {
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('isHost', 'true');
             window.location.href = 'lobby.html';
-        } catch (error) {
-            showError('Failed to create lobby. Please try again.');
-            console.error(error);
+        } else {
+            // Error already shown by createRoom()
         }
     });
 }
 
-// Modal handling
+
 const joinModal = document.getElementById('joinModal');
 const joinLobbyBtn = document.getElementById('joinLobbyBtn');
 const closeModalBtn = document.getElementById('closeModalBtn');
@@ -71,7 +46,7 @@ const modalCancelBtn = document.getElementById('modalCancelBtn');
 const modalJoinBtn = document.getElementById('modalJoinBtn');
 const gameCodeInput = document.getElementById('gameCodeInput');
 
-// Open modal
+//Modal
 if (joinLobbyBtn) {
     joinLobbyBtn.addEventListener('click', () => {
         joinModal.style.display = 'flex';
@@ -79,7 +54,6 @@ if (joinLobbyBtn) {
     });
 }
 
-// Close modal
 const closeModal = () => {
     joinModal.style.display = 'none';
     gameCodeInput.value = '';
@@ -93,19 +67,17 @@ if (modalCancelBtn) {
     modalCancelBtn.addEventListener('click', closeModal);
 }
 
-// Click outside modal to close
 window.addEventListener('click', (event) => {
     if (event.target === joinModal) {
         closeModal();
     }
 });
 
-// Auto-uppercase game code in modal
 gameCodeInput?.addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase();
 });
 
-// Join from modal
+// Join from modal - Now uses Supabase helper functions
 if (modalJoinBtn) {
     modalJoinBtn.addEventListener('click', async () => {
         const code = gameCodeInput.value.trim().toUpperCase();
@@ -114,34 +86,26 @@ if (modalJoinBtn) {
         if (!code) return showError('Please enter a game code!');
         if (!name) return showError('Please enter your name!');
 
-        try {
-            const roomSnapshot = await db.ref(`rooms/${code}`).once('value');
-            const room = roomSnapshot.val();
+        //  Using getRoom() instead of Firebase db.ref().once('value')
+        const room = await getRoom(code);
 
-            if (!room) return showError('Lobby not found!');
-            if (room.status !== 'lobby') return showError('Game already started!');
-            if (room.players && room.players[name]) return showError('Name already taken!');
+        if (!room) return showError('Lobby not found!');
+        if (room.status !== 'lobby') return showError('Game already started!');
+        if (room.players && room.players[name]) return showError('Name already taken!');
 
-            await db.ref(`rooms/${code}/players/${name}`).set({
-                score: 0,
-                answer: null,
-                answered: false,
-                correctCount: 0,
-                isHost: false,
-                joined: Date.now()
-            });
+        //  Using addPlayer() instead of Firebase db.ref().set()
+        const result = await addPlayer(code, name, false);
 
+        if (result.success) {
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('isHost', 'false');
             window.location.href = 'lobby.html';
-        } catch (error) {
-            showError('Failed to join lobby. Please try again.');
-            console.error(error);
+        } else {
+            // Error already shown by addPlayer()
         }
     });
 
-    // Also allow Enter key to join
     gameCodeInput?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             modalJoinBtn.click();
