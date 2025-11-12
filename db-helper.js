@@ -1,0 +1,548 @@
+
+/**
+ * Create a new game room
+ * @param {string} code - 4-character room code
+ * @param {string} hostName - Name of the host player
+ * @param {string} mode - Game mode ('everybody' or 'buzzer')
+ * @returns {Promise} Room creation result
+ */
+async function createRoom(code, hostName, mode = 'everybody') {
+    try {
+        // Create room
+        const { data: roomData, error: roomError } = await supabase
+            .from('rooms')
+            .insert([{
+                code: code,
+                host: hostName,
+                mode: mode,
+                status: 'lobby',
+                current_q: -1,
+                questions: null,
+                game_params: {
+                    correctPointsScale: [1000, 800, 600, 400],
+                    numQuestions: 10,
+                    selectedCategories: ['game', 'series', 'composer', 'developer', 'title', 'location', 'boss', 'year'],
+                    releaseYearMin: null,
+                    releaseYearMax: null
+                }
+            }])
+            .select()
+            .single();
+
+        if (roomError) throw roomError;
+
+        // Create host player
+        const { error: playerError } = await supabase
+            .from('players')
+            .insert([{
+                room_code: code,
+                name: hostName,
+                score: 0,
+                is_host: true
+            }]);
+
+        if (playerError) throw playerError;
+
+        return { success: true, room: roomData };
+    } catch (error) {
+        console.error('Error creating room:', error);
+        alert(`Failed to create room: ${error.message}`);
+        return { success: false, error };
+    }
+}
+
+/**
+ * Get room data with all players
+ * @param {string} code - Room code
+ * @returns {Promise<Object|null>} Room data or null
+ */
+async function getRoom(code) {
+    try {
+        // Get room
+        const { data: roomData, error: roomError } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('code', code)
+            .single();
+
+        if (roomError) {
+            if (roomError.code === 'PGRST116') return null; // Not found
+            throw roomError;
+        }
+
+        // Get players
+        const { data: playersData, error: playersError } = await supabase
+            .from('players')
+            .select('*')
+            .eq('room_code', code);
+
+        if (playersError) throw playersError;
+
+        // Convert to Firebase-like structure
+        const room = convertRoomFromDB(roomData);
+        room.players = {};
+
+        playersData.forEach(player => {
+            room.players[player.name] = convertPlayerFromDB(player);
+        });
+
+        return room;
+    } catch (error) {
+        console.error('Error getting room:', error);
+        return null;
+    }
+}
+
+/**
+ * Update room fields
+ * @param {string} code - Room code
+ * @param {Object} updates - Fields to update
+ * @returns {Promise}
+ */
+async function updateRoom(code, updates) {
+    try {
+        const dbUpdates = convertRoomToDB(updates);
+
+        const { error } = await supabase
+            .from('rooms')
+            .update(dbUpdates)
+            .eq('code', code);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error updating room:', error);
+        alert(`Failed to update room: ${error.message}`);
+        return { success: false, error };
+    }
+}
+
+/**
+ * Delete a room (cascade deletes players)
+ * @param {string} code - Room code
+ * @returns {Promise}
+ */
+async function deleteRoom(code) {
+    try {
+        const { error } = await supabase
+            .from('rooms')
+            .delete()
+            .eq('code', code);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting room:', error);
+        return { success: false, error };
+    }
+}
+
+// PLAYERS - Create, Read, Update, Delete
+// ============================================
+
+/**
+ * Add a player to a room
+ * @param {string} code - Room code 
+ * @param {string} playerName - Player name
+ * @param {boolean} isHost - Whether player is host
+ * @returns {Promise}
+ */
+async function addPlayer(code, playerName, isHost = false) {
+    try {
+        const { data, error } = await supabase
+            .from('players')
+            .insert([{
+                room_code: code,  // CHANGED: using 'code' parameter
+                name: playerName,
+                score: 0,
+                is_host: isHost
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { success: true, player: data };
+    } catch (error) {
+        console.error('Error adding player:', error);
+        alert(`Failed to join room: ${error.message}`);
+        return { success: false, error };
+    }
+}
+
+/**
+ * Update player fields
+ * @param {string} code - Room code (CHANGED from roomCode)
+ * @param {string} playerName - Player name
+ * @param {Object} updates - Fields to update
+ * @returns {Promise}
+ */
+async function updatePlayer(code, playerName, updates) {
+    try {
+        const dbUpdates = convertPlayerToDB(updates);
+
+        const { error } = await supabase
+            .from('players')
+            .update(dbUpdates)
+            .eq('room_code', code)  // CHANGED: using 'code' parameter
+            .eq('name', playerName);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error updating player:', error);
+        alert(`Failed to update player: ${error.message}`);
+        return { success: false, error };
+    }
+}
+
+/**
+ * Remove a player from a room
+ * @param {string} code - Room code (CHANGED from roomCode)
+ * @param {string} playerName - Player name
+ * @returns {Promise}
+ */
+async function removePlayer(code, playerName) {
+    try {
+        const { error } = await supabase
+            .from('players')
+            .delete()
+            .eq('room_code', code)  // CHANGED: using 'code' parameter
+            .eq('name', playerName);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error removing player:', error);
+        return { success: false, error };
+    }
+}
+
+/**
+ * Get all players in a room
+ * @param {string} code - Room code (CHANGED from roomCode)
+ * @returns {Promise<Object>} Players object keyed by name
+ */
+async function getPlayers(code) {
+    try {
+        const { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .eq('room_code', code);  // CHANGED: using 'code' parameter
+
+        if (error) throw error;
+
+        const players = {};
+        data.forEach(player => {
+            players[player.name] = convertPlayerFromDB(player);
+        });
+
+        return players;
+    } catch (error) {
+        console.error('Error getting players:', error);
+        return {};
+    }
+}
+
+// REAL-TIME SUBSCRIPTIONS
+// ============================================
+
+/**
+ * Subscribe to room changes
+ * @param {string} roomCode - Room code
+ * @param {Function} callback - Called when room/players change
+ * @returns {Object} Subscription channel (call .unsubscribe() to stop)
+ */
+function subscribeToRoom(roomCode, callback) {
+    const channel = supabase
+        .channel(`room_${roomCode}`)
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
+            async (payload) => {
+                // Room changed - fetch full data
+                const room = await getRoom(roomCode);
+                callback(room);
+            }
+        )
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${roomCode}` },
+            async (payload) => {
+                // Player changed - fetch full data
+                const room = await getRoom(roomCode);
+                callback(room);
+            }
+        )
+        .subscribe();
+
+    // Do initial fetch
+    getRoom(roomCode).then(callback);
+
+    return channel;
+}
+
+/**
+ * Subscribe to specific room field
+ * @param {string} roomCode - Room code
+ * @param {string} field - Field name (e.g., 'status', 'currentQ')
+ * @param {Function} callback - Called with field value
+ * @returns {Object} Subscription channel
+ */
+function subscribeToRoomField(roomCode, field, callback) {
+    const dbField = camelToSnake(field);
+
+    const channel = supabase
+        .channel(`room_${roomCode}_${field}`)
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
+            async (payload) => {
+                if (payload.new && payload.new[dbField] !== undefined) {
+                    callback(payload.new[dbField]);
+                } else if (payload.eventType === 'DELETE') {
+                    callback(null);
+                }
+            }
+        )
+        .subscribe();
+
+    // Do initial fetch
+    getRoom(roomCode).then(room => {
+        if (room && room[field] !== undefined) {
+            callback(room[field]);
+        }
+    });
+
+    return channel;
+}
+
+/**
+ * Subscribe to players in a room
+ * @param {string} roomCode - Room code
+ * @param {Function} callback - Called with players object
+ * @returns {Object} Subscription channel
+ */
+function subscribeToPlayers(roomCode, callback) {
+    const channel = supabase
+        .channel(`players_${roomCode}`)
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${roomCode}` },
+            async (payload) => {
+                const players = await getPlayers(roomCode);
+                callback(players);
+            }
+        )
+        .subscribe();
+
+    // Do initial fetch
+    getPlayers(roomCode).then(callback);
+
+    return channel;
+}
+
+/**
+ * Unsubscribe from a channel
+ * @param {Object} channel - Channel returned from subscribe function
+ */
+function unsubscribe(channel) {
+    if (channel) {
+        supabase.removeChannel(channel);
+    }
+}
+
+// SONGS - Query Operations
+// ============================================
+
+/**
+ * Get all verified songs
+ * @returns {Promise<Array>} Array of songs
+ */
+async function getVerifiedSongs() {
+    try {
+        const { data, error } = await supabase
+            .from('songs')
+            .select('*')
+            .eq('verified', true);
+
+        if (error) throw error;
+
+        return data.map(song => convertSongFromDB(song));
+    } catch (error) {
+        console.error('Error getting songs:', error);
+        return [];
+    }
+}
+
+/**
+ * Get song by ID
+ * @param {string} id - Song ID
+ * @returns {Promise<Object|null>}
+ */
+async function getSong(id) {
+    try {
+        const { data, error } = await supabase
+            .from('songs')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') return null;
+            throw error;
+        }
+
+        return convertSongFromDB(data);
+    } catch (error) {
+        console.error('Error getting song:', error);
+        return null;
+    }
+}
+
+// CONVERSION HELPERS
+// ============================================
+
+/**
+ * Convert camelCase to snake_case
+ */
+function camelToSnake(str) {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+}
+
+/**
+ * Convert snake_case to camelCase
+ */
+function snakeToCamel(str) {
+    return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+}
+
+/**
+ * Convert room data FROM database format TO app format
+ */
+function convertRoomFromDB(dbRoom) {
+    return {
+        code: dbRoom.code,
+        host: dbRoom.host,
+        mode: dbRoom.mode,
+        status: dbRoom.status,
+        currentQ: dbRoom.current_q,
+        questions: dbRoom.questions,
+        gameParams: dbRoom.game_params,
+        buzzedPlayer: dbRoom.buzzed_player,
+        buzzTime: dbRoom.buzz_time,
+        buzzerLocked: dbRoom.buzzer_locked,
+        isPaused: dbRoom.is_paused,
+        remainingTime: dbRoom.remaining_time,
+        questionStartTime: dbRoom.question_start_time,
+        resultsCalculated: dbRoom.results_calculated,
+        nextCountdown: dbRoom.next_countdown,
+        scoreboardCountdown: dbRoom.scoreboard_countdown,
+        created: new Date(dbRoom.created_at).getTime()
+    };
+}
+
+/**
+ * Convert room data FROM app format TO database format
+ */
+function convertRoomToDB(appRoom) {
+    const dbRoom = {};
+
+    const fieldMap = {
+        'host': 'host',
+        'mode': 'mode',
+        'status': 'status',
+        'currentQ': 'current_q',
+        'questions': 'questions',
+        'gameParams': 'game_params',
+        'buzzedPlayer': 'buzzed_player',
+        'buzzTime': 'buzz_time',
+        'buzzerLocked': 'buzzer_locked',
+        'isPaused': 'is_paused',
+        'remainingTime': 'remaining_time',
+        'questionStartTime': 'question_start_time',
+        'resultsCalculated': 'results_calculated',
+        'nextCountdown': 'next_countdown',
+        'scoreboardCountdown': 'scoreboard_countdown'
+    };
+
+    for (const [appKey, dbKey] of Object.entries(fieldMap)) {
+        if (appRoom[appKey] !== undefined) {
+            dbRoom[dbKey] = appRoom[appKey];
+        }
+    }
+
+    return dbRoom;
+}
+
+/**
+ * Convert player data FROM database format TO app format
+ */
+function convertPlayerFromDB(dbPlayer) {
+    return {
+        score: dbPlayer.score,
+        answer: dbPlayer.answer,
+        answered: dbPlayer.answered,
+        answerTime: dbPlayer.answer_time,
+        lastPoints: dbPlayer.last_points,
+        correctCount: dbPlayer.correct_count,
+        isHost: dbPlayer.is_host,
+        lockoutUntil: dbPlayer.lockout_until,
+        joined: new Date(dbPlayer.joined_at).getTime()
+    };
+}
+
+/**
+ * Convert player data FROM app format TO database format
+ */
+function convertPlayerToDB(appPlayer) {
+    const dbPlayer = {};
+
+    const fieldMap = {
+        'score': 'score',
+        'answer': 'answer',
+        'answered': 'answered',
+        'answerTime': 'answer_time',
+        'lastPoints': 'last_points',
+        'correctCount': 'correct_count',
+        'isHost': 'is_host',
+        'lockoutUntil': 'lockout_until'
+    };
+
+    for (const [appKey, dbKey] of Object.entries(fieldMap)) {
+        if (appPlayer[appKey] !== undefined) {
+            dbPlayer[dbKey] = appPlayer[appKey];
+        }
+    }
+
+    return dbPlayer;
+}
+
+/**
+ * Convert song data FROM database format TO app format
+ */
+function convertSongFromDB(dbSong) {
+    return {
+        id: dbSong.id,
+        title: dbSong.title,
+        artist: dbSong.artist,
+        specificGame: dbSong.specific_game,
+        seriesSource: dbSong.series_source,
+        developer: dbSong.developer,
+        releaseYear: dbSong.release_year,
+        bossBattle: dbSong.boss_battle,
+        area: dbSong.area,
+        youtubeUrl: dbSong.youtube_url,
+        youtubeId: dbSong.youtube_id,
+        startTime: dbSong.start_time,
+        duration: dbSong.duration,
+        difficulty: dbSong.difficulty,
+        verified: dbSong.verified
+    };
+}
+
+function generateRoomCode() {
+    return Math.random().toString(36).substring(2, 6).toUpperCase();
+}
+
+/**
+ * Sanitize player name (remove invalid characters)
+ */
+function sanitizeName(name) {
+    return name.trim().replace(/[.#$/[\]]/g, '');
+}
