@@ -1,4 +1,4 @@
-// Get session data
+// Get session data - UNCHANGED
 const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 let isHost = sessionStorage.getItem('isHost') === 'true';
@@ -7,34 +7,32 @@ if (!gameCode || !playerName) {
     window.location.href = 'index.html';
 }
 
-const roomRef = db.ref(`rooms/${gameCode}`);
-const playersRef = db.ref(`rooms/${gameCode}/players`);
-const playerRef = db.ref(`rooms/${gameCode}/players/${playerName}`);
-
 let currentMode = 'everybody';
+let roomSubscription = null; // ADDED: Track subscription for cleanup
 
-// Display game code
+// Display game code - UNCHANGED
 document.getElementById('gameCode').textContent = gameCode;
 
-// Toggle Game Mode Section
+// Toggle Game Mode Section - UNCHANGED
 document.getElementById('toggleGameModeBtn')?.addEventListener('click', () => {
     const section = document.getElementById('gameModeSection');
     section.style.display = section.style.display === 'none' ? 'block' : 'none';
 });
 
-// Toggle Parameters Section
+// Toggle Parameters Section - UNCHANGED
 document.getElementById('toggleParametersBtn')?.addEventListener('click', () => {
     const section = document.getElementById('parametersSection');
     section.style.display = section.style.display === 'none' ? 'block' : 'none';
 });
 
-// Load and populate current parameters from database when page loads
-roomRef.once('value', snapshot => {
-    const room = snapshot.val();
+// Load and populate current parameters from database - CHANGED
+// OLD: roomRef.once('value', snapshot => {...})
+// NEW: Using getRoom() helper
+getRoom(gameCode).then(room => {
     if (room && room.gameParams) {
         const params = room.gameParams;
 
-        // Load number of questions
+        // Load number of questions - UNCHANGED logic
         if (params.numQuestions) {
             const numQuestionsInput = document.getElementById('numQuestions');
             if (numQuestionsInput) {
@@ -42,7 +40,7 @@ roomRef.once('value', snapshot => {
             }
         }
 
-        // Standard mode parameters
+        // Standard mode parameters - UNCHANGED logic
         if (params.correctPointsScale) {
             const firstPlace = document.getElementById('firstPlacePoints');
             const secondPlace = document.getElementById('secondPlacePoints');
@@ -59,7 +57,7 @@ roomRef.once('value', snapshot => {
             }
         }
 
-        // Buzzer mode parameters
+        // Buzzer mode parameters - UNCHANGED logic
         if (params.buzzerCorrectPoints !== undefined) {
             const buzzerCorrect = document.getElementById('buzzerCorrectPoints');
             if (buzzerCorrect) {
@@ -87,7 +85,7 @@ roomRef.once('value', snapshot => {
     }
 });
 
-// Game Mode Selection with Buttons
+// Game Mode Selection with Buttons - CHANGED
 const modeButtons = document.querySelectorAll('.mode-btn');
 modeButtons.forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -95,51 +93,64 @@ modeButtons.forEach(btn => {
 
         const mode = btn.getAttribute('data-mode');
 
-        // Only allow click if not already selected
+        // Only allow click if not already selected - UNCHANGED
         if (btn.classList.contains('active')) return;
 
-        // Update all buttons
+        // Update all buttons - UNCHANGED
         modeButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        // Update database
+        // CHANGED: Update database using updateRoom() helper
+        // OLD: await roomRef.update({ mode });
         currentMode = mode;
-        await roomRef.update({ mode });
+        await updateRoom(gameCode, { mode });
 
-        // Show/hide appropriate parameters
+        // Show/hide appropriate parameters - UNCHANGED
         updateParametersDisplay(mode);
 
-        // Auto-close mode selection after choosing
+        // Auto-close mode selection after choosing - UNCHANGED
         document.getElementById('gameModeSection').style.display = 'none';
     });
 });
 
-// Watch for host changes
-playerRef.child('isHost').on('value', (snapshot) => {
-    const hostStatus = snapshot.val();
-    if (hostStatus === true) {
-        isHost = true;
-        sessionStorage.setItem('isHost', 'true');
-        document.getElementById('startBtn').style.display = 'block';
-        document.getElementById('toggleGameModeBtn').style.display = 'block';
-        document.getElementById('toggleParametersBtn').style.display = 'block';
-        modeButtons.forEach(btn => btn.style.pointerEvents = 'auto');
-    } else if (hostStatus === false) {
-        isHost = false;
-        sessionStorage.setItem('isHost', 'false');
-        document.getElementById('startBtn').style.display = 'none';
-        document.getElementById('toggleGameModeBtn').style.display = 'none';
-        document.getElementById('toggleParametersBtn').style.display = 'none';
-        modeButtons.forEach(btn => btn.style.pointerEvents = 'none');
-    }
-});
+// CHANGED: Subscribe to room changes using subscribeToRoom() helper
+// OLD: playerRef.child('isHost').on('value', (snapshot) => {...})
+// NEW: Subscribe to entire room, filter for player's isHost status
 
-// Listen for game mode changes
-roomRef.child('mode').on('value', (snapshot) => {
-    const mode = snapshot.val() || 'everybody';
+roomSubscription = subscribeToRoom(gameCode, (room) => {
+    if (!room) {
+        // Room deleted, go home
+        window.location.href = 'index.html';
+        return;
+    }
+
+    // Check if current player's host status changed
+    const currentPlayer = room.players ? room.players[playerName] : null;
+    if (currentPlayer) {
+        const hostStatus = currentPlayer.isHost;
+        
+        if (hostStatus === true) {
+            isHost = true;
+            sessionStorage.setItem('isHost', 'true');
+            document.getElementById('startBtn').style.display = 'block';
+            document.getElementById('toggleGameModeBtn').style.display = 'block';
+            document.getElementById('toggleParametersBtn').style.display = 'block';
+            modeButtons.forEach(btn => btn.style.pointerEvents = 'auto');
+        } else if (hostStatus === false) {
+            isHost = false;
+            sessionStorage.setItem('isHost', 'false');
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('toggleGameModeBtn').style.display = 'none';
+            document.getElementById('toggleParametersBtn').style.display = 'none';
+            modeButtons.forEach(btn => btn.style.pointerEvents = 'none');
+        }
+    }
+
+    // Update mode display - UNCHANGED logic
+    const mode = room.mode || 'everybody';
     currentMode = mode;
 
-    // Update button states
+    // Update button states - UNCHANGED logic
     modeButtons.forEach(btn => {
         btn.classList.remove('active');
         if (btn.getAttribute('data-mode') === mode) {
@@ -147,22 +158,75 @@ roomRef.child('mode').on('value', (snapshot) => {
         }
     });
 
-    // Update current mode display
+    // Update current mode display - UNCHANGED logic
     const modeMap = {
         'everybody': '🎮 Everybody Plays',
         'buzzer': '🔴 Buzzer Mode'
     };
     document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
 
-    // Update parameters display
+    // Update parameters display - UNCHANGED
     updateParametersDisplay(mode);
+
+    // Update player list - UNCHANGED logic
+    const players = room.players || {};
+    const playerArray = Object.entries(players).map(([name, data]) => ({
+        name,
+        ...data
+    }));
+
+    // Update player count - UNCHANGED
+    document.getElementById('playerCount').textContent = playerArray.length;
+
+    // Check if there's a host - CHANGED: Now handled in subscription
+    const hasHost = playerArray.some(p => p.isHost);
+    if (!hasHost && playerArray.length > 0) {
+        const firstPlayer = playerArray[0].name;
+        if (firstPlayer === playerName) {
+            // Make ourselves host
+            updatePlayer(gameCode, playerName, { isHost: true });
+            updateRoom(gameCode, { host: playerName });
+        }
+    }
+
+    // Render player list - UNCHANGED logic
+    const container = document.getElementById('playerListContainer');
+    container.innerHTML = playerArray.map(player => `
+        <div class="player-item">
+            <span class="player-name">${player.name}</span>
+            ${player.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
+            ${isHost && !player.isHost ?
+            `<button class="transfer-host-btn" data-player="${player.name}">Make Host</button>`
+            : ''}
+        </div>
+    `).join('');
+
+    // Add transfer host button handlers - UNCHANGED logic (but using helper)
+    if (isHost) {
+        document.querySelectorAll('.transfer-host-btn').forEach(btn => {
+            btn.addEventListener('click', () => transferHost(btn.dataset.player));
+        });
+    }
+
+    // Check for game start - CHANGED: Now handled in subscription
+    if (room.status === 'playing') {
+        // Set flag so beforeunload doesn't remove player
+        isStartingGame = true;
+
+        const mode = room.mode;
+        if (mode === 'buzzer') {
+            window.location.href = 'buzzer.html';
+        } else {
+            window.location.href = 'quiz.html';
+        }
+    }
 });
 
+// UNCHANGED: Helper function for parameter display
 function updateParametersDisplay(mode) {
     const standardParams = document.getElementById('standardModeParams');
     const buzzerParams = document.getElementById('buzzerModeParams');
 
-    // Check if elements exist before trying to modify
     if (!standardParams || !buzzerParams) {
         console.warn('Parameter sections not found in DOM');
         return;
@@ -177,54 +241,12 @@ function updateParametersDisplay(mode) {
     }
 }
 
-// Listen for player changes
-playersRef.on('value', (snapshot) => {
-    const players = snapshot.val();
-    if (!players) return;
-
-    const playerArray = Object.entries(players).map(([name, data]) => ({
-        name,
-        ...data
-    }));
-
-    // Update player count
-    document.getElementById('playerCount').textContent = playerArray.length;
-
-    // Check if there's a host
-    const hasHost = playerArray.some(p => p.isHost);
-    if (!hasHost && playerArray.length > 0) {
-        const firstPlayer = playerArray[0].name;
-        if (firstPlayer === playerName) {
-            db.ref(`rooms/${gameCode}/players/${playerName}/isHost`).set(true);
-            db.ref(`rooms/${gameCode}/host`).set(playerName);
-        }
-    }
-
-    // Render player list
-    const container = document.getElementById('playerListContainer');
-    container.innerHTML = playerArray.map(player => `
-        <div class="player-item">
-            <span class="player-name">${player.name}</span>
-            ${player.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
-            ${isHost && !player.isHost ?
-            `<button class="transfer-host-btn" data-player="${player.name}">Make Host</button>`
-            : ''}
-        </div>
-    `).join('');
-
-    // Add transfer host button handlers
-    if (isHost) {
-        document.querySelectorAll('.transfer-host-btn').forEach(btn => {
-            btn.addEventListener('click', () => transferHost(btn.dataset.player));
-        });
-    }
-});
-
-// Save Parameters - NOW SAVES numQuestions TOO
+// Save Parameters - CHANGED: Now uses updateRoom() helper
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
-    // Get number of questions
+    // Get number of questions - UNCHANGED
     const numQuestions = parseInt(document.getElementById('numQuestions')?.value) || 10;
 
+    // Build gameParams object - UNCHANGED logic
     const gameParams = currentMode === 'buzzer'
         ? {
             buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints')?.value) || 1000,
@@ -244,72 +266,56 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             hostTimerDuration: 60,
             numQuestions: numQuestions
         };
+    
+    // Get selected categories - UNCHANGED
     const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
         .map(cb => cb.value);
     gameParams.categories = selectedCategories;
 
-    await roomRef.update({ gameParams });
+    // CHANGED: Update using helper
+    // OLD: await roomRef.update({ gameParams });
+    await updateRoom(gameCode, { gameParams });
     alert('Parameters saved!');
 
-    // Auto-close parameters section
+    // Auto-close parameters section - UNCHANGED
     const paramsSection = document.getElementById('parametersSection');
     if (paramsSection) {
         paramsSection.style.display = 'none';
     }
 });
 
-// Listen for game start
-roomRef.child('status').on('value', (snapshot) => {
-    const status = snapshot.val();
-    if (status === 'playing') {
-        // Set flag so beforeunload doesn't remove player
-        isStartingGame = true;
-
-        roomRef.child('mode').once('value', modeSnapshot => {
-            const mode = modeSnapshot.val();
-            if (mode === 'buzzer') {
-                window.location.href = 'buzzer.html';
-            } else {
-                window.location.href = 'quiz.html';
-            }
-        });
-    }
-});
-
-// Transfer host function
+// Transfer host function - CHANGED: Now uses helper functions
 async function transferHost(newHostName) {
     if (!isHost) return;
 
-    const updates = {};
-    updates[`rooms/${gameCode}/host`] = newHostName;
-    updates[`rooms/${gameCode}/players/${playerName}/isHost`] = false;
-    updates[`rooms/${gameCode}/players/${newHostName}/isHost`] = true;
+    // CHANGED: Use individual helper functions instead of multi-path update
+    // OLD: db.ref().update({ multiple paths... })
+    await updateRoom(gameCode, { host: newHostName });
+    await updatePlayer(gameCode, playerName, { isHost: false });
+    await updatePlayer(gameCode, newHostName, { isHost: true });
 
-    await db.ref().update(updates);
     alert(`${newHostName} is now the host!`);
 }
 
-// Start Game (Host Only)
+// Start Game (Host Only) - CHANGED: Database operations, logic UNCHANGED
 document.getElementById('startBtn')?.addEventListener('click', async () => {
-    const snapshot = await playersRef.once('value');
-    const players = snapshot.val();
+    // CHANGED: Get players using helper
+    // OLD: const snapshot = await playersRef.once('value');
+    const room = await getRoom(gameCode);
+    const players = room ? room.players : null;
 
     if (!players || Object.keys(players).length < 1) {
         alert('Need at least 1 player to start!');
         return;
     }
 
-    // Get current room to check mode
-    const roomSnapshot = await roomRef.once('value');
-    const room = roomSnapshot.val();
-
-    // For buzzer mode, require at least 2 players (host + 1 player)
+    // For buzzer mode, require at least 2 players - UNCHANGED
     if (room.mode === 'buzzer' && Object.keys(players).length < 2) {
         alert('Buzzer mode requires at least 2 players (host + 1 player)!');
         return;
     }
 
-    // Get number of questions - check saved params first, then input field
+    // Get number of questions - UNCHANGED
     let numQuestions = room.gameParams?.numQuestions || parseInt(document.getElementById('numQuestions')?.value) || 10;
 
     if (numQuestions < 1 || numQuestions > 100) {
@@ -317,13 +323,13 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
-    // Disable button while generating
+    // Disable button while generating - UNCHANGED
     const btn = document.getElementById('startBtn');
     btn.disabled = true;
     btn.textContent = `Generating ${numQuestions} questions...`;
 
     try {
-        // Generate questions from database
+        // Generate questions - NOTE: This will need question-generator.js updated
         const generator = new QuestionGenerator();
         const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
             .map(cb => cb.value);
@@ -332,7 +338,6 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         const yearMax = parseInt(document.getElementById(`${currentMode}ReleaseYearMax`)?.value) || null;
 
         const questions = await generator.generateQuestions(numQuestions, selectedCategories, yearMin, yearMax);
-
 
         if (questions.length === 0) {
             alert('Error: Could not generate questions. Please check that songs have been added to the database.');
@@ -345,8 +350,7 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             alert(`Only ${questions.length} questions available. Starting with ${questions.length} questions.`);
         }
 
-        // Use existing gameParams or set defaults
-        // This ensures the displayed values match what's actually used
+        // Use existing gameParams or set defaults - UNCHANGED
         const finalGameParams = room.gameParams || {
             correctPointsScale: [1000, 800, 600, 400],
             buzzerCorrectPoints: 1000,
@@ -357,8 +361,9 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             musicDuration: 30
         };
 
-        // Start game with generated questions
-        await roomRef.update({
+        // CHANGED: Start game using updateRoom() helper
+        // OLD: await roomRef.update({...})
+        await updateRoom(gameCode, {
             status: 'playing',
             currentQ: 0,
             questions: questions,
@@ -373,37 +378,51 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
     }
 });
 
-// Leave Lobby
+// Leave Lobby - CHANGED: Now uses helper functions
 document.getElementById('leaveBtn')?.addEventListener('click', async () => {
-    await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
+    // CHANGED: Remove player using helper
+    // OLD: await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
+    await removePlayer(gameCode, playerName);
 
-    const snapshot = await playersRef.once('value');
-    const players = snapshot.val();
+    // CHANGED: Check if room is empty using helper
+    // OLD: const snapshot = await playersRef.once('value');
+    const players = await getPlayers(gameCode);
 
-    // If no players left, delete the entire room
+    // If no players left, delete the entire room - UNCHANGED logic
     if (!players || Object.keys(players).length === 0) {
         console.log('No players left, deleting room');
-        await roomRef.remove();
+        await deleteRoom(gameCode);
     } else if (isHost) {
-        // Transfer host to first remaining player
+        // Transfer host to first remaining player - CHANGED: Using helpers
         const remainingPlayers = Object.keys(players);
-        await db.ref(`rooms/${gameCode}/players/${remainingPlayers[0]}/isHost`).set(true);
-        await db.ref(`rooms/${gameCode}/host`).set(remainingPlayers[0]);
+        await updatePlayer(gameCode, remainingPlayers[0], { isHost: true });
+        await updateRoom(gameCode, { host: remainingPlayers[0] });
+    }
+
+    // Cleanup subscription - ADDED
+    if (roomSubscription) {
+        unsubscribe(roomSubscription);
     }
 
     sessionStorage.clear();
     window.location.href = 'index.html';
 });
 
-// Handle page unload - only remove player if actually leaving (not starting game)
+// Handle page unload - CHANGED: Now uses helper
 let isStartingGame = false;
 
 window.addEventListener('beforeunload', async (e) => {
-    // Don't remove player if they're starting/joining the game
+    // Don't remove player if they're starting/joining the game - UNCHANGED
     if (isStartingGame) {
         return;
     }
 
-    // Only remove if truly leaving
-    await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
+    // CHANGED: Remove player using helper
+    // OLD: await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
+    await removePlayer(gameCode, playerName);
+    
+    // Cleanup subscription - ADDED
+    if (roomSubscription) {
+        unsubscribe(roomSubscription);
+    }
 });
