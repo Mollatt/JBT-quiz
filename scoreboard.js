@@ -1,4 +1,4 @@
-// Get session data
+// Get session data - UNCHANGED
 const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 const isHost = sessionStorage.getItem('isHost') === 'true';
@@ -7,15 +7,15 @@ if (!gameCode || !playerName) {
     window.location.href = 'index.html';
 }
 
-const roomRef = db.ref(`rooms/${gameCode}`);
-const playersRef = db.ref(`rooms/${gameCode}/players`);
+// ADDED: Track subscriptions for cleanup
+let countdownSubscription = null;
+let statusSubscription = null;
 
 let countdownInterval = null;
 
-// Listen for countdown state in Firebase
-roomRef.child('scoreboardCountdown').on('value', (snapshot) => {
-    const countdownData = snapshot.val();
-    
+// CHANGED: Listen for countdown state using Supabase subscription
+// OLD: roomRef.child('scoreboardCountdown').on('value', (snapshot) => {...})
+countdownSubscription = subscribeToRoomField(gameCode, 'scoreboardCountdown', (countdownData) => {
     if (countdownData && countdownData.active) {
         // Someone started countdown, show it for everyone
         const continueBtn = document.getElementById('continueBtn');
@@ -43,46 +43,42 @@ roomRef.child('scoreboardCountdown').on('value', (snapshot) => {
     }
 });
 
-// Listen for status changes - UPDATED TO CHECK MODE
-roomRef.child('status').on('value', (snapshot) => {
-    const status = snapshot.val();
+// CHANGED: Listen for status changes
+// OLD: roomRef.child('status').on('value', (snapshot) => {...})
+statusSubscription = subscribeToRoomField(gameCode, 'status', async (status) => {
     if (status === 'playing') {
         // Check mode and go to correct page
-        roomRef.child('mode').once('value', modeSnapshot => {
-            const mode = modeSnapshot.val();
-            if (mode === 'buzzer') {
-                window.location.href = 'buzzer.html';
-            } else {
-                window.location.href = 'quiz.html';
-            }
-        });
+        const room = await getRoom(gameCode);
+        const mode = room ? room.mode : 'everybody';
+        
+        if (mode === 'buzzer') {
+            window.location.href = 'buzzer.html';
+        } else {
+            window.location.href = 'quiz.html';
+        }
     } else if (status === 'finished') {
         // Go to final results
         window.location.href = 'results.html';
     }
 });
 
-// Load and display scoreboard
-Promise.all([
-    roomRef.once('value'),
-    playersRef.once('value')
-]).then(([roomSnapshot, playersSnapshot]) => {
-    const room = roomSnapshot.val();
-    const players = playersSnapshot.val();
-    
-    if (!room || !players) {
+// CHANGED: Load and display scoreboard
+// OLD: Promise.all([roomRef.once('value'), playersRef.once('value')])
+getRoom(gameCode).then(room => {
+    if (!room) {
         window.location.href = 'index.html';
         return;
     }
     
+    const players = room.players || {};
     const currentQ = room.currentQ;
-    const totalQ = room.questions.length;
+    const totalQ = room.questions ? room.questions.length : 0;
     
-    // Update progress
+    // Update progress - UNCHANGED
     document.getElementById('progressQ').textContent = currentQ;
     document.getElementById('progressTotal').textContent = totalQ;
     
-    // Filter out host if in buzzer mode
+    // Filter out host if in buzzer mode - UNCHANGED
     let filteredPlayers = players;
     if (room.mode === 'buzzer') {
         filteredPlayers = Object.fromEntries(
@@ -90,7 +86,7 @@ Promise.all([
         );
     }
     
-    // Sort players by score
+    // Sort players by score - UNCHANGED
     const leaderboard = Object.entries(filteredPlayers)
         .map(([name, data]) => ({
             name,
@@ -98,10 +94,10 @@ Promise.all([
         }))
         .sort((a, b) => b.score - a.score);
     
-    // Display top 3
+    // Display top 3 - UNCHANGED
     displayTopPlayers(leaderboard.slice(0, 3));
     
-    // Show current player's position (skip if host in buzzer mode)
+    // Show current player's position - UNCHANGED
     if (room.mode === 'buzzer' && isHost) {
         // Don't show position for host in buzzer mode
         document.getElementById('yourPosition').style.display = 'none';
@@ -111,10 +107,14 @@ Promise.all([
         displayYourPosition(playerRank, playerScore, leaderboard.length);
     }
     
-    // Setup continue button
+    // Setup continue button - UNCHANGED
     setupContinueButton(room.mode);
+}).catch(error => {
+    console.error('Error loading scoreboard:', error);
+    alert('Failed to load scoreboard');
 });
 
+// UNCHANGED: Display functions
 function displayTopPlayers(topPlayers) {
     const container = document.getElementById('topPlayersContainer');
     const medals = ['🥇', '🥈', '🥉'];
@@ -162,6 +162,7 @@ function getOrdinalSuffix(num) {
     return 'th';
 }
 
+// UNCHANGED: Setup continue button
 function setupContinueButton(mode) {
     const continueBtn = document.getElementById('continueBtn');
     const autoCountdown = document.getElementById('autoCountdown');
@@ -188,9 +189,11 @@ function setupContinueButton(mode) {
     }
 }
 
+// CHANGED: Start countdown
 function startCountdown() {
-    // Set countdown state in Firebase so all players see it
-    roomRef.update({
+    // CHANGED: Set countdown state in Supabase
+    // OLD: roomRef.update({ scoreboardCountdown: {...} })
+    updateRoom(gameCode, {
         scoreboardCountdown: {
             active: true,
             timeLeft: 3,
@@ -200,6 +203,7 @@ function startCountdown() {
     });
 }
 
+// UNCHANGED: Display countdown
 function startCountdownDisplay(initialTime) {
     const countdownEl = document.getElementById('countdownTime');
     
@@ -210,22 +214,31 @@ function startCountdownDisplay(initialTime) {
         timeLeft--;
         if (countdownEl) countdownEl.textContent = timeLeft;
         
-        // Update Firebase so all players stay synced
+        // CHANGED: Update Supabase
         if (timeLeft > 0) {
-            await roomRef.child('scoreboardCountdown').update({ timeLeft });
+            await updateRoom(gameCode, { 
+                scoreboardCountdown: { 
+                    active: true, 
+                    timeLeft,
+                    startedBy: playerName,
+                    startedAt: Date.now() - (initialTime - timeLeft) * 1000
+                }
+            });
         } else {
             clearInterval(countdownInterval);
             countdownInterval = null;
-            // Clear countdown and continue
-            await roomRef.child('scoreboardCountdown').remove();
+            // CHANGED: Clear countdown and continue
+            await updateRoom(gameCode, { scoreboardCountdown: null });
             continueQuiz();
         }
     }, 1000);
 }
 
+// CHANGED: Cancel countdown
 function cancelCountdown() {
-    // Clear countdown in Firebase so all players see it cancelled
-    roomRef.child('scoreboardCountdown').remove();
+    // CHANGED: Clear countdown in Supabase
+    // OLD: roomRef.child('scoreboardCountdown').remove()
+    updateRoom(gameCode, { scoreboardCountdown: null });
     
     if (countdownInterval) {
         clearInterval(countdownInterval);
@@ -233,15 +246,23 @@ function cancelCountdown() {
     }
 }
 
+// CHANGED: Continue quiz
 async function continueQuiz() {
-    // Check mode and status
-    const snapshot = await roomRef.once('value');
-    const room = snapshot.val();
+    // CHANGED: Check mode and status
+    // OLD: const snapshot = await roomRef.once('value');
+    const room = await getRoom(gameCode);
     
     if (room.currentQ >= room.questions.length) {
-        await roomRef.update({ status: 'finished' });
+        await updateRoom(gameCode, { status: 'finished' });
     } else {
-        await roomRef.update({ status: 'playing' });
+        await updateRoom(gameCode, { status: 'playing' });
         // Will redirect via status listener based on mode
     }
 }
+
+// ADDED: Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (countdownSubscription) unsubscribe(countdownSubscription);
+    if (statusSubscription) unsubscribe(statusSubscription);
+    if (countdownInterval) clearInterval(countdownInterval);
+});
