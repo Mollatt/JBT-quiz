@@ -1,4 +1,4 @@
-// Get session data
+// Get session data - UNCHANGED
 const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 const isHost = sessionStorage.getItem('isHost') === 'true';
@@ -7,31 +7,29 @@ if (!gameCode || !playerName) {
     window.location.href = 'index.html';
 }
 
-const roomRef = db.ref(`rooms/${gameCode}`);
-const playersRef = db.ref(`rooms/${gameCode}/players`);
+// ADDED: Track subscription for cleanup
+let statusSubscription = null;
 
-// Listen for status changes to sync all players
-roomRef.child('status').on('value', (snapshot) => {
-    const status = snapshot.val();
+// CHANGED: Listen for status changes to sync all players
+// OLD: roomRef.child('status').on('value', (snapshot) => {...})
+statusSubscription = subscribeToRoomField(gameCode, 'status', (status) => {
     if (status === 'lobby') {
         // Game is restarting, go back to lobby
         window.location.href = 'lobby.html';
     }
 });
-// Load and display results
-Promise.all([
-    roomRef.once('value'),
-    playersRef.once('value')
-]).then(([roomSnapshot, playersSnapshot]) => {
-    const room = roomSnapshot.val();
-    const players = playersSnapshot.val();
-    
-    if (!room || !players) {
+
+// CHANGED: Load and display results
+// OLD: Promise.all([roomRef.once('value'), playersRef.once('value')])
+getRoom(gameCode).then(room => {
+    if (!room) {
         window.location.href = 'index.html';
         return;
     }
 
-    // Filter out host if in buzzer mode
+    const players = room.players || {};
+    
+    // Filter out host if in buzzer mode - UNCHANGED
     let filteredPlayers = players;
     if (room.mode === 'buzzer') {
         filteredPlayers = Object.fromEntries(
@@ -39,7 +37,7 @@ Promise.all([
         );
     }
 
-    // Convert to array and sort by score
+    // Convert to array and sort by score - UNCHANGED
     const leaderboard = Object.entries(filteredPlayers)
         .map(([name, data]) => ({
             name,
@@ -48,11 +46,15 @@ Promise.all([
         }))
         .sort((a, b) => b.score - a.score);
 
-    // Get total questions
-    const totalQuestions = room.questions.length;
+    // Get total questions - UNCHANGED
+    const totalQuestions = room.questions ? room.questions.length : 0;
     displayLeaderboard(leaderboard, totalQuestions);
+}).catch(error => {
+    console.error('Error loading results:', error);
+    alert('Failed to load results');
 });
 
+// UNCHANGED: Display leaderboard
 function displayLeaderboard(leaderboard, totalQuestions) {
     const container = document.getElementById('leaderboardContainer');
 
@@ -91,11 +93,11 @@ function displayLeaderboard(leaderboard, totalQuestions) {
     }).join('');
 }
 
-// Play again button - ALL players can click
+// CHANGED: Play again button - ALL players can click
 document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
-    // Only one person should trigger the reset (use host or first clicker)
-    const snapshot = await roomRef.once('value');
-    const room = snapshot.val();
+    // CHANGED: Get current room state
+    // OLD: const snapshot = await roomRef.once('value');
+    const room = await getRoom(gameCode);
     
     // Check if already being reset
     if (room.status === 'lobby') {
@@ -103,49 +105,52 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
         return;
     }
     
-    // Reset all player scores and answers
-    const players = room.players;
-    const updates = {};
+    // CHANGED: Reset all player scores and answers
+    const players = room.players || {};
     
+    // Update each player individually
     for (const [name, data] of Object.entries(players)) {
-        updates[`rooms/${gameCode}/players/${name}/score`] = 0;
-        updates[`rooms/${gameCode}/players/${name}/answer`] = null;
-        updates[`rooms/${gameCode}/players/${name}/answered`] = false;
-        updates[`rooms/${gameCode}/players/${name}/answerTime`] = null;
-        updates[`rooms/${gameCode}/players/${name}/lastPoints`] = 0;
-        updates[`rooms/${gameCode}/players/${name}/correctCount`] = 0;
+        await updatePlayer(gameCode, name, {
+            score: 0,
+            answer: null,
+            answered: false,
+            answerTime: null,
+            lastPoints: 0,
+            correctCount: 0
+        });
     }
     
-    // Clear results flags
-    updates[`rooms/${gameCode}/resultsCalculated`] = null;
-    
-    updates[`rooms/${gameCode}/status`] = 'lobby';
-    updates[`rooms/${gameCode}/currentQ`] = -1;
-    
-    await db.ref().update(updates);
+    // CHANGED: Clear results flags and reset room
+    // OLD: db.ref().update({ multiple paths... })
+    await updateRoom(gameCode, {
+        resultsCalculated: null,
+        status: 'lobby',
+        currentQ: -1
+    });
     
     // Will redirect via status listener
 });
 
-// Home button
+// CHANGED: Home button
 document.getElementById('homeBtn')?.addEventListener('click', async () => {
-    // Remove player from room
-    await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
+    // CHANGED: Remove player from room
+    // OLD: await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
+    await removePlayer(gameCode, playerName);
 
-    // Check if room is empty and clean up
-    const snapshot = await playersRef.once('value');
-    const players = snapshot.val();
+    // CHANGED: Check if room is empty and clean up
+    // OLD: const snapshot = await playersRef.once('value');
+    const players = await getPlayers(gameCode);
 
     if (!players || Object.keys(players).length === 0) {
-        await roomRef.remove();
+        await deleteRoom(gameCode);
     }
 
-    // Clear session and return home
+    // Clear session and return home - UNCHANGED
     sessionStorage.clear();
     window.location.href = 'index.html';
 });
 
-// Add highlight style for current player
+// UNCHANGED: Highlight style for current player
 const style = document.createElement('style');
 style.textContent = `
     .leaderboard-item.highlight {
@@ -155,3 +160,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ADDED: Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (statusSubscription) unsubscribe(statusSubscription);
+});
