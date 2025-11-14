@@ -501,6 +501,16 @@ async function calculateAndShowResults(players) {
 
 async function advanceQuestionAfterCountdown() {
     try {
+        // CHANGED: Hide all UI elements immediately to prevent flash
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('nextBtn').style.display = 'none';
+        document.getElementById('resultsBtn').style.display = 'none';
+        document.getElementById('waitingMsg').style.display = 'none';
+        document.getElementById('answerProgress').style.display = 'none';
+
+        const nextCountdownEl = document.getElementById('nextCountdown');
+        if (nextCountdownEl) nextCountdownEl.style.display = 'none';
+
         const room = await getRoom(gameCode);
 
         if (!room) return;
@@ -526,11 +536,11 @@ async function advanceQuestionAfterCountdown() {
         await Promise.all(resetPromises);
 
         await updateRoom(gameCode, {
-            resultsCalculated: resultsCalc,
+            resultsCalc: resultsCalc,
             nextCountdown: null
         });
 
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         if (shouldShowScoreboard(nextQ, totalQ)) {
             await updateRoom(gameCode, {
@@ -645,6 +655,9 @@ function showPostResultsButtons() {
     const resultsBtn = document.getElementById('resultsBtn');
     const waitingMsg = document.getElementById('waitingMsg');
 
+    // CHANGED: Determine if next is a scoreboard
+    const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
+
     if (effMode === 'host') {
         if (nextQ >= totalQ) {
             if (isHost) {
@@ -654,7 +667,11 @@ function showPostResultsButtons() {
             }
         } else {
             if (isHost) {
-                if (nextBtn) nextBtn.style.display = 'block';
+                if (nextBtn) {
+                    // CHANGED: Update button text based on what's next
+                    nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
+                    nextBtn.style.display = 'block';
+                }
             } else {
                 if (waitingMsg) waitingMsg.style.display = 'block';
             }
@@ -667,7 +684,11 @@ function showPostResultsButtons() {
                 if (waitingMsg) waitingMsg.style.display = 'block';
             }
         } else {
-            if (nextBtn) nextBtn.style.display = 'block';
+            if (nextBtn) {
+                // CHANGED: Update button text based on what's next
+                nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
+                nextBtn.style.display = 'block';
+            }
         }
     }
 }
@@ -722,12 +743,34 @@ function showFeedback(isCorrect) {
     });
 }
 
-document.getElementById('nextBtn')?.addEventListener('click', () => {
-    requestStartCountdown(3);
+// CHANGED: Next button - instant for scoreboard, countdown for questions
+document.getElementById('nextBtn')?.addEventListener('click', async () => {
+    const nextQ = (currentRoom?.currentQ ?? 0) + 1;
+    const totalQ = currentRoom?.questions?.length ?? 0;
+    const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
+
+    if (nextIsScoreboard) {
+        // CHANGED: Instant transition to scoreboard, no countdown
+        if (isHost) {
+            await advanceQuestionAfterCountdown();
+        }
+    } else {
+        // Regular question - use countdown
+        requestStartCountdown(3);
+    }
 });
 
-document.getElementById('resultsBtn')?.addEventListener('click', () => {
-    requestStartCountdown(3);
+// CHANGED: Results button - instant transition, no countdown
+document.getElementById('resultsBtn')?.addEventListener('click', async () => {
+    if (isHost) {
+        const room = await getRoom(gameCode);
+        const nextQ = room.currentQ + 1;
+        const totalQ = room.questions.length;
+
+        if (nextQ >= totalQ) {
+            await updateRoom(gameCode, { status: 'finished' });
+        }
+    }
 });
 
 window.addEventListener('beforeunload', () => {
