@@ -679,9 +679,10 @@ function showPostResultsButtons() {
     } else {
         if (nextQ >= totalQ) {
             if (isHost) {
-                if (resultsBtn) resultsBtn.style.display = 'block';
+                resultsBtn.style.display = 'block';
             } else {
-                if (waitingMsg) waitingMsg.style.display = 'block';
+                waitingMsg.style.display = 'block';
+                waitingMsg.textContent = "Finished! Waiting for host...";
             }
         } else {
             if (nextBtn) {
@@ -750,10 +751,7 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
     const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
 
     if (nextIsScoreboard) {
-        // CHANGED: Instant transition to scoreboard, no countdown
-        if (isHost) {
             await advanceQuestionAfterCountdown();
-        }
     } else {
         // Regular question - use countdown
         requestStartCountdown(3);
@@ -777,3 +775,4 @@ window.addEventListener('beforeunload', () => {
     if (roomSubscription) unsubscribe(roomSubscription);
     if (answerCheckSubscription) unsubscribe(answerCheckSubscription);
 });
+
