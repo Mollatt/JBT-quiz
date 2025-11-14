@@ -1191,49 +1191,6 @@ button:active {
     border-radius: 6px;
 }
 
-.next-countdown {
-    background: rgba(102, 126, 234, 0.3);
-    border: 2px solid rgba(102, 126, 234, 0.6);
-    padding: 1.5rem;
-    border-radius: 12px;
-    text-align: center;
-    margin-top: 1rem;
-}
-
-.countdown-text {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.8rem;
-    opacity: 0.9;
-}
-
-#nextCountdownTime {
-    font-size: 1.8rem;
-    color: rgba(102, 126, 234, 1);
-    font-weight: 900;
-    display: block;
-    margin-bottom: 1rem;
-}
-
-#cancelCountdownBtn {
-    width: 100%;
-    margin-top: 0.5rem;
-    padding: 0.8rem;
-    background: rgba(244, 67, 54, 0.8);
-    border: 2px solid rgba(244, 67, 54, 1);
-    color: white;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 600;
-    transition: all 0.3s;
-}
-
-#cancelCountdownBtn:hover {
-    background: rgba(244, 67, 54, 1);
-    transform: translateY(-1px);
-}
-
 /* Year Range Input Styling */
 #everybodyReleaseYearMin,
 #everybodyReleaseYearMax,
@@ -1400,3 +1357,4 @@ select option {
         font-size: 1.5rem;
     }
 }
+
