@@ -80,18 +80,33 @@ function setupRoomSubscription(initialRoom) {
 
         currentRoom = room;
 
-        // Handle status changes
+        // CHANGED: Handle status changes AFTER updating currentRoom
         if (room.status === 'finished') {
+            // Clean up before redirect
+            if (window.currentTimerInterval) clearInterval(window.currentTimerInterval);
+            if (window.autoModeTimerInterval) clearInterval(window.autoModeTimerInterval);
+            if (musicPlayer) musicPlayer.stop();
+
             window.location.href = 'results.html';
             return;
         } else if (room.status === 'scoreboard') {
+            // Clean up before redirect
+            if (window.currentTimerInterval) clearInterval(window.currentTimerInterval);
+            if (window.autoModeTimerInterval) clearInterval(window.autoModeTimerInterval);
+            if (musicPlayer) musicPlayer.stop();
+
             window.location.href = 'scoreboard.html';
+            return;
+        }
+
+        // Only handle questions if status is 'playing'
+        if (room.status !== 'playing') {
             return;
         }
 
         // Handle question changes
         const qIndex = room.currentQ;
-        
+
         if (qIndex === -1) return;
 
         if (qIndex >= room.questions.length) {
@@ -104,7 +119,7 @@ function setupRoomSubscription(initialRoom) {
         // CHANGED: Only display if this is a NEW question
         if (qIndex !== displayedQuestionIndex) {
             console.log(`Question changed from ${displayedQuestionIndex} to ${qIndex}`);
-            
+
             // Reset state for new question
             displayedQuestionIndex = qIndex;
             hasAnswered = false;
@@ -131,7 +146,7 @@ function setupRoomSubscription(initialRoom) {
             }
 
             displayQuestion(room.questions[qIndex], qIndex);
-            
+
             // If already answered, check if all answered
             if (hasAnswered) {
                 checkAllAnswered();
@@ -161,7 +176,7 @@ function setupAutoMode(room) {
 
         if (qIndex !== currentAutoQ) {
             currentAutoQ = qIndex;
-            
+
             if (window.autoModeTimerInterval) {
                 clearInterval(window.autoModeTimerInterval);
             }
@@ -216,7 +231,7 @@ function displayQuestion(question, index) {
     document.getElementById('nextBtn').style.display = 'none';
     document.getElementById('resultsBtn').style.display = 'none';
     document.getElementById('waitingMsg').style.display = 'none';
-    
+
     const nextCountdownEl = document.getElementById('nextCountdown');
     if (nextCountdownEl) nextCountdownEl.style.display = 'none';
 
@@ -228,21 +243,21 @@ function displayQuestion(question, index) {
     const musicPlayerEl = document.getElementById('musicPlayer');
     if (question.type === 'music') {
         musicPlayerEl.style.display = 'none';
-        
+
         if (!musicPlayer) {
             musicPlayer = new YouTubePlayer('musicPlayer');
         }
-        
+
         musicPlayer.load(question.youtubeUrl).then(() => {
             const duration = question.duration || 30;
-            
+
             musicPlayer.playClip(question.startTime, duration, (remaining) => {
                 const timerEl = document.getElementById('timeLeft');
                 if (timerEl) {
                     timerEl.textContent = remaining;
                 }
             });
-            
+
         }).catch(error => {
             console.error('Failed to load music:', error);
             document.getElementById('questionText').innerHTML += '<br><span style="color: #ff6b6b; font-size: 0.9rem;">⚠️ Music failed to load</span>';
@@ -372,12 +387,12 @@ function checkAllAnswered() {
 
         if (answeredCount === totalPlayers && !allAnsweredTriggered) {
             allAnsweredTriggered = true;
-            
+
             if (answerCheckSubscription) {
                 unsubscribe(answerCheckSubscription);
                 answerCheckSubscription = null;
             }
-            
+
             await calculateAndShowResults(players);
         }
     });
@@ -392,10 +407,8 @@ async function forceShowResults() {
 
 async function calculateAndShowResults(players) {
     if (window.resultsCalculated) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const freshRoom = await getRoom(gameCode);
-        const playerData = freshRoom.players ? freshRoom.players[playerName] : null;
-        const isCorrect = playerData?.answer === currentQuestion.correct;
+        // Already calculated, just show feedback with current data
+        const isCorrect = selectedAnswer === currentQuestion.correct;
         showFeedback(isCorrect);
         return;
     }
@@ -403,16 +416,15 @@ async function calculateAndShowResults(players) {
 
     const currentRoomData = await getRoom(gameCode);
     currentRoom = currentRoomData;
-    
+
     const resultsCalc = currentRoom.resultsCalculated || {};
-    
+
     if (resultsCalc[currentRoom.currentQ]) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const freshRoom = await getRoom(gameCode);
-        const playerData = freshRoom.players ? freshRoom.players[playerName] : null;
-        const isCorrectNow = playerData?.answer === currentQuestion.correct;
+        // Results already calculated by another player
+        // Show feedback immediately, it will update with server data
+        const isCorrectNow = selectedAnswer === currentQuestion.correct;
         showFeedback(isCorrectNow);
-        
+
         if (window.currentTimerInterval) clearInterval(window.currentTimerInterval);
         if (window.autoModeTimerInterval) clearInterval(window.autoModeTimerInterval);
         if (musicPlayer && currentQuestion.type === 'music') musicPlayer.stop();
@@ -426,12 +438,12 @@ async function calculateAndShowResults(players) {
         clearInterval(window.currentTimerInterval);
         window.currentTimerInterval = null;
     }
-    
+
     if (window.autoModeTimerInterval) {
         clearInterval(window.autoModeTimerInterval);
         window.autoModeTimerInterval = null;
     }
-    
+
     if (musicPlayer && currentQuestion.type === 'music') {
         musicPlayer.stop();
     }
@@ -463,13 +475,28 @@ async function calculateAndShowResults(players) {
         );
     }
 
-    await Promise.all(updatePromises);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // CHANGED: Show feedback IMMEDIATELY, then update scores in background
+    const isCorrect = selectedAnswer === currentQuestion.correct;
+    showFeedback(isCorrect);
 
+    // Update scores in background
+    await Promise.all(updatePromises);
+
+    // CHANGED: Reduced wait time since showFeedback already handles async update
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Trigger a refresh of the feedback with updated server data
     const freshRoom = await getRoom(gameCode);
     const playerData = freshRoom.players ? freshRoom.players[playerName] : null;
-    const isCorrect = playerData?.answer === currentQuestion.correct;
-    showFeedback(isCorrect);
+    const points = (playerData && playerData.lastPoints) || 0;
+    const currentScore = (playerData && playerData.score) || 0;
+
+    const feedbackEl = document.getElementById('feedback');
+    if (isCorrect) {
+        feedbackEl.innerHTML = `✅ Correct! <strong>+${points} points</strong><br>Total: ${currentScore}`;
+    } else {
+        feedbackEl.innerHTML = `❌ Wrong! Correct answer: <strong>${currentQuestion.options[currentQuestion.correct]}</strong><br>Total: ${currentScore}`;
+    }
 }
 
 async function advanceQuestionAfterCountdown() {
@@ -484,7 +511,7 @@ async function advanceQuestionAfterCountdown() {
 
         const resultsCalc = room.resultsCalculated || {};
         delete resultsCalc[currentQ];
-        
+
         const players = room.players || {};
         const resetPromises = [];
         for (const name in players) {
@@ -498,7 +525,7 @@ async function advanceQuestionAfterCountdown() {
         }
         await Promise.all(resetPromises);
 
-        await updateRoom(gameCode, { 
+        await updateRoom(gameCode, {
             resultsCalculated: resultsCalc,
             nextCountdown: null
         });
@@ -523,17 +550,17 @@ async function advanceQuestionAfterCountdown() {
 // CHANGED: Handle countdown updates from room subscription
 function handleCountdownUpdate(room) {
     const countdown = room.nextCountdown;
-    
+
     if (!countdown || !countdown.active) {
         clearLocalCountdownUI();
-        
+
         // Show appropriate buttons if results are calculated
         if (window.resultsCalculated) {
             showPostResultsButtons();
         }
         return;
     }
-    
+
     const msLeft = (countdown.endsAt || 0) - Date.now();
     if (msLeft <= 0) {
         clearLocalCountdownUI();
@@ -542,7 +569,7 @@ function handleCountdownUpdate(room) {
         }
         return;
     }
-    
+
     startLocalCountdownUI(msLeft);
 }
 
@@ -550,13 +577,13 @@ let countdownIntervalId = null;
 
 function requestStartCountdown(seconds = 3) {
     const endsAt = Date.now() + seconds * 1000;
-    updateRoom(gameCode, { 
+    updateRoom(gameCode, {
         nextCountdown: { active: true, endsAt, startedBy: playerName }
     });
 }
 
 function requestStopCountdown() {
-    updateRoom(gameCode, { 
+    updateRoom(gameCode, {
         nextCountdown: null
     });
 }
@@ -580,7 +607,7 @@ function startLocalCountdownUI(msRemaining) {
 
     nextCountdownTime.textContent = String(sec);
     nextCountdownEl.style.display = 'block';
-    
+
     const nextBtnEl = document.getElementById('nextBtn');
     const resultsBtnEl = document.getElementById('resultsBtn');
     const waitingMsgEl = document.getElementById('waitingMsg');
@@ -649,6 +676,7 @@ function showFeedback(isCorrect) {
     const feedbackEl = document.getElementById('feedback');
     const buttons = document.querySelectorAll('.answer-btn');
 
+    // CHANGED: Show UI immediately based on local state
     if (buttons[currentQuestion.correct]) {
         buttons[currentQuestion.correct].classList.add('correct');
     }
@@ -659,11 +687,31 @@ function showFeedback(isCorrect) {
 
     document.getElementById('answerProgress').style.display = 'none';
 
+    // CHANGED: Show feedback immediately with optimistic values
+    // We'll update with server data once it arrives
+
+    // Calculate expected points locally
+    let estimatedPoints = 0;
+    if (isCorrect) {
+        // We can't know exact placement yet, so show "calculating"
+        feedbackEl.innerHTML = `✅ Correct! <strong>Calculating points...</strong>`;
+        feedbackEl.className = 'feedback correct';
+    } else {
+        feedbackEl.innerHTML = `❌ Wrong! Correct answer: <strong>${currentQuestion.options[currentQuestion.correct]}</strong>`;
+        feedbackEl.className = 'feedback incorrect';
+    }
+    feedbackEl.style.display = 'block';
+
+    showPostResultsButtons();
+    window.resultsCalculated = true;
+
+    // CHANGED: Fetch server data in background and update
     getRoom(gameCode).then(room => {
         const playerData = room.players ? room.players[playerName] : null;
         const points = (playerData && playerData.lastPoints) || 0;
         const currentScore = (playerData && playerData.score) || 0;
 
+        // Update with actual server values
         if (isCorrect) {
             feedbackEl.innerHTML = `✅ Correct! <strong>+${points} points</strong><br>Total: ${currentScore}`;
             feedbackEl.className = 'feedback correct';
@@ -671,10 +719,6 @@ function showFeedback(isCorrect) {
             feedbackEl.innerHTML = `❌ Wrong! Correct answer: <strong>${currentQuestion.options[currentQuestion.correct]}</strong><br>Total: ${currentScore}`;
             feedbackEl.className = 'feedback incorrect';
         }
-        feedbackEl.style.display = 'block';
-
-        showPostResultsButtons();
-        window.resultsCalculated = true;
     });
 }
 
