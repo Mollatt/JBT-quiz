@@ -501,7 +501,22 @@ async function calculateAndShowResults(players) {
 
 async function advanceQuestionAfterCountdown() {
     try {
-        // CHANGED: Hide all UI elements immediately to prevent flash
+        // CHANGED: Only host performs the database updates
+        if (!isHost) {
+            // Non-hosts just hide UI and wait for status change
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('resultsBtn').style.display = 'none';
+            document.getElementById('waitingMsg').style.display = 'none';
+            document.getElementById('answerProgress').style.display = 'none';
+
+            const nextCountdownEl = document.getElementById('nextCountdown');
+            if (nextCountdownEl) nextCountdownEl.style.display = 'none';
+
+            return; // Don't update database, just wait
+        }
+
+        // Host proceeds with updates
         document.getElementById('feedback').style.display = 'none';
         document.getElementById('nextBtn').style.display = 'none';
         document.getElementById('resultsBtn').style.display = 'none';
@@ -536,11 +551,11 @@ async function advanceQuestionAfterCountdown() {
         await Promise.all(resetPromises);
 
         await updateRoom(gameCode, {
-            resultsCalc: resultsCalc,
+            resultsCalculated: resultsCalc,
             nextCountdown: null
         });
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         if (shouldShowScoreboard(nextQ, totalQ)) {
             await updateRoom(gameCode, {
@@ -751,7 +766,7 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
     const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
 
     if (nextIsScoreboard) {
-            await advanceQuestionAfterCountdown();
+        await advanceQuestionAfterCountdown();
     } else {
         // Regular question - use countdown
         requestStartCountdown(3);
@@ -775,4 +790,3 @@ window.addEventListener('beforeunload', () => {
     if (roomSubscription) unsubscribe(roomSubscription);
     if (answerCheckSubscription) unsubscribe(answerCheckSubscription);
 });
-
