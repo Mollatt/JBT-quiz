@@ -73,14 +73,15 @@ function shouldShowScoreboard(currentQ, totalQ) {
 // CHANGED: Single subscription handles all room changes
 function setupRoomSubscription(initialRoom) {
     roomSubscription = subscribeToRoom(gameCode, async (room) => {
+        // CHANGED: Better null handling - don't redirect immediately
         if (!room) {
-            window.location.href = 'index.html';
-            return;
+            console.warn('Room data is null, waiting for update...');
+            return; // Wait for next update instead of redirecting
         }
 
         currentRoom = room;
 
-        // CHANGED: Handle status changes AFTER updating currentRoom
+        // Handle status changes AFTER updating currentRoom
         if (room.status === 'finished') {
             // Clean up before redirect
             if (window.currentTimerInterval) clearInterval(window.currentTimerInterval);
