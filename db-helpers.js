@@ -248,52 +248,77 @@ async function getPlayers(code) {
 
 /**
  * Subscribe to room changes
- * @param {string} roomCode - Room code
+ * @param {string} code - Room code
  * @param {Function} callback - Called when room/players change
- * @returns {Object} Subscription channel (call .unsubscribe() to stop)
+ * @returns {Object} Subscription channel (call unsubscribe() to stop)
  */
-function subscribeToRoom(roomCode, callback) {
+function subscribeToRoom(code, callback) {
+    console.log('subscribeToRoom called for:', code);
+
     const channel = supabase
-        .channel(`room_${roomCode}`)
+        .channel(`room_${code}`)
         .on('postgres_changes',
-            { event: '*', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
+            {
+                event: '*',
+                schema: 'public',
+                table: 'rooms',
+                filter: `code=eq.${code}`
+            },
             async (payload) => {
+                console.log('Room table changed:', payload);
                 // Room changed - fetch full data
-                const room = await getRoom(roomCode);
+                const room = await getRoom(code);
                 callback(room);
             }
         )
         .on('postgres_changes',
-            { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${roomCode}` },
+            {
+                event: '*',
+                schema: 'public',
+                table: 'players',
+                filter: `room_code=eq.${code}`
+            },
             async (payload) => {
+                console.log('Players table changed:', payload);
                 // Player changed - fetch full data
-                const room = await getRoom(roomCode);
+                const room = await getRoom(code);
                 callback(room);
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            console.log('Subscription status:', status);
+        });
 
     // Do initial fetch
-    getRoom(roomCode).then(callback);
+    getRoom(code).then(callback);
 
     return channel;
 }
 
 /**
  * Subscribe to specific room field
- * @param {string} roomCode - Room code
+ * @param {string} code - Room code
  * @param {string} field - Field name (e.g., 'status', 'currentQ')
  * @param {Function} callback - Called with field value
  * @returns {Object} Subscription channel
  */
-function subscribeToRoomField(roomCode, field, callback) {
+function subscribeToRoomField(code, field, callback) {
+    console.log('subscribeToRoomField called for:', code, field);
+
     const dbField = camelToSnake(field);
 
     const channel = supabase
-        .channel(`room_${roomCode}_${field}`)
+        .channel(`room_${code}_${field}`)
         .on('postgres_changes',
-            { event: '*', schema: 'public', table: 'rooms', filter: `code=eq.${roomCode}` },
+            {
+                event: '*',
+                schema: 'public',
+                table: 'rooms',
+                filter: `code=eq.${code}`
+            },
             async (payload) => {
+                console.log(`Room field ${field} changed:`, payload);
+
                 if (payload.new && payload.new[dbField] !== undefined) {
                     callback(payload.new[dbField]);
                 } else if (payload.eventType === 'DELETE') {
@@ -301,10 +326,12 @@ function subscribeToRoomField(roomCode, field, callback) {
                 }
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            console.log(`Subscription status for ${field}:`, status);
+        });
 
     // Do initial fetch
-    getRoom(roomCode).then(room => {
+    getRoom(code).then(room => {
         if (room && room[field] !== undefined) {
             callback(room[field]);
         }
@@ -315,24 +342,34 @@ function subscribeToRoomField(roomCode, field, callback) {
 
 /**
  * Subscribe to players in a room
- * @param {string} roomCode - Room code
+ * @param {string} code - Room code
  * @param {Function} callback - Called with players object
  * @returns {Object} Subscription channel
  */
-function subscribeToPlayers(roomCode, callback) {
+function subscribeToPlayers(code, callback) {
+    console.log('subscribeToPlayers called for:', code);
+
     const channel = supabase
-        .channel(`players_${roomCode}`)
+        .channel(`players_${code}`)
         .on('postgres_changes',
-            { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${roomCode}` },
+            {
+                event: '*',
+                schema: 'public',
+                table: 'players',
+                filter: `room_code=eq.${code}`
+            },
             async (payload) => {
-                const players = await getPlayers(roomCode);
+                console.log('Players changed:', payload);
+                const players = await getPlayers(code);
                 callback(players);
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            console.log('Players subscription status:', status);
+        });
 
     // Do initial fetch
-    getPlayers(roomCode).then(callback);
+    getPlayers(code).then(callback);
 
     return channel;
 }
