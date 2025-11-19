@@ -445,6 +445,15 @@ function subscribeToPlayers(code, callback) {
 
     return channel;
 }
+/** 
+ * Unsubscribe from a channel
+ * @param {Object} channel - Channel returned from subscribe function
+ */
+function unsubscribe(channel) {
+    if (channel) {
+        supabase.removeChannel(channel);
+    }
+}
 
 // SONGS - Query Operations
 // ============================================
