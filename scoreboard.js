@@ -13,19 +13,16 @@ let countdownInterval = null;
 
 countdownSubscription = subscribeToRoomField(gameCode, 'scoreboardCountdown', (countdownData) => {
     if (countdownData && countdownData.active) {
-        // Someone started countdown, show it for everyone
         const continueBtn = document.getElementById('continueBtn');
         const autoCountdown = document.getElementById('autoCountdown');
 
         if (continueBtn) continueBtn.style.display = 'none';
         if (autoCountdown) autoCountdown.style.display = 'block';
 
-        // Don't start a new interval if one exists
         if (!countdownInterval) {
             startCountdownDisplay(countdownData.timeLeft);
         }
     } else {
-        // Countdown cancelled or finished
         if (countdownInterval) {
             clearInterval(countdownInterval);
             countdownInterval = null;
@@ -38,6 +35,7 @@ countdownSubscription = subscribeToRoomField(gameCode, 'scoreboardCountdown', (c
         if (autoCountdown) autoCountdown.style.display = 'none';
     }
 });
+
 
 statusSubscription = subscribeToRoom(gameCode, async (room) => {
     if (!room) return;
@@ -53,7 +51,6 @@ statusSubscription = subscribeToRoom(gameCode, async (room) => {
             window.location.href = 'quiz.html';
         }
     } else if (status === 'finished') {
-        // Go to final results
         window.location.href = 'results.html';
     }
 });
@@ -78,7 +75,6 @@ getRoom(gameCode).then(room => {
         );
     }
 
-    // Sort players by score - UNCHANGED
     const leaderboard = Object.entries(filteredPlayers)
         .map(([name, data]) => ({
             name,
@@ -86,12 +82,9 @@ getRoom(gameCode).then(room => {
         }))
         .sort((a, b) => b.score - a.score);
 
-    // Display top 3 - UNCHANGED
     displayTopPlayers(leaderboard.slice(0, 3));
 
-    // Show current player's position - UNCHANGED
     if (room.mode === 'buzzer' && isHost) {
-        // Don't show position for host in buzzer mode
         document.getElementById('yourPosition').style.display = 'none';
     } else {
         const playerRank = leaderboard.findIndex(p => p.name === playerName) + 1;
@@ -99,7 +92,6 @@ getRoom(gameCode).then(room => {
         displayYourPosition(playerRank, playerScore, leaderboard.length);
     }
 
-    // Setup continue button - UNCHANGED
     setupContinueButton(room.mode);
 }).catch(error => {
     console.error('Error loading scoreboard:', error);
@@ -158,17 +150,14 @@ function setupContinueButton(mode) {
     const autoCountdown = document.getElementById('autoCountdown');
     const cancelBtn = document.getElementById('cancelBtn');
 
-    // Always show the continue button
     continueBtn.style.display = 'block';
     continueBtn.textContent = 'Continue';
 
-    // Hide countdown initially
     if (autoCountdown) {
         autoCountdown.style.display = 'none';
     }
 
     continueBtn.addEventListener('click', () => {
-        // Start countdown (3 seconds for all modes)
         startCountdown();
     });
 
@@ -178,6 +167,7 @@ function setupContinueButton(mode) {
         });
     }
 }
+
 function startCountdown() {
     updateRoom(gameCode, {
         scoreboardCountdown: {
@@ -199,7 +189,6 @@ function startCountdownDisplay(initialTime) {
         timeLeft--;
         if (countdownEl) countdownEl.textContent = timeLeft;
 
-        // CHANGED: Update Supabase
         if (timeLeft > 0) {
             await updateRoom(gameCode, {
                 scoreboardCountdown: {
@@ -212,17 +201,13 @@ function startCountdownDisplay(initialTime) {
         } else {
             clearInterval(countdownInterval);
             countdownInterval = null;
-            // CHANGED: Clear countdown and continue
             await updateRoom(gameCode, { scoreboardCountdown: null });
             continueQuiz();
         }
     }, 1000);
 }
 
-// CHANGED: Cancel countdown
 function cancelCountdown() {
-    // CHANGED: Clear countdown in Supabase
-    // OLD: roomRef.child('scoreboardCountdown').remove()
     updateRoom(gameCode, { scoreboardCountdown: null });
 
     if (countdownInterval) {
@@ -230,12 +215,23 @@ function cancelCountdown() {
         countdownInterval = null;
     }
 }
+
 async function continueQuiz() {
     const room = await getRoom(gameCode);
 
     if (room.currentQ >= room.questions.length) {
         await updateRoom(gameCode, { status: 'finished' });
     } else {
+        const players = room.players || {};
+        const clearLockouts = [];
+
+        for (const playerName in players) {
+            clearLockouts.push(
+                updatePlayer(gameCode, playerName, { lockoutUntil: null })
+            );
+        }
+
+        await Promise.all(clearLockouts);
         await updateRoom(gameCode, {
             status: 'playing',
             buzzedPlayer: null,
@@ -245,6 +241,7 @@ async function continueQuiz() {
         });
     }
 }
+
 window.addEventListener('beforeunload', () => {
     if (countdownSubscription) unsubscribe(countdownSubscription);
     if (statusSubscription) unsubscribe(statusSubscription);
