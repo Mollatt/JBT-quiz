@@ -43,13 +43,14 @@ countdownSubscription = subscribeToRoomField(gameCode, 'scoreboardCountdown', (c
     }
 });
 
-// CHANGED: Listen for status changes
-// OLD: roomRef.child('status').on('value', (snapshot) => {...})
-statusSubscription = subscribeToRoomField(gameCode, 'status', async (status) => {
+statusSubscription = subscribeToRoom(gameCode, async (room) => {
+    if (!room) return;
+    
+    const status = room.status;
+    
     if (status === 'playing') {
-        // Check mode and go to correct page
-        const room = await getRoom(gameCode);
-        const mode = room ? room.mode : 'everybody';
+        // CHANGED: Check mode and go to correct page
+        const mode = room.mode;
         
         if (mode === 'buzzer') {
             window.location.href = 'buzzer.html';
