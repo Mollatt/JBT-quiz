@@ -1,3 +1,53 @@
+const roomCache = new Map();
+const CACHE_TTL = 500; // Cache for 500ms
+
+/**
+ * Get room data with all players (with caching)
+ * @param {string} code - Room code
+ * @returns {Promise<Object|null>} Room data or null
+ */
+async function getRoom(code) {
+    // Check cache
+    const cached = roomCache.get(code);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data;
+    }
+
+    try {
+        // Get room and players in parallel
+        const [roomResult, playersResult] = await Promise.all([
+            supabase.from('rooms').select('*').eq('code', code).single(),
+            supabase.from('players').select('*').eq('room_code', code)
+        ]);
+
+        if (roomResult.error) {
+            if (roomResult.error.code === 'PGRST116') return null;
+            throw roomResult.error;
+        }
+
+        if (playersResult.error) throw playersResult.error;
+
+        // Convert to app format
+        const room = convertRoomFromDB(roomResult.data);
+        room.players = {};
+
+        playersResult.data.forEach(player => {
+            room.players[player.name] = convertPlayerFromDB(player);
+        });
+
+        // Cache result
+        roomCache.set(code, {
+            data: room,
+            timestamp: Date.now()
+        });
+
+        return room;
+    } catch (error) {
+        console.error('Error getting room:', error);
+        return null;
+    }
+}
+
 
 /**
  * Create a new game room
@@ -254,19 +304,19 @@ async function getPlayers(code) {
  */
 function subscribeToRoom(code, callback) {
     console.log('subscribeToRoom called for:', code);
-    
+
     // Create unique channel name
     const channelName = `room_${code}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const channel = supabase
         .channel(channelName)
         .on(
             'postgres_changes',
-            { 
-                event: '*', 
-                schema: 'public', 
-                table: 'rooms', 
-                filter: `code=eq.${code}` 
+            {
+                event: '*',
+                schema: 'public',
+                table: 'rooms',
+                filter: `code=eq.${code}`
             },
             async (payload) => {
                 console.log('Rooms table changed:', payload);
@@ -276,11 +326,11 @@ function subscribeToRoom(code, callback) {
         )
         .on(
             'postgres_changes',
-            { 
-                event: '*', 
-                schema: 'public', 
-                table: 'players', 
-                filter: `room_code=eq.${code}` 
+            {
+                event: '*',
+                schema: 'public',
+                table: 'players',
+                filter: `room_code=eq.${code}`
             },
             async (payload) => {
                 console.log('Players table changed:', payload);
@@ -308,23 +358,23 @@ function subscribeToRoom(code, callback) {
  */
 function subscribeToRoomField(code, field, callback) {
     console.log('subscribeToRoomField called for:', code, field);
-    
+
     const dbField = camelToSnake(field);
     const channelName = `room_${code}_${field}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const channel = supabase
         .channel(channelName)
         .on(
             'postgres_changes',
-            { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'rooms', 
-                filter: `code=eq.${code}` 
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'rooms',
+                filter: `code=eq.${code}`
             },
             async (payload) => {
                 console.log(`Room field ${field} changed:`, payload);
-                
+
                 if (payload.new && payload.new[dbField] !== undefined) {
                     callback(payload.new[dbField]);
                 }
@@ -332,11 +382,11 @@ function subscribeToRoomField(code, field, callback) {
         )
         .on(
             'postgres_changes',
-            { 
-                event: 'DELETE', 
-                schema: 'public', 
-                table: 'rooms', 
-                filter: `code=eq.${code}` 
+            {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'rooms',
+                filter: `code=eq.${code}`
             },
             () => {
                 console.log(`Room ${code} deleted`);
@@ -366,18 +416,18 @@ function subscribeToRoomField(code, field, callback) {
  */
 function subscribeToPlayers(code, callback) {
     console.log('subscribeToPlayers called for:', code);
-    
+
     const channelName = `players_${code}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const channel = supabase
         .channel(channelName)
         .on(
             'postgres_changes',
-            { 
-                event: '*', 
-                schema: 'public', 
-                table: 'players', 
-                filter: `room_code=eq.${code}` 
+            {
+                event: '*',
+                schema: 'public',
+                table: 'players',
+                filter: `room_code=eq.${code}`
             },
             async (payload) => {
                 console.log('Players changed:', payload);
