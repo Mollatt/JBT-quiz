@@ -1,4 +1,3 @@
-// Get session data - UNCHANGED
 const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 const isHost = sessionStorage.getItem('isHost') === 'true';
@@ -9,6 +8,9 @@ if (!gameCode || !playerName) {
     window.location.href = 'index.html';
 }
 
+if (typeof unsubscribe !== 'function') {
+    console.error('unsubscribe function not found! Check db-helpers.js is loaded.');
+}
 // Track subscriptions for cleanup
 let roomSubscription = null;
 
@@ -85,13 +87,20 @@ getRoom(gameCode).then(async room => {
         const playerData = room.players ? room.players[playerName] : null;
         const now = Date.now();
 
-        // Only set reload lockout if player isn't already locked out
-        if (!playerData.lockoutUntil || playerData.lockoutUntil < now) {
-            const reloadLockout = now + 3000; // 3s reload cooldown
-            console.log('Setting reload lockout for page refresh');
-            await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
+        const gameRunningTime = now - (room.questionStartTime || room.created);
+        const isLikelyReload = gameRunningTime > 5000;
+
+        if (isLikelyReload) {
+            // Only set reload lockout if player isn't already locked out
+            if (!playerData?.lockoutUntil || playerData.lockoutUntil < now) {
+                const reloadLockout = now + 3000; // 3s reload cooldown
+                console.log('Setting reload lockout for page refresh');
+                await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
+            } else {
+                console.log('Player already locked out, maintaining existing lockout');
+            }
         } else {
-            console.log('Player already locked out, maintaining existing lockout');
+            console.log('Fresh game start, no reload lockout needed');
         }
     }
 
@@ -567,8 +576,16 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
 
     if (!playerData) {
         console.error('Player left the game');
-        alert('Player has left the game. Skipping to next question.');
-        await advanceQuestion();
+        //Should resume the game automatically instead of advancing. 
+        //Should check if there are any players left first.
+        //If yes, resume the game. If no, end the game.
+        //Check handling in wrongBtn as well.
+        alert('Player has left the game. Resuming question.');
+        await updateRoom(gameCode, {
+            buzzedPlayer: null,
+            buzzerLocked: false,
+            isPaused: false
+        });
         return;
     }
 
@@ -576,13 +593,20 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
     const correctCount = (playerData.correctCount || 0) + 1;
 
     console.log('Awarding points to', buzzedPlayerName, ':', newScore);
-
     await updatePlayer(gameCode, buzzedPlayerName, {
         score: newScore,
         correctCount: correctCount,
         lastPoints: 1000
     });
-
+    /* Check clear handlers in handleBuzzCleared as well as next question advancement.
+    Replace advanceQuestion with the updateRoom logic under (in addition to advanceQ)?
+    Check for and remove any duplicate code and double handlers in other functions.
+    
+        await updateRoom(gameCode, {
+            buzzedPlayer: null,
+            buzzerLocked: false,
+            isPaused: false
+        });*/
     await advanceQuestion();
 });
 
@@ -720,6 +744,11 @@ document.getElementById('skipBtn')?.addEventListener('click', async () => {
     if (!isHost) return;
 
     if (confirm('Skip this question without scoring?')) {
+        await updateRoom(gameCode, {
+            isPaused: false,
+            buzzedPlayer: null,
+            buzzerLocked: false
+        });
         await advanceQuestion();
     }
 });
