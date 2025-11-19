@@ -81,16 +81,23 @@ getRoom(gameCode).then(async room => {
         }
     }
 
-    /*// Detect reload mid-session
-    if (!isHost && room.status === 'playing' && room.currentQ !== undefined) {
-        const reloadLockout = Date.now() + 5000;
-        console.log('Setting reload lockout');
-        await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
-    }*/
+    if (!isHost && room.status === 'playing' && room.currentQ >= 0) {
+        const playerData = room.players ? room.players[playerName] : null;
+        const now = Date.now();
+
+        // Only set reload lockout if player isn't already locked out
+        if (!playerData.lockoutUntil || playerData.lockoutUntil < now) {
+            const reloadLockout = now + 3000; // 3s reload cooldown
+            console.log('Setting reload lockout for page refresh');
+            await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
+        } else {
+            console.log('Player already locked out, maintaining existing lockout');
+        }
+    }
 
     // Setup subscriptions
     setupRoomSubscription();
-    setupLockoutListener();
+    //  setupLockoutListener();
 }).catch(error => {
     console.error('Error loading initial room:', error);
     alert('Failed to load game');
@@ -160,8 +167,10 @@ function setupRoomSubscription() {
             displayedQuestionIndex = qIndex;
 
             // Reset state
+            currentQuestion = null;
             isLockedOut = false;
             isPaused = false;
+            remainingTime = 0;
 
             if (lockoutTimer) {
                 clearInterval(lockoutTimer);
@@ -171,6 +180,13 @@ function setupRoomSubscription() {
                 clearInterval(questionTimer);
                 questionTimer = null;
             }
+            /*if (musicPlayer) {
+                try {
+                    musicPlayer.stop();
+                } catch (e) {
+                    console.warn('Could not stop music:', e);
+                }
+            }*/
 
             currentQuestion = room.questions[qIndex];
             displayQuestion(currentQuestion, qIndex);
@@ -376,8 +392,15 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
     console.log('displayQuestion called:', { question: question.text, index, opts });
     currentQuestion = question;
 
+    const duration = opts.remainingTime || question.duration || 30;
+    remainingTime = duration;
+
+    console.log('Setting initial remaining time to:', remainingTime);
+
     document.getElementById('currentQ').textContent = index + 1;
     document.getElementById('questionText').textContent = question.text;
+
+    document.getElementById('timeLeft').textContent = remainingTime;
 
     // Hide all UI elements initially
     document.getElementById('buzzerSection').style.display = 'none';
@@ -653,7 +676,8 @@ async function advanceQuestion() {
             remainingTime: duration,
             isPaused: false,
             buzzedPlayer: null,
-            buzzerLocked: false
+            buzzerLocked: false,
+            buzzTime: null
         });
     }
 }
