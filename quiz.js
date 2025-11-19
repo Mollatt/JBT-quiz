@@ -7,6 +7,9 @@ if (!gameCode || !playerName) {
     window.location.href = 'index.html';
 }
 
+if (typeof unsubscribe !== 'function') {
+    console.error('unsubscribe function not found! Check db-helpers.js is loaded.');
+}
 // CHANGED: Single room subscription instead of multiple field subscriptions
 let roomSubscription = null;
 let answerCheckSubscription = null;
@@ -135,7 +138,11 @@ function setupRoomSubscription(initialRoom) {
 
             // Clean up old answer subscription
             if (answerCheckSubscription) {
-                unsubscribe(answerCheckSubscription);
+                try {
+                    unsubscribe(answerCheckSubscription);
+                } catch (e) {
+                    console.warn('Error unsubscribing answer check:', e);
+                }
                 answerCheckSubscription = null;
             }
 
@@ -371,6 +378,7 @@ async function handleAnswer(answerIndex) {
 
 function checkAllAnswered() {
     if (allAnsweredTriggered) {
+        console.log('All answered already triggered, skipping');
         return;
     }
 
@@ -390,7 +398,11 @@ function checkAllAnswered() {
             allAnsweredTriggered = true;
 
             if (answerCheckSubscription) {
-                unsubscribe(answerCheckSubscription);
+                try {
+                    unsubscribe(answerCheckSubscription);
+                } catch (e) {
+                    console.warn('Error unsubscribing:', e);
+                }
                 answerCheckSubscription = null;
             }
 
@@ -702,7 +714,6 @@ function showPostResultsButtons() {
             }
         } else {
             if (nextBtn) {
-                // CHANGED: Update button text based on what's next
                 nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
                 nextBtn.style.display = 'block';
             }
@@ -714,7 +725,6 @@ function showFeedback(isCorrect) {
     const feedbackEl = document.getElementById('feedback');
     const buttons = document.querySelectorAll('.answer-btn');
 
-    // CHANGED: Show UI immediately based on local state
     if (buttons[currentQuestion.correct]) {
         buttons[currentQuestion.correct].classList.add('correct');
     }
@@ -725,13 +735,10 @@ function showFeedback(isCorrect) {
 
     document.getElementById('answerProgress').style.display = 'none';
 
-    // CHANGED: Show feedback immediately with optimistic values
-    // We'll update with server data once it arrives
 
-    // Calculate expected points locally
     let estimatedPoints = 0;
     if (isCorrect) {
-        // We can't know exact placement yet, so show "calculating"
+
         feedbackEl.innerHTML = `✅ Correct! <strong>Calculating points...</strong>`;
         feedbackEl.className = 'feedback correct';
     } else {
@@ -743,13 +750,11 @@ function showFeedback(isCorrect) {
     showPostResultsButtons();
     window.resultsCalculated = true;
 
-    // CHANGED: Fetch server data in background and update
     getRoom(gameCode).then(room => {
         const playerData = room.players ? room.players[playerName] : null;
         const points = (playerData && playerData.lastPoints) || 0;
         const currentScore = (playerData && playerData.score) || 0;
 
-        // Update with actual server values
         if (isCorrect) {
             feedbackEl.innerHTML = `✅ Correct! <strong>+${points} points</strong><br>Total: ${currentScore}`;
             feedbackEl.className = 'feedback correct';
@@ -760,7 +765,6 @@ function showFeedback(isCorrect) {
     });
 }
 
-// CHANGED: Next button - instant for scoreboard, countdown for questions
 document.getElementById('nextBtn')?.addEventListener('click', async () => {
     const nextQ = (currentRoom?.currentQ ?? 0) + 1;
     const totalQ = currentRoom?.questions?.length ?? 0;
@@ -769,12 +773,11 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
     if (nextIsScoreboard) {
         await advanceQuestionAfterCountdown();
     } else {
-        // Regular question - use countdown
+
         requestStartCountdown(3);
     }
 });
 
-// CHANGED: Results button - instant transition, no countdown
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
     if (isHost) {
         const room = await getRoom(gameCode);
@@ -788,6 +791,21 @@ document.getElementById('resultsBtn')?.addEventListener('click', async () => {
 });
 
 window.addEventListener('beforeunload', () => {
-    if (roomSubscription) unsubscribe(roomSubscription);
-    if (answerCheckSubscription) unsubscribe(answerCheckSubscription);
+    console.log('Cleaning up subscriptions');
+
+    if (roomSubscription) {
+        try {
+            unsubscribe(roomSubscription);
+        } catch (e) {
+            console.warn('Error cleaning up room subscription:', e);
+        }
+    }
+
+    if (answerCheckSubscription) {
+        try {
+            unsubscribe(answerCheckSubscription);
+        } catch (e) {
+            console.warn('Error cleaning up answer subscription:', e);
+        }
+    }
 });
