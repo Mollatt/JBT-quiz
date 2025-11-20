@@ -1,11 +1,8 @@
-// Admin Panel - Song Management with Edit
-
 const songsRef = db.ref('songs');
 
 let editingSongId = null;
 let allSongs = [];
 
-// Show status message
 function showMessage(text, type = 'success') {
     const el = document.getElementById('statusMessage');
     el.textContent = text;
@@ -15,7 +12,6 @@ function showMessage(text, type = 'success') {
     }, 3000);
 }
 
-// Extract YouTube video ID from URL
 function extractYouTubeId(url) {
     const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
@@ -31,11 +27,9 @@ function extractYouTubeId(url) {
     return null;
 }
 
-// Add/Edit song form submission
 document.getElementById('addSongForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Get form data
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData);
 
@@ -45,14 +39,12 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
         return;
     }
 
-    // Validate YouTube URL and extract ID
     const youtubeId = extractYouTubeId(data.youtubeUrl);
     if (!youtubeId) {
         showMessage('Invalid YouTube URL', 'error');
         return;
     }
 
-    // Prepare song data
     const songData = {
         title: data.title.trim(),
         artist: data.artist.trim() || '',
@@ -72,30 +64,33 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
 
     try {
         if (editingSongId) {
-            // Update existing song (keep createdAt)
-            const originalSong = allSongs.find(s => s.id === editingSongId);
-            if (originalSong) {
-                songData.createdAt = originalSong.createdAt;
-            }
+            const { error } = await supabase
+                .from('songs')
+                .update(songData)
+                .eq('id', editingSongId);
 
-            await songsRef.child(editingSongId).update(songData);
+            if (error) throw error;
+
             showMessage(`Song "${songData.title}" updated successfully!`);
-            
-            // Reset edit mode
+
             editingSongId = null;
             document.getElementById('addSongForm').reset();
             document.getElementById('formTitle').textContent = 'Add New Song';
             const submitBtn = document.querySelector('#addSongForm button[type="submit"]');
             if (submitBtn) submitBtn.textContent = 'Add Song';
         } else {
-            // Create new song
-            songData.createdAt = Date.now();
+            songData.created_at = new Date().toISOString();
             songData.verified = false;
 
-            const newSongRef = songsRef.push();
-            await newSongRef.set(songData);
+            const { data: newSong, error } = await supabase
+                .from('songs')
+                .insert([songData])
+                .select()
+                .single();
 
-            showMessage(`Song added successfully! ID: ${newSongRef.key.substring(0, 8)}...`);
+            if (error) throw error;
+
+            showMessage(`Song added successfully! ID: ${newSong.id.substring(0, 8)}...`);
             document.getElementById('addSongForm').reset();
         }
 
@@ -107,29 +102,30 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
     }
 });
 
-// Load and display songs
 async function loadSongs() {
     try {
-        const snapshot = await songsRef.once('value');
-        const songsData = snapshot.val();
+        const { data: songsData, error } = await supabase
+            .from('songs')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
 
         const container = document.getElementById('songsList');
 
-        if (!songsData || Object.keys(songsData).length === 0) {
+        if (!songsData || songsData.length === 0) {
             container.innerHTML = '<p style="opacity: 0.7;">No songs added yet</p>';
             allSongs = [];
             return;
         }
 
-        allSongs = Object.entries(songsData)
-            .map(([id, data]) => ({ id, ...data }))
-            .sort((a, b) => b.createdAt - a.createdAt);
+        allSongs = songsData.map(song => convertSongFromDB(song));
 
         displaySongs(allSongs);
 
     } catch (error) {
         console.error('Error loading songs:', error);
-        document.getElementById('songsList').innerHTML = 
+        document.getElementById('songsList').innerHTML =
             `<p style="color: #ff6b6b;">Error loading songs: ${error.message}</p>`;
     }
 }
@@ -170,14 +166,12 @@ function displaySongs(songs) {
     `).join('');
 }
 
-// Edit song
 async function editSong(songId) {
     const song = allSongs.find(s => s.id === songId);
     if (!song) return;
 
     editingSongId = songId;
 
-    // Populate form with song data
     document.getElementById('addSongForm').elements['title'].value = song.title;
     document.getElementById('addSongForm').elements['artist'].value = song.artist || '';
     document.getElementById('addSongForm').elements['specificGame'].value = song.specificGame;
@@ -191,16 +185,13 @@ async function editSong(songId) {
     document.getElementById('addSongForm').elements['duration'].value = song.duration || 30;
     document.getElementById('addSongForm').elements['difficulty'].value = song.difficulty;
 
-    // Update form title and button
     document.getElementById('formTitle').textContent = `Edit Song: ${song.title}`;
     const submitBtn = document.querySelector('#addSongForm button[type="submit"]');
     if (submitBtn) submitBtn.textContent = 'Update Song';
 
-    // Scroll to form
     document.getElementById('addSongForm').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Cancel edit
 function cancelEdit() {
     editingSongId = null;
     document.getElementById('addSongForm').reset();
@@ -209,18 +200,20 @@ function cancelEdit() {
     if (submitBtn) submitBtn.textContent = 'Add Song';
 }
 
-// Verify/Unverify song
 async function verifySong(songId) {
     try {
-        const snapshot = await songsRef.child(songId).once('value');
-        const song = snapshot.val();
-        
+        const song = allSongs.find(s => s.id === songId);
         if (!song) return showMessage('Song not found', 'error');
 
-        await songsRef.child(songId).update({
-            verified: !song.verified,
-            updatedAt: Date.now()
-        });
+        const { error } = await supabase
+            .from('songs')
+            .update({
+                verified: !song.verified,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', songId);
+
+        if (error) throw error;
 
         showMessage(`Song ${song.verified ? 'unverified' : 'verified'}!`);
         loadSongs();
@@ -230,7 +223,6 @@ async function verifySong(songId) {
     }
 }
 
-// Delete song
 async function deleteSong(songId) {
     const song = allSongs.find(s => s.id === songId);
     if (!song) return;
@@ -238,8 +230,13 @@ async function deleteSong(songId) {
     if (!confirm(`Are you sure you want to delete "${song.title}"?`)) return;
 
     try {
-        await songsRef.child(songId).remove();
-        
+        const { error } = await supabase
+            .from('songs')
+            .delete()
+            .eq('id', songId);
+
+        if (error) throw error;
+
         // If we were editing this song, cancel edit
         if (editingSongId === songId) {
             cancelEdit();
@@ -261,7 +258,6 @@ function filterSongs() {
 
     let filtered = allSongs;
 
-    // Search filter
     if (searchText) {
         filtered = filtered.filter(song =>
             song.title.toLowerCase().includes(searchText) ||
@@ -271,12 +267,10 @@ function filterSongs() {
         );
     }
 
-    // Difficulty filter
     if (difficultyFilter) {
         filtered = filtered.filter(song => song.difficulty === difficultyFilter);
     }
 
-    // Verified filter
     if (verifiedFilter === 'verified') {
         filtered = filtered.filter(song => song.verified === true);
     } else if (verifiedFilter === 'unverified') {
@@ -286,13 +280,29 @@ function filterSongs() {
     displaySongs(filtered);
 }
 
-// Setup search and filter listeners
 document.getElementById('searchInput')?.addEventListener('input', filterSongs);
 document.getElementById('difficultyFilter')?.addEventListener('change', filterSongs);
 document.getElementById('verifiedFilter')?.addEventListener('change', filterSongs);
-
-// Add cancel edit button listener
 document.getElementById('cancelEditBtn')?.addEventListener('click', cancelEdit);
 
-// Load songs on page load
+function convertSongFromDB(dbSong) {
+    return {
+        id: dbSong.id,
+        title: dbSong.title,
+        artist: dbSong.artist,
+        specificGame: dbSong.specific_game,
+        seriesSource: dbSong.series_source,
+        developer: dbSong.developer,
+        releaseYear: dbSong.release_year,
+        bossBattle: dbSong.boss_battle,
+        area: dbSong.area,
+        youtubeUrl: dbSong.youtube_url,
+        youtubeId: dbSong.youtube_id,
+        startTime: dbSong.start_time,
+        duration: dbSong.duration,
+        difficulty: dbSong.difficulty,
+        verified: dbSong.verified
+    };
+}
+
 loadSongs();
