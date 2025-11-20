@@ -46,19 +46,20 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
     const songData = {
         title: data.title.trim(),
         artist: data.artist.trim() || '',
-        specificGame: data.specificGame.trim(),
-        seriesSource: data.seriesSource.trim() || '',
+        specific_game: data.specificGame.trim(),
+        series_source: data.seriesSource.trim() || '',
         developer: data.developer.trim() || '',
-        releaseYear: data.releaseYear ? parseInt(data.releaseYear) : null,
-        bossBattle: data.bossBattle.trim() || '',
+        release_year: data.releaseYear ? parseInt(data.releaseYear) : null,
+        boss_battle: data.bossBattle.trim() || '',
         area: data.area.trim() || '',
-        youtubeUrl: `https://youtube.com/watch?v=${youtubeId}`,
-        youtubeId: youtubeId,
-        startTime: parseInt(data.startTime) || 0,
+        youtube_url: `https://youtube.com/watch?v=${youtubeId}`,
+        youtube_id: youtubeId,
+        start_time: parseInt(data.startTime) || 0,
         duration: parseInt(data.duration) || 30,
         difficulty: data.difficulty,
-        updatedAt: Date.now()
+        updated_at: new Date().toISOString()
     };
+
 
     try {
         if (editingSongId) {
