@@ -87,20 +87,28 @@ getRoom(gameCode).then(async room => {
         const playerData = room.players ? room.players[playerName] : null;
         const now = Date.now();
 
-        const gameRunningTime = now - (room.questionStartTime || room.created);
-        const isLikelyReload = gameRunningTime > 5000;
+        const hasPlayerHistory = playerData && (
+            playerData.score > 0 ||
+            playerData.correctCount > 0 ||
+            playerData.answered === true
+        );
+
+        const questionAge = room.questionStartTime ? (now - room.questionStartTime) : 0;
+        const questionIsOld = questionAge > 5000; // Question has been running >5 seconds
+
+        const isLikelyReload = hasPlayerHistory || questionIsOld || room.buzzedPlayer;
 
         if (isLikelyReload) {
             // Only set reload lockout if player isn't already locked out
             if (!playerData?.lockoutUntil || playerData.lockoutUntil < now) {
                 const reloadLockout = now + 3000; // 3s reload cooldown
-                console.log('Setting reload lockout for page refresh');
+                console.log('Setting reload lockout for page refresh (player has history or question is old)');
                 await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
             } else {
                 console.log('Player already locked out, maintaining existing lockout');
             }
         } else {
-            console.log('Fresh game start, no reload lockout needed');
+            console.log('Fresh question start or just returned from scoreboard, no reload lockout');
         }
     }
 
