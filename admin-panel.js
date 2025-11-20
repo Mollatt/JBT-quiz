@@ -1,5 +1,3 @@
-const songsRef = db.ref('songs');
-
 let editingSongId = null;
 let allSongs = [];
 
