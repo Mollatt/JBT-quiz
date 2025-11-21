@@ -770,12 +770,12 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
     const totalQ = currentRoom?.questions?.length ?? 0;
     const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
 
-    /* if (nextIsScoreboard) {
+     if (nextIsScoreboard) {
          await advanceQuestionAfterCountdown();
-     } else {*/
+     } else {
 
     requestStartCountdown(3);
-    //}
+    }
 });
 
 document.getElementById('resultsBtn')?.addEventListener('click', async () => {
@@ -809,3 +809,4 @@ window.addEventListener('beforeunload', () => {
         }
     }
 });
+
