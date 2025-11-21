@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Connect</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <h1>🎯 Quiz Connect</h1>
@@ -13,28 +15,38 @@
 
         <div id="errorMsg" class="error"></div>
 
+        <!-- FEATURE 3: Removed name input from main page -->
         <div class="menu">
-            <input id="nameInput" type="text" placeholder="Enter your name..." maxlength="20" autocomplete="off">
-            
             <button id="createLobbyBtn" class="btn-primary">🎮 Create Lobby</button>
             <button id="joinLobbyBtn" class="btn-secondary">Join Lobby</button>
         </div>
     </div>
 
-    <!-- Join Modal -->
-    <div id="joinModal" class="modal" style="display: none;">
+    <!-- FEATURE 3: Modified modal - now handles both create and join flows -->
+    <div id="actionModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Join Lobby</h2>
+                <h2 id="modalTitle">Create Lobby</h2>
                 <button id="closeModalBtn" class="modal-close">&times;</button>
             </div>
-            
+
             <div class="modal-body">
-                <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off" class="modal-input">
+                <!-- FEATURE 3: Room code input (only shown for join flow) -->
+                <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off"
+                    class="modal-input" style="display: none;">
+
+                <!-- FEATURE 3: Name input (shown for both flows) -->
+                <input id="modalNameInput" type="text" placeholder="Enter your name..." maxlength="20"
+                    autocomplete="off" class="modal-input">
+
+                <!-- FEATURE 3: Avatar selection placeholder - will be added in Feature 6 -->
+                <div id="avatarSelectionPlaceholder" style="display: none;">
+                    <!-- Avatar selection UI will go here in Feature 6 -->
+                </div>
             </div>
-            
+
             <div class="modal-footer">
-                <button id="modalJoinBtn" class="btn-primary">Join</button>
+                <button id="modalActionBtn" class="btn-primary">Create</button>
                 <button id="modalCancelBtn" class="btn-secondary">Cancel</button>
             </div>
         </div>
@@ -43,10 +55,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="db-helpers.js"></script>
-    
+
     <script src="script.js"></script>
     <script src="room-cleanup.js"></script>
 </body>
+
 </html>
-
-
