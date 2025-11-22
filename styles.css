@@ -361,7 +361,45 @@ button:active {
 }
 
 .question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     margin-bottom: 2rem;
+}
+
+.score-display {
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0.95;
+    padding: 0.3rem 0.8rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.score-display span {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+/* Adjust question header layout for mobile */
+@media (max-width: 480px) {
+    .question-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .score-display {
+        order: -1;
+        align-self: flex-end;
+        font-size: 0.85rem;
+    }
+    
+    .score-display span {
+        font-size: 0.95rem;
+    }
 }
 
 .question-number {
@@ -1357,4 +1395,5 @@ select option {
         font-size: 1.5rem;
     }
 }
+
 
