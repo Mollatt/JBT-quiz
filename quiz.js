@@ -13,6 +13,7 @@ if (typeof unsubscribe !== 'function') {
 // CHANGED: Single room subscription instead of multiple field subscriptions
 let roomSubscription = null;
 let answerCheckSubscription = null;
+let scoreSubscription = null;
 
 let currentQuestion = null;
 let selectedAnswer = null;
@@ -21,6 +22,13 @@ let musicPlayer = null;
 let currentRoom = null;
 let displayedQuestionIndex = -1; // Track what's currently displayed
 let allAnsweredTriggered = false;
+
+function updateScoreDisplay(score) {
+    const scoreEl = document.getElementById('currentScore');
+    if (scoreEl) {
+        scoreEl.textContent = score || 0;
+    }
+}
 
 // Helper for mode normalization - UNCHANGED
 function getEffectiveMode(room) {
@@ -35,6 +43,37 @@ function getEffectiveMode(room) {
             return room.mode;
     }
 }
+
+getRoom(gameCode).then(room => {
+    if (!room) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    currentRoom = room;
+    document.getElementById('totalQ').textContent = room.questions.length;
+
+    // FEATURE 8: Initialize score display
+    const playerData = room.players ? room.players[playerName] : null;
+    if (playerData) {
+        updateScoreDisplay(playerData.score || 0);
+    }
+
+    // FEATURE 8: Subscribe to player's score changes
+    scoreSubscription = subscribeToRoom(gameCode, (updatedRoom) => {
+        if (!updatedRoom || !updatedRoom.players) return;
+        const updatedPlayerData = updatedRoom.players[playerName];
+        if (updatedPlayerData) {
+            updateScoreDisplay(updatedPlayerData.score || 0);
+        }
+    });
+
+    setupRoomSubscription(room);
+
+    if (getEffectiveMode(room) === 'everybody') {
+        setupAutoMode(room);
+    }
+});
 
 // CHANGED: Load initial room and setup single subscription
 getRoom(gameCode).then(room => {
@@ -770,11 +809,11 @@ document.getElementById('nextBtn')?.addEventListener('click', async () => {
     const totalQ = currentRoom?.questions?.length ?? 0;
     const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
 
-     if (nextIsScoreboard) {
-         await advanceQuestionAfterCountdown();
-     } else {
+    if (nextIsScoreboard) {
+        await advanceQuestionAfterCountdown();
+    } else {
 
-    requestStartCountdown(3);
+        requestStartCountdown(3);
     }
 });
 
@@ -808,5 +847,12 @@ window.addEventListener('beforeunload', () => {
             console.warn('Error cleaning up answer subscription:', e);
         }
     }
-});
 
+    if (scoreSubscription) {
+        try {
+            unsubscribe(scoreSubscription);
+        } catch (e) {
+            console.warn('Error cleaning up score subscription:', e);
+        }
+    }
+});
