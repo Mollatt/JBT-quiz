@@ -13,6 +13,7 @@ if (typeof unsubscribe !== 'function') {
 }
 // Track subscriptions for cleanup
 let roomSubscription = null;
+let scoreSubscription = null;
 
 let currentQuestion = null;
 let musicPlayer = null;
@@ -22,6 +23,41 @@ let questionTimer = null;
 let remainingTime = 0;
 let isPaused = false;
 let displayedQuestionIndex = -1; // Track displayed question
+
+// FEATURE 8: Function to update score display
+function updateScoreDisplay(score) {
+    const scoreEl = document.getElementById('currentScore');
+    if (scoreEl) {
+        scoreEl.textContent = score || 0;
+    }
+}
+
+function initializeScoreDisplay() {
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    if (!scoreDisplay) return;
+
+    if (isHost) {
+        scoreDisplay.style.display = 'none';
+    } else {
+        scoreDisplay.style.display = 'block';
+
+        // Load initial score and setup listener
+        getRoom(gameCode).then(room => {
+            if (room && room.players && room.players[playerName]) {
+                updateScoreDisplay(room.players[playerName].score || 0);
+            }
+        });
+
+        // FEATURE 8: Subscribe to score changes
+        scoreSubscription = subscribeToRoom(gameCode, (room) => {
+            if (!room || !room.players) return;
+            const playerData = room.players[playerName];
+            if (playerData) {
+                updateScoreDisplay(playerData.score || 0);
+            }
+        });
+    }
+}
 
 // Load initial room data
 console.log('Fetching initial room data...');
@@ -33,6 +69,8 @@ getRoom(gameCode).then(async room => {
         window.location.href = 'index.html';
         return;
     }
+
+    initializeScoreDisplay();
 
     // Check if questions exist
     if (!room.questions || room.questions.length === 0) {
@@ -764,4 +802,5 @@ document.getElementById('skipBtn')?.addEventListener('click', async () => {
 window.addEventListener('beforeunload', () => {
     console.log('Page unloading, cleaning up');
     if (roomSubscription) unsubscribe(roomSubscription);
+    if (scoreSubscription) unsubscribe(scoreSubscription);
 });
