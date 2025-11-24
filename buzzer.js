@@ -13,7 +13,6 @@ if (typeof unsubscribe !== 'function') {
 }
 // Track subscriptions for cleanup
 let roomSubscription = null;
-let scoreSubscription = null;
 
 let currentQuestion = null;
 let musicPlayer = null;
@@ -32,28 +31,20 @@ function updateScoreDisplay(score) {
     }
 }
 
+// FEATURE 8: Initialize score display (show/hide based on host status)
 function initializeScoreDisplay() {
     const scoreDisplay = document.getElementById('scoreDisplay');
     if (!scoreDisplay) return;
-
+    
     if (isHost) {
         scoreDisplay.style.display = 'none';
     } else {
         scoreDisplay.style.display = 'block';
-
-        // Load initial score and setup listener
+        
+        // Load initial score
         getRoom(gameCode).then(room => {
             if (room && room.players && room.players[playerName]) {
                 updateScoreDisplay(room.players[playerName].score || 0);
-            }
-        });
-
-        // FEATURE 8: Subscribe to score changes
-        scoreSubscription = subscribeToRoom(gameCode, (room) => {
-            if (!room || !room.players) return;
-            const playerData = room.players[playerName];
-            if (playerData) {
-                updateScoreDisplay(playerData.score || 0);
             }
         });
     }
@@ -191,6 +182,10 @@ function setupRoomSubscription() {
         if (!isHost && room.players && room.players[playerName]) {
             const playerData = room.players[playerName];
             handlePlayerLockout(playerData.lockoutUntil);
+        }
+        if (!isHost && room.players && room.players[playerName]) {
+            const playerData = room.players[playerName];
+            updateScoreDisplay(playerData.score || 0);
         }
         // Handle status changes
         if (room.status === 'finished') {
@@ -802,5 +797,4 @@ document.getElementById('skipBtn')?.addEventListener('click', async () => {
 window.addEventListener('beforeunload', () => {
     console.log('Page unloading, cleaning up');
     if (roomSubscription) unsubscribe(roomSubscription);
-    if (scoreSubscription) unsubscribe(scoreSubscription);
 });
