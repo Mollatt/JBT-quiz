@@ -50,7 +50,7 @@ async function cleanupDisconnectedPlayers() {
     if (!room || !room.players) return;
 
     const now = Date.now();
-    const timeout = 15000; // 15 seconds
+    const timeout = 5000; // 5 seconds
 
     const players = room.players;
     for (const [name, data] of Object.entries(players)) {
