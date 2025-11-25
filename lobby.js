@@ -128,7 +128,7 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
     const currentPlayer = room.players ? room.players[playerName] : null;
     if (currentPlayer) {
         const hostStatus = currentPlayer.isHost;
-        
+
         if (hostStatus === true) {
             isHost = true;
             sessionStorage.setItem('isHost', 'true');
@@ -266,7 +266,7 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             hostTimerDuration: 60,
             numQuestions: numQuestions
         };
-    
+
     // Get selected categories - UNCHANGED
     const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
         .map(cb => cb.value);
@@ -378,28 +378,21 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
     }
 });
 
-// Leave Lobby - CHANGED: Now uses helper functions
 document.getElementById('leaveBtn')?.addEventListener('click', async () => {
-    // CHANGED: Remove player using helper
-    // OLD: await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
+    isLeavingLobby = true;
     await removePlayer(gameCode, playerName);
 
-    // CHANGED: Check if room is empty using helper
-    // OLD: const snapshot = await playersRef.once('value');
     const players = await getPlayers(gameCode);
 
-    // If no players left, delete the entire room - UNCHANGED logic
     if (!players || Object.keys(players).length === 0) {
         console.log('No players left, deleting room');
         await deleteRoom(gameCode);
     } else if (isHost) {
-        // Transfer host to first remaining player - CHANGED: Using helpers
         const remainingPlayers = Object.keys(players);
         await updatePlayer(gameCode, remainingPlayers[0], { isHost: true });
         await updateRoom(gameCode, { host: remainingPlayers[0] });
     }
 
-    // Cleanup subscription - ADDED
     if (roomSubscription) {
         unsubscribe(roomSubscription);
     }
@@ -408,20 +401,19 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
     window.location.href = 'index.html';
 });
 
-// Handle page unload - CHANGED: Now uses helper
 let isStartingGame = false;
+let isLeavingLobby = false;
 
 window.addEventListener('beforeunload', async (e) => {
-    // Don't remove player if they're starting/joining the game - UNCHANGED
-    if (isStartingGame) {
+    if (isStartingGame || !isLeavingLobby) {
+        if (roomSubscription) {
+            unsubscribe(roomSubscription);
+        }
         return;
     }
 
-    // CHANGED: Remove player using helper
-    // OLD: await db.ref(`rooms/${gameCode}/players/${playerName}`).remove();
     await removePlayer(gameCode, playerName);
-    
-    // Cleanup subscription - ADDED
+
     if (roomSubscription) {
         unsubscribe(roomSubscription);
     }
