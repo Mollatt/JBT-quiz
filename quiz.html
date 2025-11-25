@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz | Quiz Connect</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container quiz-container">
         <div class="question-header">
@@ -15,12 +17,14 @@
             <div class="score-display">
                 Score: <span id="currentScore">0</span>
             </div>
+            <div class="room-code-display">
+                Room Code: <span id="roomCodeDisplay">----</span>
+            </div>
             <div id="timerDisplay" class="timer" style="display: none;">
                 <span id="timerLabel">⏱️</span> <span id="timeLeft">0</span>s
             </div>
         </div>
 
-        <!-- Music Player (hidden for text questions) -->
         <div id="musicPlayer" style="display: none; margin: 1.5rem 0;"></div>
 
         <h2 class="question-text" id="questionText">Loading question...</h2>
@@ -47,11 +51,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="db-helpers.js"></script>
-    
+
     <script src="question-generator.js"></script>
     <script src="youtube-player.js"></script>
     <script src="quiz.js"></script>
 </body>
+
 </html>
-
-
