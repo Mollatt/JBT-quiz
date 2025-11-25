@@ -205,7 +205,8 @@ async function addPlayer(code, playerName, isHost = false) {
                 room_code: code,  // CHANGED: using 'code' parameter
                 name: playerName,
                 score: 0,
-                is_host: isHost
+                is_host: isHost,
+                last_seen: Date.now()
             }])
             .select()
             .single();
@@ -591,6 +592,7 @@ function convertPlayerFromDB(dbPlayer) {
         correctCount: dbPlayer.correct_count,
         isHost: dbPlayer.is_host,
         lockoutUntil: dbPlayer.lockout_until,
+        lastSeen: dbPlayer.last_seen,
         joined: new Date(dbPlayer.joined_at).getTime()
     };
 }
@@ -609,7 +611,8 @@ function convertPlayerToDB(appPlayer) {
         'lastPoints': 'last_points',
         'correctCount': 'correct_count',
         'isHost': 'is_host',
-        'lockoutUntil': 'lockout_until'
+        'lockoutUntil': 'lockout_until',
+        'lastSeen': 'last_seen'
     };
 
     for (const [appKey, dbKey] of Object.entries(fieldMap)) {
