@@ -1,4 +1,3 @@
-// Get session data - UNCHANGED
 const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 const isHost = sessionStorage.getItem('isHost') === 'true';
@@ -10,7 +9,7 @@ if (!gameCode || !playerName) {
 if (typeof unsubscribe !== 'function') {
     console.error('unsubscribe function not found! Check db-helpers.js is loaded.');
 }
-// CHANGED: Single room subscription instead of multiple field subscriptions
+
 let roomSubscription = null;
 let answerCheckSubscription = null;
 let scoreSubscription = null;
@@ -30,7 +29,7 @@ function updateScoreDisplay(score) {
     }
 }
 
-// Helper for mode normalization - UNCHANGED
+
 function getEffectiveMode(room) {
     if (!room || !room.mode) return 'everybody';
     switch (room.mode) {
@@ -53,13 +52,16 @@ getRoom(gameCode).then(room => {
     currentRoom = room;
     document.getElementById('totalQ').textContent = room.questions.length;
 
-    // FEATURE 8: Initialize score display
+    const roomCodeEl = document.getElementById('roomCodeDisplay');
+    if (roomCodeEl) {
+        roomCodeEl.textContent = gameCode;
+    }
+
     const playerData = room.players ? room.players[playerName] : null;
     if (playerData) {
         updateScoreDisplay(playerData.score || 0);
     }
 
-    // FEATURE 8: Subscribe to player's score changes
     scoreSubscription = subscribeToRoom(gameCode, (updatedRoom) => {
         if (!updatedRoom || !updatedRoom.players) return;
         const updatedPlayerData = updatedRoom.players[playerName];
