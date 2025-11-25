@@ -735,15 +735,15 @@ function showPostResultsButtons() {
                 if (waitingMsg) waitingMsg.style.display = 'block';
             }
         } else {
-           // if (isHost) {
-              //  if (nextBtn) {
-                    // CHANGED: Update button text based on what's next
-                    nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
-                    nextBtn.style.display = 'block';
-              /*  }
-            } else {
-                if (waitingMsg) waitingMsg.style.display = 'block';
-            }*/
+            // if (isHost) {
+            //  if (nextBtn) {
+            // CHANGED: Update button text based on what's next
+            nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
+            nextBtn.style.display = 'block';
+            /*  }
+          } else {
+              if (waitingMsg) waitingMsg.style.display = 'block';
+          }*/
         }
     } else {
         if (nextQ >= totalQ) {
@@ -754,10 +754,10 @@ function showPostResultsButtons() {
                 waitingMsg.textContent = "Finished! Waiting for host...";
             }
         } else {
-            if (nextBtn) {
+          //  if (nextBtn) {
                 nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
                 nextBtn.style.display = 'block';
-            }
+           // }
         }
     }
 }
