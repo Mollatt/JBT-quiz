@@ -556,7 +556,7 @@ async function calculateAndShowResults(players) {
 async function advanceQuestionAfterCountdown() {
     try {
         // CHANGED: Only host performs the database updates
-        if (!isHost) {
+       /* if (!isHost) {
             // Non-hosts just hide UI and wait for status change
             document.getElementById('feedback').style.display = 'none';
             document.getElementById('nextBtn').style.display = 'none';
@@ -570,7 +570,7 @@ async function advanceQuestionAfterCountdown() {
             return; // Don't update database, just wait
         }
 
-        // Host proceeds with updates
+        // Host proceeds with updates*/
         document.getElementById('feedback').style.display = 'none';
         document.getElementById('nextBtn').style.display = 'none';
         document.getElementById('resultsBtn').style.display = 'none';
@@ -727,7 +727,7 @@ function showPostResultsButtons() {
     // CHANGED: Determine if next is a scoreboard
     const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
 
-    if (effMode === 'host') {
+  /*  if (effMode === 'host') {
         if (nextQ >= totalQ) {
             if (isHost) {
                 if (resultsBtn) resultsBtn.style.display = 'block';
@@ -744,8 +744,8 @@ function showPostResultsButtons() {
           } else {
               if (waitingMsg) waitingMsg.style.display = 'block';
           }*/
-        }
-    } else {
+       // }
+   // } else {
         if (nextQ >= totalQ) {
             if (isHost) {
                 resultsBtn.style.display = 'block';
@@ -754,13 +754,13 @@ function showPostResultsButtons() {
                 waitingMsg.textContent = "Finished! Waiting for host...";
             }
         } else {
-          //  if (nextBtn) {
-                nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
-                nextBtn.style.display = 'block';
-           // }
+            //  if (nextBtn) {
+            nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
+            nextBtn.style.display = 'block';
+            // }
         }
     }
-}
+//}
 
 function showFeedback(isCorrect) {
     const feedbackEl = document.getElementById('feedback');
