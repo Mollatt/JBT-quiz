@@ -123,28 +123,23 @@ getRoom(gameCode).then(async room => {
         const playerData = room.players ? room.players[playerName] : null;
         const now = Date.now();
 
-        const hasPlayerHistory = playerData && (
-            playerData.score > 0 ||
-            playerData.correctCount > 0 ||
-            playerData.answered === true
-        );
-
         const questionAge = room.questionStartTime ? (now - room.questionStartTime) : 0;
-        const questionIsOld = questionAge > 5000; // Question has been running >5 seconds
+        const questionIsOld = questionAge > 5000; // Question has been active for more than 5 seconds
 
-        const isLikelyReload = hasPlayerHistory || questionIsOld || room.buzzedPlayer;
+        // FEATURE 4 FIX: Only apply lockout if question is OLD, not based on player history
+        // This prevents lockout after scoreboard when starting fresh questions
+        const isLikelyReload = questionIsOld || room.buzzedPlayer;
 
         if (isLikelyReload) {
-            // Only set reload lockout if player isn't already locked out
             if (!playerData?.lockoutUntil || playerData.lockoutUntil < now) {
-                const reloadLockout = now + 3000; // 3s reload cooldown
-                console.log('Setting reload lockout for page refresh (player has history or question is old)');
+                const reloadLockout = now + 3000;
+                console.log('Setting reload lockout for page refresh (question is old)');
                 await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
             } else {
                 console.log('Player already locked out, maintaining existing lockout');
             }
         } else {
-            console.log('Fresh question start or just returned from scoreboard, no reload lockout');
+            console.log('Fresh question start, no reload lockout');
         }
     }
 
@@ -321,8 +316,15 @@ function handleBuzzCleared(room) {
     document.getElementById('buzzDisplay').style.display = 'none';
     document.getElementById('hostControls').style.display = 'none';
 
-    if (!isHost && !isLockedOut && !isPaused) {
-        document.getElementById('buzzerSection').style.display = 'block';
+    if (!isHost) {
+        // FEATURE 4 FIX: Check individual player's lockout status from room data
+        const playerData = room.players ? room.players[playerName] : null;
+        const now = Date.now();
+        const isPlayerLockedOut = playerData?.lockoutUntil && now < playerData.lockoutUntil;
+
+        if (!isPlayerLockedOut && !isPaused) {
+            document.getElementById('buzzerSection').style.display = 'block';
+        }
     }
 
     if (isHost) {
