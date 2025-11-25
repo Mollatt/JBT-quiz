@@ -1,4 +1,3 @@
-// FEATURE 3: Modal flow state management
 let modalMode = 'create'; // 'create' or 'join'
 let joinFlowStep = 1; // 1 = room code, 2 = name
 
@@ -227,10 +226,10 @@ async function handleJoinStep1() {
     }
 }
 
-// FEATURE 3: Join lobby step 2 - validate name and join
 async function handleJoinStep2() {
     const code = gameCodeInput.value.trim().toUpperCase();
     const name = sanitizeName(modalNameInput.value);
+
 
     if (!name) {
         showModalError('Please enter your name!');
@@ -247,6 +246,41 @@ async function handleJoinStep2() {
 
     if (room.players && room.players[name]) {
         showModalError('Name already taken!');
+        return;
+    }
+
+    if (room.status !== 'lobby') {
+        // Game is in progress - add player and redirect to appropriate page
+        modalActionBtn.disabled = true;
+        modalActionBtn.textContent = 'Joining...';
+
+        const result = await addPlayer(code, name, false);
+
+        if (result.success) {
+            sessionStorage.setItem('gameCode', code);
+            sessionStorage.setItem('playerName', name);
+            sessionStorage.setItem('isHost', 'false');
+
+            // Redirect based on current game status
+            if (room.status === 'scoreboard') {
+                window.location.href = 'scoreboard.html';
+            } else if (room.status === 'playing') {
+                if (room.mode === 'buzzer') {
+                    window.location.href = 'buzzer.html';
+                } else {
+                    window.location.href = 'quiz.html';
+                }
+            } else if (room.status === 'finished') {
+                window.location.href = 'results.html';
+            } else {
+                // Fallback to lobby if status is unknown
+                window.location.href = 'lobby.html';
+            }
+        } else {
+            modalActionBtn.disabled = false;
+            modalActionBtn.textContent = 'Join';
+            showModalError('Failed to join game. Please try again.');
+        }
         return;
     }
 
