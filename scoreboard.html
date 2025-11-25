@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scoreboard | Quiz Connect</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container scoreboard-container">
         <h1>📊 Scoreboard</h1>
-        
+        <div class="room-code-display">
+            Room Code: <span id="roomCodeDisplay">----</span>
+        </div>
+
         <div class="progress-info">
             Question <span id="progressQ">5</span> of <span id="progressTotal">10</span>
         </div>
@@ -22,7 +27,7 @@
         <div class="your-position" id="yourPosition"></div>
 
         <button id="continueBtn" class="btn-primary">Continue</button>
-        
+
         <div id="autoCountdown" style="display: none; margin-top: 1rem; opacity: 0.8;">
             Continuing in <span id="countdownTime">5</span>s...
             <button id="cancelBtn" class="btn-secondary" style="margin-top: 0.5rem;">Cancel</button>
@@ -34,4 +39,5 @@
     <script src="db-helpers.js"></script>
     <script src="scoreboard.js"></script>
 </body>
+
 </html>
