@@ -61,6 +61,11 @@ getRoom(gameCode).then(room => {
         return;
     }
 
+    const roomCodeEl = document.getElementById('roomCodeDisplay');
+    if (roomCodeEl) {
+        roomCodeEl.textContent = gameCode;
+    }
+
     const players = room.players || {};
     const currentQ = room.currentQ;
     const totalQ = room.questions ? room.questions.length : 0;
