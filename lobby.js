@@ -1,4 +1,3 @@
-// Get session data - UNCHANGED
 const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 let isHost = sessionStorage.getItem('isHost') === 'true';
@@ -8,31 +7,83 @@ if (!gameCode || !playerName) {
 }
 
 let currentMode = 'everybody';
-let roomSubscription = null; // ADDED: Track subscription for cleanup
+let roomSubscription = null;
+let heartbeatInterval = null;
 
-// Display game code - UNCHANGED
 document.getElementById('gameCode').textContent = gameCode;
 
-// Toggle Game Mode Section - UNCHANGED
 document.getElementById('toggleGameModeBtn')?.addEventListener('click', () => {
     const section = document.getElementById('gameModeSection');
     section.style.display = section.style.display === 'none' ? 'block' : 'none';
 });
 
-// Toggle Parameters Section - UNCHANGED
 document.getElementById('toggleParametersBtn')?.addEventListener('click', () => {
     const section = document.getElementById('parametersSection');
     section.style.display = section.style.display === 'none' ? 'block' : 'none';
 });
 
-// Load and populate current parameters from database - CHANGED
-// OLD: roomRef.once('value', snapshot => {...})
-// NEW: Using getRoom() helper
+function startHeartbeat() {
+    // Update our lastSeen timestamp every 5 seconds
+    heartbeatInterval = setInterval(async () => {
+        try {
+            await updatePlayer(gameCode, playerName, {
+                lastSeen: Date.now()
+            });
+        } catch (error) {
+            console.error('Heartbeat failed:', error);
+        }
+    }, 5000);
+}
+
+function stopHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+}
+
+// FEATURE 4 FIX: Check for and remove disconnected players (host only)
+async function cleanupDisconnectedPlayers() {
+    if (!isHost) return;
+
+    const room = await getRoom(gameCode);
+    if (!room || !room.players) return;
+
+    const now = Date.now();
+    const timeout = 15000; // 15 seconds
+
+    const players = room.players;
+    for (const [name, data] of Object.entries(players)) {
+        const lastSeen = data.lastSeen || 0;
+        if (now - lastSeen > timeout) {
+            console.log(`Removing disconnected player: ${name}`);
+            await removePlayer(gameCode, name);
+
+            // Check if room is now empty
+            const updatedRoom = await getRoom(gameCode);
+            const remainingPlayers = updatedRoom?.players || {};
+            if (Object.keys(remainingPlayers).length === 0) {
+                console.log('No players left, deleting room');
+                await deleteRoom(gameCode);
+                sessionStorage.clear();
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // If removed player was host, transfer to first remaining player
+            if (data.isHost) {
+                const firstPlayer = Object.keys(remainingPlayers)[0];
+                await updatePlayer(gameCode, firstPlayer, { isHost: true });
+                await updateRoom(gameCode, { host: firstPlayer });
+            }
+        }
+    }
+}
+
 getRoom(gameCode).then(room => {
     if (room && room.gameParams) {
         const params = room.gameParams;
 
-        // Load number of questions - UNCHANGED logic
         if (params.numQuestions) {
             const numQuestionsInput = document.getElementById('numQuestions');
             if (numQuestionsInput) {
@@ -40,7 +91,6 @@ getRoom(gameCode).then(room => {
             }
         }
 
-        // Standard mode parameters - UNCHANGED logic
         if (params.correctPointsScale) {
             const firstPlace = document.getElementById('firstPlacePoints');
             const secondPlace = document.getElementById('secondPlacePoints');
@@ -85,7 +135,16 @@ getRoom(gameCode).then(room => {
     }
 });
 
-// Game Mode Selection with Buttons - CHANGED
+document.getElementById('gameCode').textContent = gameCode;
+
+// FEATURE 4 FIX: Start heartbeat system
+startHeartbeat();
+
+// FEATURE 4 FIX: Host checks for disconnected players every 10 seconds
+if (isHost) {
+    setInterval(cleanupDisconnectedPlayers, 10000);
+}
+
 const modeButtons = document.querySelectorAll('.mode-btn');
 modeButtons.forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -380,6 +439,7 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
 
 document.getElementById('leaveBtn')?.addEventListener('click', async () => {
     isLeavingLobby = true;
+    stopHeartbeat();
     await removePlayer(gameCode, playerName);
 
     const players = await getPlayers(gameCode);
@@ -405,14 +465,15 @@ let isStartingGame = false;
 let isLeavingLobby = false;
 
 window.addEventListener('beforeunload', async (e) => {
-    if (isStartingGame || !isLeavingLobby) {
+    stopHeartbeat();
+    /*if (isStartingGame || !isLeavingLobby) {
         if (roomSubscription) {
             unsubscribe(roomSubscription);
         }
         return;
     }
 
-    await removePlayer(gameCode, playerName);
+    await removePlayer(gameCode, playerName);*/
 
     if (roomSubscription) {
         unsubscribe(roomSubscription);
