@@ -35,12 +35,12 @@ function updateScoreDisplay(score) {
 function initializeScoreDisplay() {
     const scoreDisplay = document.getElementById('scoreDisplay');
     if (!scoreDisplay) return;
-    
+
     if (isHost) {
         scoreDisplay.style.display = 'none';
     } else {
         scoreDisplay.style.display = 'block';
-        
+
         // Load initial score
         getRoom(gameCode).then(room => {
             if (room && room.players && room.players[playerName]) {
@@ -61,8 +61,6 @@ getRoom(gameCode).then(async room => {
         return;
     }
 
-    initializeScoreDisplay();
-
     // Check if questions exist
     if (!room.questions || room.questions.length === 0) {
         console.error('No questions found in room');
@@ -73,7 +71,16 @@ getRoom(gameCode).then(async room => {
 
     document.getElementById('totalQ').textContent = room.questions.length;
 
-    // Check if we're in the middle of a question
+    const roomCodeDisplayDiv = document.getElementById('roomCodeDisplay');
+    const roomCodeText = document.getElementById('roomCodeText');
+    if (isHost && roomCodeDisplayDiv && roomCodeText) {
+        roomCodeDisplayDiv.style.display = 'block';
+        roomCodeText.textContent = gameCode;
+    }
+
+    initializeScoreDisplay();
+
+    // Check if in the middle of a question
     if (room.currentQ >= 0 && room.currentQ < room.questions.length) {
         console.log('Resuming question', room.currentQ);
         currentQuestion = room.questions[room.currentQ];
