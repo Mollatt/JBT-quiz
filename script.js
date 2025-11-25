@@ -1,3 +1,4 @@
+// FEATURE 3: Modal flow state management
 let modalMode = 'create'; // 'create' or 'join'
 let joinFlowStep = 1; // 1 = room code, 2 = name
 
@@ -205,11 +206,11 @@ async function handleJoinStep1() {
         return;
     }
 
-    if (room.status !== 'lobby') {
-        modalActionBtn.textContent = 'Next';
-        showModalError('Game already started!');
-        return;
-    }
+    /* if (room.status !== 'lobby') {
+         modalActionBtn.textContent = 'Next';
+         showModalError('Game already started!');
+         return;
+     }*/
 
     // Room exists and is joinable - move to step 2
     joinFlowStep = 2;
