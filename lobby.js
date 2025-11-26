@@ -51,7 +51,7 @@ async function cleanupDisconnectedPlayers() {
     if (!room || !room.players) return;
 
     const now = Date.now();
-    const heartbeatInterval = 3000; // 3 seconds between heartbeats
+    const heartbeatInterval = 5000; // 5 seconds between heartbeats
     const timeout = heartbeatInterval + 1000; // Allow 1 second grace period
 
     const players = room.players;
@@ -480,3 +480,4 @@ window.addEventListener('beforeunload', async (e) => {
         unsubscribe(roomSubscription);
     }
 });
+
