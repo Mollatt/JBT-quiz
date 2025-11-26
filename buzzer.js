@@ -143,7 +143,7 @@ getRoom(gameCode).then(async room => {
 
     // Setup subscriptions
     setupRoomSubscription();
-    //  setupLockoutListener();
+    //setupLockoutListener();
 }).catch(error => {
     console.error('Error loading initial room:', error);
     alert('Failed to load game');
@@ -178,7 +178,7 @@ function setupRoomSubscription() {
             console.warn('Room data is null');
             return;
         }
-        // Handle lockout for this player
+        /* Handle lockout for this player
         if (!isHost && room.players && room.players[playerName]) {
             const playerData = room.players[playerName];
             handlePlayerLockout(playerData.lockoutUntil);
@@ -186,7 +186,8 @@ function setupRoomSubscription() {
         if (!isHost && room.players && room.players[playerName]) {
             const playerData = room.players[playerName];
             updateScoreDisplay(playerData.score || 0);
-        }
+        }*/
+
         // Handle status changes
         if (room.status === 'finished') {
             console.log('Game finished, redirecting');
@@ -241,7 +242,11 @@ function setupRoomSubscription() {
             currentQuestion = room.questions[qIndex];
             displayQuestion(currentQuestion, qIndex);
         }
-
+        if (!isHost && room.players && room.players[playerName]) {
+            const playerData = room.players[playerName];
+            handlePlayerLockout(playerData.lockoutUntil);
+            updateScoreDisplay(playerData.score || 0);
+        }
         // Handle buzz state
         if (room.buzzedPlayer) {
             console.log('Buzz detected:', room.buzzedPlayer);
@@ -619,19 +624,6 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     console.log('Setting lockout for', buzzedPlayerName, 'until', new Date(lockoutUntil));
 
     await updatePlayer(gameCode, buzzedPlayerName, { lockoutUntil });
-
-
-    if (!isHost && !buzzedPlayerName) {
-        handleBuzzCleared(room);
-    }
-    /*
-        if (!isHost && !buzzedPlayerName) {
-        const buzzerSection = document.getElementById('buzzerSection');
-        if (buzzerSection) {
-            buzzerSection.style.display = 'block';
-        }
-    }
-    */
 
     await updateRoom(gameCode, {
         buzzedPlayer: null,
