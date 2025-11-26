@@ -320,8 +320,8 @@ function handleBuzzCleared(room) {
     document.getElementById('hostControls').style.display = 'none';
 
     if (!isHost) {
-
-        if (!isLockedOut && !isPaused) {
+        //buzzer refresh fix?
+        if (!isLockedOut || !isPaused) {
             document.getElementById('buzzerSection').style.display = 'block';
         }
     }
