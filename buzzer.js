@@ -126,8 +126,6 @@ getRoom(gameCode).then(async room => {
         const questionAge = room.questionStartTime ? (now - room.questionStartTime) : 0;
         const questionIsOld = questionAge > 5000; // Question has been active for more than 5 seconds
 
-        // FEATURE 4 FIX: Only apply lockout if question is OLD, not based on player history
-        // This prevents lockout after scoreboard when starting fresh questions
         const isLikelyReload = questionIsOld || room.buzzedPlayer;
 
         if (isLikelyReload) {
@@ -317,12 +315,8 @@ function handleBuzzCleared(room) {
     document.getElementById('hostControls').style.display = 'none';
 
     if (!isHost) {
-        // FEATURE 4 FIX: Check individual player's lockout status from room data
-        const playerData = room.players ? room.players[playerName] : null;
-        const now = Date.now();
-        const isPlayerLockedOut = playerData?.lockoutUntil && now < playerData.lockoutUntil;
 
-        if (!isPlayerLockedOut && !isPaused) {
+        if (!isLockedOut && !isPaused) {
             document.getElementById('buzzerSection').style.display = 'block';
         }
     }
@@ -384,68 +378,6 @@ function handlePauseState(pausedState) {
         }
     }
 }
-
-/*function setupLockoutListener() {
-    console.log('Setting up lockout listener for player:', playerName);
-
-    // Subscribe to entire room and extract player lockout
-    const lockoutSub = subscribeToRoom(gameCode, async (room) => {
-        if (!room || !room.players) return;
-
-        const playerData = room.players[playerName];
-        if (!playerData) return;
-
-        const lockoutUntil = playerData.lockoutUntil;
-        const now = Date.now();
-        const buzzerBtn = document.getElementById('buzzerBtn');
-        const lockoutMsg = document.getElementById('lockoutMsg');
-
-        if (!buzzerBtn || !lockoutMsg) return;
-
-        if (lockoutTimer) {
-            clearInterval(lockoutTimer);
-            lockoutTimer = null;
-        }
-
-        if (lockoutUntil && now < lockoutUntil) {
-            console.log('Player locked out until:', new Date(lockoutUntil));
-            isLockedOut = true;
-            const buzzerSection = document.getElementById('buzzerSection');
-            if (buzzerSection) buzzerSection.style.display = 'block';
-
-            let remaining = Math.ceil((lockoutUntil - now) / 1000);
-            lockoutMsg.style.display = 'block';
-            document.getElementById('lockoutTime').textContent = remaining;
-            buzzerBtn.disabled = true;
-            buzzerBtn.style.opacity = '0.3';
-
-            lockoutTimer = setInterval(() => {
-                remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
-                if (remaining <= 0) {
-                    clearInterval(lockoutTimer);
-                    lockoutTimer = null;
-                    isLockedOut = false;
-                    lockoutMsg.style.display = 'none';
-                    console.log('Lockout ended');
-                    updatePlayer(gameCode, playerName, { lockoutUntil: null });
-                    if (!isPaused) {
-                        buzzerBtn.disabled = false;
-                        buzzerBtn.style.opacity = '1';
-                    }
-                } else {
-                    document.getElementById('lockoutTime').textContent = remaining;
-                }
-            }, 1000);
-        } else {
-            isLockedOut = false;
-            lockoutMsg.style.display = 'none';
-            if (!isPaused) {
-                buzzerBtn.disabled = false;
-                buzzerBtn.style.opacity = '1';
-            }
-        }
-    });
-}*/
 
 function displayQuestion(question, index, opts = { autoPlay: true }) {
     console.log('displayQuestion called:', { question: question.text, index, opts });
@@ -661,6 +593,8 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
 });
 
 // Host clicks Wrong
+
+
 document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     console.log('Wrong button clicked');
 
@@ -685,6 +619,10 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
     console.log('Setting lockout for', buzzedPlayerName, 'until', new Date(lockoutUntil));
 
     await updatePlayer(gameCode, buzzedPlayerName, { lockoutUntil });
+
+    if (!isHost && !buzzedPlayerName) {
+        document.getElementById('buzzerSection').style.display = 'block';
+    }
 
     await updateRoom(gameCode, {
         buzzedPlayer: null,
