@@ -9,6 +9,7 @@ if (!gameCode || !playerName) {
 let currentMode = 'everybody';
 let roomSubscription = null;
 let heartbeatInterval = null;
+let missedHeartbeats = {};
 
 document.getElementById('gameCode').textContent = gameCode;
 
@@ -42,7 +43,7 @@ function stopHeartbeat() {
     }
 }
 
-// FEATURE 4 FIX: Check for and remove disconnected players (host only)
+
 async function cleanupDisconnectedPlayers() {
     if (!isHost) return;
 
@@ -50,31 +51,47 @@ async function cleanupDisconnectedPlayers() {
     if (!room || !room.players) return;
 
     const now = Date.now();
-    const timeout = 5000; // 5 seconds
+    const heartbeatInterval = 3000; // 3 seconds between heartbeats
+    const timeout = heartbeatInterval + 1000; // Allow 1 second grace period
 
     const players = room.players;
     for (const [name, data] of Object.entries(players)) {
         const lastSeen = data.lastSeen || 0;
+
         if (now - lastSeen > timeout) {
-            console.log(`Removing disconnected player: ${name}`);
-            await removePlayer(gameCode, name);
+            // Player missed a heartbeat
+            missedHeartbeats[name] = (missedHeartbeats[name] || 0) + 1;
 
-            // Check if room is now empty
-            const updatedRoom = await getRoom(gameCode);
-            const remainingPlayers = updatedRoom?.players || {};
-            if (Object.keys(remainingPlayers).length === 0) {
-                console.log('No players left, deleting room');
-                await deleteRoom(gameCode);
-                sessionStorage.clear();
-                window.location.href = 'index.html';
-                return;
+            // Only remove after 2 consecutive missed heartbeats
+            if (missedHeartbeats[name] >= 2) {
+                console.log(`Removing disconnected player: ${name} (missed ${missedHeartbeats[name]} heartbeats)`);
+                await removePlayer(gameCode, name);
+                delete missedHeartbeats[name]; // Clean up tracking
+
+                // Check if room is now empty
+                const updatedRoom = await getRoom(gameCode);
+                const remainingPlayers = updatedRoom?.players || {};
+                if (Object.keys(remainingPlayers).length === 0) {
+                    console.log('No players left, deleting room');
+                    await deleteRoom(gameCode);
+                    sessionStorage.clear();
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // If removed player was host, transfer to first remaining player
+                if (data.isHost) {
+                    const firstPlayer = Object.keys(remainingPlayers)[0];
+                    await updatePlayer(gameCode, firstPlayer, { isHost: true });
+                    await updateRoom(gameCode, { host: firstPlayer });
+                }
+            } else {
+                console.log(`Player ${name} missed heartbeat (${missedHeartbeats[name]}/2)`);
             }
-
-            // If removed player was host, transfer to first remaining player
-            if (data.isHost) {
-                const firstPlayer = Object.keys(remainingPlayers)[0];
-                await updatePlayer(gameCode, firstPlayer, { isHost: true });
-                await updateRoom(gameCode, { host: firstPlayer });
+        } else {
+            // Player sent heartbeat, reset their missed count
+            if (missedHeartbeats[name]) {
+                missedHeartbeats[name] = 0;
             }
         }
     }
@@ -140,6 +157,8 @@ document.getElementById('gameCode').textContent = gameCode;
 // FEATURE 4 FIX: Start heartbeat system
 startHeartbeat();
 
+updatePlayer(gameCode, playerName, { lastSeen: Date.now() });
+
 // FEATURE 4 FIX: Host checks for disconnected players every 10 seconds
 if (isHost) {
     setInterval(cleanupDisconnectedPlayers, 10000);
@@ -171,10 +190,6 @@ modeButtons.forEach(btn => {
         document.getElementById('gameModeSection').style.display = 'none';
     });
 });
-
-// CHANGED: Subscribe to room changes using subscribeToRoom() helper
-// OLD: playerRef.child('isHost').on('value', (snapshot) => {...})
-// NEW: Subscribe to entire room, filter for player's isHost status
 
 roomSubscription = subscribeToRoom(gameCode, (room) => {
     if (!room) {
@@ -347,8 +362,6 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
 async function transferHost(newHostName) {
     if (!isHost) return;
 
-    // CHANGED: Use individual helper functions instead of multi-path update
-    // OLD: db.ref().update({ multiple paths... })
     await updateRoom(gameCode, { host: newHostName });
     await updatePlayer(gameCode, playerName, { isHost: false });
     await updatePlayer(gameCode, newHostName, { isHost: true });
@@ -358,8 +371,6 @@ async function transferHost(newHostName) {
 
 // Start Game (Host Only) - CHANGED: Database operations, logic UNCHANGED
 document.getElementById('startBtn')?.addEventListener('click', async () => {
-    // CHANGED: Get players using helper
-    // OLD: const snapshot = await playersRef.once('value');
     const room = await getRoom(gameCode);
     const players = room ? room.players : null;
 
@@ -420,8 +431,6 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             musicDuration: 30
         };
 
-        // CHANGED: Start game using updateRoom() helper
-        // OLD: await roomRef.update({...})
         await updateRoom(gameCode, {
             status: 'playing',
             currentQ: 0,
@@ -466,14 +475,6 @@ let isLeavingLobby = false;
 
 window.addEventListener('beforeunload', async (e) => {
     stopHeartbeat();
-    /*if (isStartingGame || !isLeavingLobby) {
-        if (roomSubscription) {
-            unsubscribe(roomSubscription);
-        }
-        return;
-    }
-
-    await removePlayer(gameCode, playerName);*/
 
     if (roomSubscription) {
         unsubscribe(roomSubscription);
