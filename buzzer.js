@@ -620,9 +620,18 @@ document.getElementById('wrongBtn')?.addEventListener('click', async () => {
 
     await updatePlayer(gameCode, buzzedPlayerName, { lockoutUntil });
 
+
     if (!isHost && !buzzedPlayerName) {
-        document.getElementById('buzzerSection').style.display = 'block';
+        handleBuzzCleared(room);
     }
+    /*
+        if (!isHost && !buzzedPlayerName) {
+        const buzzerSection = document.getElementById('buzzerSection');
+        if (buzzerSection) {
+            buzzerSection.style.display = 'block';
+        }
+    }
+    */
 
     await updateRoom(gameCode, {
         buzzedPlayer: null,
