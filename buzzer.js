@@ -320,11 +320,15 @@ function handleBuzzCleared(room) {
     document.getElementById('hostControls').style.display = 'none';
 
     if (!isHost) {
-        //buzzer refresh fix?
-        if (!isLockedOut || !isPaused) {
-            document.getElementById('buzzerSection').style.display = 'block';
-        }
+
+    const buzzerSection = document.getElementById('buzzerSection');
+
+    if (!isLockedOut) {
+        buzzerSection.style.display = 'block';
+    } else {
+        buzzerSection.style.display = 'none';
     }
+}
 
     if (isHost) {
         document.getElementById('hostButtonsTop').style.display = 'block';
