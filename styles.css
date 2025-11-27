@@ -33,12 +33,13 @@
     opacity: 0.95;
 }
 
+/*
 .mode-buttons {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.8rem;
 }
-
+/*
 .mode-btn {
     padding: 1rem;
     background: rgba(255, 255, 255, 0.2);
@@ -66,7 +67,7 @@
 
 .mode-btn:active:not(.active) {
     transform: scale(0.98);
-}
+}*/
 
 /* Parameters Section */
 .parameters-section {
@@ -938,6 +939,55 @@ button:active {
 
 .mode-btn:active:not(.active) {
     transform: scale(0.98);
+}
+
+/* FEATURE 2: Mode button with info icon */
+.mode-btn-with-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mode-btn-text {
+    flex: 1;
+    text-align: left;
+}
+
+.mode-btn-info {
+    font-size: 1.1rem;
+    opacity: 0.7;
+    padding: 0.2rem 0.5rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: help;
+    transition: all 0.2s;
+}
+
+.mode-btn-info:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+/* FEATURE 2: Info tooltip */
+.mode-info-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    max-width: 280px;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.mode-info-tooltip.show {
+    opacity: 1;
 }
 
 /* Parameters Section */
