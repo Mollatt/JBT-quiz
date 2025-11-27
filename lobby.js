@@ -190,7 +190,75 @@ modeButtons.forEach(btn => {
         document.getElementById('gameModeSection').style.display = 'none';
     });
 });
+// FEATURE 2: Info icon handlers for game modes
+document.querySelectorAll('.mode-btn-info').forEach(infoIcon => {
+    // Prevent info icon from triggering mode selection
+    infoIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+    
+    // Show tooltip on click (works for both mobile and desktop)
+    infoIcon.addEventListener('click', (e) => {
+        const mode = infoIcon.getAttribute('data-info');
+        showModeInfo(mode, e);
+    });
+    
+    // Also show on hover for desktop
+    infoIcon.addEventListener('mouseenter', (e) => {
+        const mode = infoIcon.getAttribute('data-info');
+        showModeInfo(mode, e);
+    });
+    
+    infoIcon.addEventListener('mouseleave', () => {
+        hideModeInfo();
+    });
+});
 
+// FEATURE 2: Show mode information tooltip
+function showModeInfo(mode, event) {
+    // Remove any existing tooltip
+    hideModeInfo();
+    
+    let message = '';
+    if (mode === 'buzzer') {
+        message = 'This is a Local Play game mode. Music will only play on the host\'s device. Best for in-person gatherings!';
+    }
+    
+    if (!message) return;
+    
+    // Create tooltip
+    const tooltip = document.createElement('div');
+    tooltip.className = 'mode-info-tooltip show';
+    tooltip.id = 'modeInfoTooltip';
+    tooltip.textContent = message;
+    
+    // Position tooltip near the info icon
+    const rect = event.target.getBoundingClientRect();
+    tooltip.style.top = `${rect.bottom + 10}px`;
+    tooltip.style.left = `${rect.left - 100}px`;
+    
+    document.body.appendChild(tooltip);
+    
+    // Auto-hide after 5 seconds on mobile (click)
+    if (event.type === 'click') {
+        setTimeout(hideModeInfo, 5000);
+    }
+}
+
+// FEATURE 2: Hide mode information tooltip
+function hideModeInfo() {
+    const tooltip = document.getElementById('modeInfoTooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
+}
+
+// Close tooltip when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.classList.contains('mode-btn-info')) {
+        hideModeInfo();
+    }
+});
 roomSubscription = subscribeToRoom(gameCode, (room) => {
     if (!room) {
         // Room deleted, go home
@@ -282,7 +350,6 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
         });
     }
 
-    // Check for game start - CHANGED: Now handled in subscription
     if (room.status === 'playing') {
         // Set flag so beforeunload doesn't remove player
         isStartingGame = true;
@@ -296,7 +363,6 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
     }
 });
 
-// UNCHANGED: Helper function for parameter display
 function updateParametersDisplay(mode) {
     const standardParams = document.getElementById('standardModeParams');
     const buzzerParams = document.getElementById('buzzerModeParams');
@@ -480,4 +546,3 @@ window.addEventListener('beforeunload', async (e) => {
         unsubscribe(roomSubscription);
     }
 });
-
