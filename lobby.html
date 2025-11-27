@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lobby | Quiz Connect</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container lobby-container">
         <h1>🎯 Quiz Connect Lobby</h1>
@@ -29,7 +31,10 @@
             <h3>Select Game Mode</h3>
             <div class="mode-buttons">
                 <button class="mode-btn" data-mode="everybody">🎵 Everybody Plays</button>
-                <button class="mode-btn" data-mode="buzzer">🔴 Buzzer Mode</button>
+                <button class="mode-btn mode-btn-with-info" data-mode="buzzer">
+                    <span class="mode-btn-text">🔴 Buzzer Mode</span>
+                    <span class="mode-btn-info" data-info="buzzer">ⓘ</span>
+                </button>
             </div>
         </div>
 
@@ -39,7 +44,7 @@
         <!-- Game Parameters (hidden by default) -->
         <div id="parametersSection" class="parameters-section" style="display: none;">
             <h3>Game Parameters</h3>
-            
+
             <!-- Everybody Plays Mode Parameters -->
             <div id="everybodyModeParams" style="display: none;">
                 <div class="param-group">
@@ -95,14 +100,18 @@
                 </div>
                 <label>Release Year Range (Optional):</label>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="number" id="everybodyReleaseYearMin" placeholder="From" min="1980" max="2099" style="flex: 1;">
+                    <input type="number" id="everybodyReleaseYearMin" placeholder="From" min="1980" max="2099"
+                        style="flex: 1;">
                     <span>to</span>
-                    <input type="number" id="everybodyReleaseYearMax" placeholder="To" min="1980" max="2099" style="flex: 1;">
+                    <input type="number" id="everybodyReleaseYearMax" placeholder="To" min="1980" max="2099"
+                        style="flex: 1;">
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="number" id="buzzerReleaseYearMin" placeholder="From" min="1980" max="2099" style="flex: 1; display: none;">
+                    <input type="number" id="buzzerReleaseYearMin" placeholder="From" min="1980" max="2099"
+                        style="flex: 1; display: none;">
                     <span style="display: none;">to</span>
-                    <input type="number" id="buzzerReleaseYearMax" placeholder="To" min="1980" max="2099" style="flex: 1; display: none;">
+                    <input type="number" id="buzzerReleaseYearMax" placeholder="To" min="1980" max="2099"
+                        style="flex: 1; display: none;">
                 </div>
             </div>
 
@@ -155,10 +164,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="db-helpers.js"></script>
-    
+
     <script src="question-generator.js"></script>
     <script src="lobby.js"></script>
 </body>
+
 </html>
-
-
