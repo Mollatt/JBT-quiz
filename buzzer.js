@@ -321,14 +321,14 @@ function handleBuzzCleared(room) {
 
     if (!isHost) {
 
-    const buzzerSection = document.getElementById('buzzerSection');
+        const buzzerSection = document.getElementById('buzzerSection');
 
-    if (!isLockedOut) {
-        buzzerSection.style.display = 'block';
-    } else {
-        buzzerSection.style.display = 'none';
+        if (!isLockedOut) {
+            buzzerSection.style.display = 'block';
+        } else {
+            buzzerSection.style.display = 'none';
+        }
     }
-}
 
     if (isHost) {
         document.getElementById('hostButtonsTop').style.display = 'block';
@@ -424,14 +424,14 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
         document.getElementById('buzzerSection').style.display = 'block';
     }
 
-    // Setup music player
-    if (!musicPlayer) {
-        console.log('Creating music player');
-        musicPlayer = new YouTubePlayer('musicPlayer');
-    }
 
-    if (question.type === 'music' && question.youtubeUrl) {
-        console.log('Loading music:', question.youtubeUrl);
+    if (question.type === 'music' && question.youtubeUrl && isHost) {
+        console.log('Loading music (host only):', question.youtubeUrl);
+
+        if (!musicPlayer) {
+            console.log('Creating music player');
+            musicPlayer = new YouTubePlayer('musicPlayer');
+        }
 
         musicPlayer.load(question.youtubeUrl).then(() => {
             console.log('Music loaded successfully');
@@ -452,6 +452,13 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
             console.error('Failed to load music:', error);
             alert('Music failed to load: ' + error.message);
         });
+    } else if (question.type === 'music' && !isHost) {
+        // FEATURE 2: Non-host players - no music, just start timer
+        console.log('Player mode: Music plays on host device only');
+        const duration = opts.remainingTime || 30;
+        remainingTime = duration;
+        document.getElementById('timeLeft').textContent = remainingTime;
+        startQuestionTimer();
     } else {
         console.log('No music for this question');
         const duration = opts.remainingTime || 30;
