@@ -356,6 +356,24 @@ button:active {
     transform: scale(1.05);
 }
 
+.edit-name-btn {
+    background: rgba(102, 126, 234, 0.3);
+    border: 1px solid rgba(102, 126, 234, 0.5);
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: auto;
+    margin: 0 0.5rem;
+}
+
+.edit-name-btn:hover {
+    background: rgba(102, 126, 234, 0.5);
+    transform: scale(1.05);
+}
+
 /* Quiz Styles */
 .quiz-container {
     padding: 1.5rem;
