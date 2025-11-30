@@ -96,7 +96,7 @@ async function createRoom(code, hostName, mode = 'everybody') {
 
         // Create host player
         const hostPlayerId = generatePlayerId();
-        const { error: playerError } = await supabase
+        const { data: playerData, error: playerError } = await supabase
             .from('players')
             .insert([{
                 room_code: code,
@@ -105,11 +105,13 @@ async function createRoom(code, hostName, mode = 'everybody') {
                 score: 0,
                 is_host: true,
                 last_seen: Date.now()
-            }]);
+            }])
+            .select()
+            .single();
 
         if (playerError) throw playerError;
 
-        return { success: true, room: roomData };
+        return { success: true, room: roomData, player: playerData };
     } catch (error) {
         console.error('Error creating room:', error);
         alert(`Failed to create room: ${error.message}`);
@@ -692,6 +694,9 @@ function convertPlayerToDB(appPlayer) {
     return dbPlayer;
 }
 
+/**
+ * Convert song data FROM database format TO app format
+ */
 function convertSongFromDB(dbSong) {
     return {
         id: dbSong.id,
