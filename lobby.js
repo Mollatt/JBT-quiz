@@ -196,19 +196,19 @@ document.querySelectorAll('.mode-btn-info').forEach(infoIcon => {
     infoIcon.addEventListener('click', (e) => {
         e.stopPropagation();
     });
-    
+
     // Show tooltip on click (works for both mobile and desktop)
     infoIcon.addEventListener('click', (e) => {
         const mode = infoIcon.getAttribute('data-info');
         showModeInfo(mode, e);
     });
-    
+
     // Also show on hover for desktop
     infoIcon.addEventListener('mouseenter', (e) => {
         const mode = infoIcon.getAttribute('data-info');
         showModeInfo(mode, e);
     });
-    
+
     infoIcon.addEventListener('mouseleave', () => {
         hideModeInfo();
     });
@@ -218,27 +218,27 @@ document.querySelectorAll('.mode-btn-info').forEach(infoIcon => {
 function showModeInfo(mode, event) {
     // Remove any existing tooltip
     hideModeInfo();
-    
+
     let message = '';
     if (mode === 'buzzer') {
         message = 'This is a Local Play game mode. Music will only play on the host\'s device. Best for in-person gatherings!';
     }
-    
+
     if (!message) return;
-    
+
     // Create tooltip
     const tooltip = document.createElement('div');
     tooltip.className = 'mode-info-tooltip show';
     tooltip.id = 'modeInfoTooltip';
     tooltip.textContent = message;
-    
+
     // Position tooltip near the info icon
     const rect = event.target.getBoundingClientRect();
     tooltip.style.top = `${rect.bottom + 10}px`;
     tooltip.style.left = `${rect.left - 100}px`;
-    
+
     document.body.appendChild(tooltip);
-    
+
     // Auto-hide after 5 seconds on mobile (click)
     if (event.type === 'click') {
         setTimeout(hideModeInfo, 5000);
@@ -317,10 +317,10 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
         ...data
     }));
 
-    // Update player count - UNCHANGED
+
     document.getElementById('playerCount').textContent = playerArray.length;
 
-    // Check if there's a host - CHANGED: Now handled in subscription
+
     const hasHost = playerArray.some(p => p.isHost);
     if (!hasHost && playerArray.length > 0) {
         const firstPlayer = playerArray[0].name;
@@ -331,22 +331,30 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
         }
     }
 
-    // Render player list - UNCHANGED logic
+    const myPlayerId = sessionStorage.getItem('playerId');
     const container = document.getElementById('playerListContainer');
     container.innerHTML = playerArray.map(player => `
         <div class="player-item">
             <span class="player-name">${player.name}</span>
+            ${player.playerId === myPlayerId ?
+            `<button class="edit-name-btn" data-player-id="${player.playerId}">✏️ Edit</button>`
+            : ''}
             ${player.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
             ${isHost && !player.isHost ?
-            `<button class="transfer-host-btn" data-player="${player.name}">Make Host</button>`
+            `<button class="transfer-host-btn" data-player-id="${player.playerId}" data-player-name="${player.name}">Make Host</button>`
             : ''}
         </div>
     `).join('');
 
+
+    document.querySelectorAll('.edit-name-btn').forEach(btn => {
+        btn.addEventListener('click', () => openEditNameModal(btn.dataset.playerId));
+    });
+
     // Add transfer host button handlers - UNCHANGED logic (but using helper)
     if (isHost) {
         document.querySelectorAll('.transfer-host-btn').forEach(btn => {
-            btn.addEventListener('click', () => transferHost(btn.dataset.player));
+            btn.addEventListener('click', () => transferHost(btn.dataset.playerId, btn.dataset.playerName));
         });
     }
 
@@ -407,35 +415,31 @@ document.getElementById('saveParametersBtn')?.addEventListener('click', async ()
             numQuestions: numQuestions
         };
 
-    // Get selected categories - UNCHANGED
     const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
         .map(cb => cb.value);
     gameParams.categories = selectedCategories;
 
-    // CHANGED: Update using helper
-    // OLD: await roomRef.update({ gameParams });
     await updateRoom(gameCode, { gameParams });
     alert('Parameters saved!');
 
-    // Auto-close parameters section - UNCHANGED
+
     const paramsSection = document.getElementById('parametersSection');
     if (paramsSection) {
         paramsSection.style.display = 'none';
     }
 });
 
-// Transfer host function - CHANGED: Now uses helper functions
-async function transferHost(newHostName) {
+
+async function transferHost(newHostPlayerId, newHostName) {
     if (!isHost) return;
 
     await updateRoom(gameCode, { host: newHostName });
-    await updatePlayer(gameCode, playerName, { isHost: false });
-    await updatePlayer(gameCode, newHostName, { isHost: true });
+    await updatePlayer(gameCode, sessionStorage.getItem('playerId'), { isHost: false });
+    await updatePlayer(gameCode, newHostPlayerId, { isHost: true });
 
     alert(`${newHostName} is now the host!`);
 }
 
-// Start Game (Host Only) - CHANGED: Database operations, logic UNCHANGED
 document.getElementById('startBtn')?.addEventListener('click', async () => {
     const room = await getRoom(gameCode);
     const players = room ? room.players : null;
@@ -445,13 +449,11 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
-    // For buzzer mode, require at least 2 players - UNCHANGED
     if (room.mode === 'buzzer' && Object.keys(players).length < 2) {
         alert('Buzzer mode requires at least 2 players (host + 1 player)!');
         return;
     }
 
-    // Get number of questions - UNCHANGED
     let numQuestions = room.gameParams?.numQuestions || parseInt(document.getElementById('numQuestions')?.value) || 10;
 
     if (numQuestions < 1 || numQuestions > 100) {
@@ -538,6 +540,89 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
 
 let isStartingGame = false;
 let isLeavingLobby = false;
+
+// FEATURE 5: Edit name modal functions
+function openEditNameModal(playerId) {
+    const modal = document.getElementById('editNameModal');
+    const input = document.getElementById('editNameInput');
+
+    input.value = playerName;
+    input.dataset.playerId = playerId;
+
+    modal.style.display = 'flex';
+    input.focus();
+    input.select();
+}
+
+function closeEditNameModal() {
+    const modal = document.getElementById('editNameModal');
+    const input = document.getElementById('editNameInput');
+
+    modal.style.display = 'none';
+    input.value = '';
+    delete input.dataset.playerId;
+}
+
+// FEATURE 5: Edit name modal event listeners
+document.getElementById('closeEditNameBtn')?.addEventListener('click', closeEditNameModal);
+document.getElementById('cancelEditNameBtn')?.addEventListener('click', closeEditNameModal);
+
+document.getElementById('saveNameBtn')?.addEventListener('click', async () => {
+    const input = document.getElementById('editNameInput');
+    const newName = sanitizeName(input.value);
+    const playerId = input.dataset.playerId;
+
+    if (!newName) {
+        alert('Please enter a name!');
+        return;
+    }
+
+    if (newName === playerName) {
+        closeEditNameModal();
+        return;
+    }
+
+    // Disable button during save
+    const saveBtn = document.getElementById('saveNameBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    const result = await changePlayerName(gameCode, playerId, newName);
+
+    if (result.success) {
+        // Update session storage
+        sessionStorage.setItem('playerName', newName);
+
+        // Update local reference
+        window.playerName = newName;
+
+        // Update host field if this player is host
+        if (isHost) {
+            await updateRoom(gameCode, { host: newName });
+        }
+
+        closeEditNameModal();
+    } else {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        alert(result.error || 'Failed to change name. Please try again.');
+    }
+});
+
+// Handle Enter key in edit name input
+document.getElementById('editNameInput')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        document.getElementById('saveNameBtn').click();
+    }
+});
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('editNameModal');
+    if (event.target === modal) {
+        closeEditNameModal();
+    }
+});
 
 window.addEventListener('beforeunload', async (e) => {
     stopHeartbeat();
