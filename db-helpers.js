@@ -1,6 +1,19 @@
 const roomCache = new Map();
 const CACHE_TTL = 500; // Cache for 500ms
 
+
+/**
+ * @returns {string} 8-character alphanumeric ID
+ */
+function generatePlayerId() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
+    for (let i = 0; i < 8; i++) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+}
+
 /**
  * Get room data with all players (with caching)
  * @param {string} code - Room code
@@ -82,13 +95,16 @@ async function createRoom(code, hostName, mode = 'everybody') {
         if (roomError) throw roomError;
 
         // Create host player
+        const hostPlayerId = generatePlayerId();
         const { error: playerError } = await supabase
             .from('players')
             .insert([{
                 room_code: code,
+                player_id: hostPlayerId,
                 name: hostName,
                 score: 0,
-                is_host: true
+                is_host: true,
+                last_seen: Date.now()
             }]);
 
         if (playerError) throw playerError;
@@ -199,10 +215,12 @@ async function deleteRoom(code) {
  */
 async function addPlayer(code, playerName, isHost = false) {
     try {
+        const playerId = generatePlayerId();
         const { data, error } = await supabase
             .from('players')
             .insert([{
-                room_code: code,  // CHANGED: using 'code' parameter
+                room_code: code,
+                player_id: playerId,
                 name: playerName,
                 score: 0,
                 is_host: isHost,
@@ -227,15 +245,22 @@ async function addPlayer(code, playerName, isHost = false) {
  * @param {Object} updates - Fields to update
  * @returns {Promise}
  */
-async function updatePlayer(code, playerName, updates) {
+async function updatePlayer(code, playerNameOrId, updates) {
     try {
         const dbUpdates = convertPlayerToDB(updates);
-
-        const { error } = await supabase
+        const isPlayerId = playerNameOrId.length === 8 && !playerNameOrId.includes(' ');
+        const query = supabase
             .from('players')
             .update(dbUpdates)
-            .eq('room_code', code)  // CHANGED: using 'code' parameter
-            .eq('name', playerName);
+            .eq('room_code', code);
+
+        if (isPlayerId) {
+            query.eq('player_id', playerNameOrId);
+        } else {
+            query.eq('name', playerNameOrId);
+        }
+
+        const { error } = await query;
 
         if (error) throw error;
         return { success: true };
@@ -252,19 +277,60 @@ async function updatePlayer(code, playerName, updates) {
  * @param {string} playerName - Player name
  * @returns {Promise}
  */
-async function removePlayer(code, playerName) {
+async function removePlayer(code, playerNameOrId) {
     try {
-        const { error } = await supabase
+        const isPlayerId = playerNameOrId.length === 8 && !playerNameOrId.includes(' ');
+        const query = supabase
             .from('players')
             .delete()
-            .eq('room_code', code)  // CHANGED: using 'code' parameter
-            .eq('name', playerName);
+            .eq('room_code', code);
+
+        if (isPlayerId) {
+            query.eq('player_id', playerNameOrId);
+        } else {
+            query.eq('name', playerNameOrId);
+        }
+
+        const { error } = await query;
 
         if (error) throw error;
         return { success: true };
     } catch (error) {
         console.error('Error removing player:', error);
         return { success: false, error };
+    }
+}
+
+/**
+ * @param {string} code - Room code
+ * @param {string} playerId - Player ID
+ * @param {string} newName - New name
+ * @returns {Promise}
+ */
+async function changePlayerName(code, playerId, newName) {
+    try {
+        const { data: existingPlayer, error: checkError } = await supabase
+            .from('players')
+            .select('player_id')
+            .eq('room_code', code)
+            .eq('name', newName)
+            .single();
+
+        if (existingPlayer && existingPlayer.player_id !== playerId) {
+            return { success: false, error: 'Name already taken' };
+        }
+
+        const { error } = await supabase
+            .from('players')
+            .update({ name: newName })
+            .eq('room_code', code)
+            .eq('player_id', playerId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error changing player name:', error);
+        return { success: false, error: error.message };
     }
 }
 
@@ -584,6 +650,8 @@ function convertRoomToDB(appRoom) {
  */
 function convertPlayerFromDB(dbPlayer) {
     return {
+        playerId: dbPlayer.player_id,
+        name: dbPlayer.name,
         score: dbPlayer.score,
         answer: dbPlayer.answer,
         answered: dbPlayer.answered,
@@ -624,9 +692,6 @@ function convertPlayerToDB(appPlayer) {
     return dbPlayer;
 }
 
-/**
- * Convert song data FROM database format TO app format
- */
 function convertSongFromDB(dbSong) {
     return {
         id: dbSong.id,
