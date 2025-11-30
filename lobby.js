@@ -1,5 +1,5 @@
 const gameCode = sessionStorage.getItem('gameCode');
-const playerName = sessionStorage.getItem('playerName');
+let playerName = sessionStorage.getItem('playerName');
 let isHost = sessionStorage.getItem('isHost') === 'true';
 
 if (!gameCode || !playerName) {
@@ -24,10 +24,10 @@ document.getElementById('toggleParametersBtn')?.addEventListener('click', () => 
 });
 
 function startHeartbeat() {
-    // Update our lastSeen timestamp every 5 seconds
     heartbeatInterval = setInterval(async () => {
         try {
-            await updatePlayer(gameCode, playerName, {
+            const myPlayerId = sessionStorage.getItem('playerId');
+            await updatePlayer(gameCode, myPlayerId, {
                 lastSeen: Date.now()
             });
         } catch (error) {
@@ -55,18 +55,20 @@ async function cleanupDisconnectedPlayers() {
     const timeout = heartbeatInterval + 1000; // Allow 1 second grace period
 
     const players = room.players;
+    // FEATURE 5 FIX: Iterate by playerId
     for (const [name, data] of Object.entries(players)) {
+        const playerId = data.playerId;
+        if (!playerId) continue;
+
         const lastSeen = data.lastSeen || 0;
 
         if (now - lastSeen > timeout) {
-            // Player missed a heartbeat
-            missedHeartbeats[name] = (missedHeartbeats[name] || 0) + 1;
+            missedHeartbeats[playerId] = (missedHeartbeats[playerId] || 0) + 1;
 
-            // Only remove after 2 consecutive missed heartbeats
-            if (missedHeartbeats[name] >= 2) {
-                console.log(`Removing disconnected player: ${name} (missed ${missedHeartbeats[name]} heartbeats)`);
-                await removePlayer(gameCode, name);
-                delete missedHeartbeats[name]; // Clean up tracking
+            if (missedHeartbeats[playerId] >= 2) {
+                console.log(`Removing disconnected player: ${name} (missed ${missedHeartbeats[playerId]} heartbeats)`);
+                await removePlayer(gameCode, playerId);
+                delete missedHeartbeats[playerId]; // Clean up tracking
 
                 // Check if room is now empty
                 const updatedRoom = await getRoom(gameCode);
@@ -79,19 +81,17 @@ async function cleanupDisconnectedPlayers() {
                     return;
                 }
 
-                // If removed player was host, transfer to first remaining player
                 if (data.isHost) {
-                    const firstPlayer = Object.keys(remainingPlayers)[0];
-                    await updatePlayer(gameCode, firstPlayer, { isHost: true });
-                    await updateRoom(gameCode, { host: firstPlayer });
+                    const firstPlayerData = Object.values(remainingPlayers)[0];
+                    await updatePlayer(gameCode, firstPlayerData.playerId, { isHost: true });
+                    await updateRoom(gameCode, { host: firstPlayerData.name });
                 }
             } else {
                 console.log(`Player ${name} missed heartbeat (${missedHeartbeats[name]}/2)`);
             }
         } else {
-            // Player sent heartbeat, reset their missed count
-            if (missedHeartbeats[name]) {
-                missedHeartbeats[name] = 0;
+            if (missedHeartbeats[playerId]) {
+                missedHeartbeats[playerId] = 0;
             }
         }
     }
@@ -157,7 +157,8 @@ document.getElementById('gameCode').textContent = gameCode;
 // FEATURE 4 FIX: Start heartbeat system
 startHeartbeat();
 
-updatePlayer(gameCode, playerName, { lastSeen: Date.now() });
+const myPlayerId = sessionStorage.getItem('playerId');
+updatePlayer(gameCode, myPlayerId, { lastSeen: Date.now() });
 
 // FEATURE 4 FIX: Host checks for disconnected players every 10 seconds
 if (isHost) {
@@ -266,8 +267,12 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
         return;
     }
 
-    // Check if current player's host status changed
-    const currentPlayer = room.players ? room.players[playerName] : null;
+    // FEATURE 5 FIX: Find current player by playerId instead of name
+    const currentPlayer = room.players ? Object.values(room.players).find(p => p.playerId === sessionStorage.getItem('playerId')) : null;
+    if (currentPlayer && currentPlayer.name !== playerName) {
+        playerName = currentPlayer.name;
+        sessionStorage.setItem('playerName', playerName);
+    }
     if (currentPlayer) {
         const hostStatus = currentPlayer.isHost;
 
@@ -336,7 +341,7 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
     container.innerHTML = playerArray.map(player => `
         <div class="player-item">
             <span class="player-name">${player.name}</span>
-            ${player.playerId === myPlayerId ?
+            ${player.playerId === sessionStorage.getItem('playerId') ?
             `<button class="edit-name-btn" data-player-id="${player.playerId}">✏️ Edit</button>`
             : ''}
             ${player.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
