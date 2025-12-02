@@ -218,6 +218,12 @@ async function deleteRoom(code) {
 async function addPlayer(code, playerName, isHost = false) {
     try {
         const playerId = generatePlayerId();
+
+        let buzzerSoundId = null;
+        if (!isHost) {
+            buzzerSoundId = await getNextAvailableBuzzerSound(code);
+        }
+
         const { data, error } = await supabase
             .from('players')
             .insert([{
@@ -226,7 +232,8 @@ async function addPlayer(code, playerName, isHost = false) {
                 name: playerName,
                 score: 0,
                 is_host: isHost,
-                last_seen: Date.now()
+                last_seen: Date.now(),
+                buzzer_sound_id: buzzerSoundId
             }])
             .select()
             .single();
@@ -572,6 +579,202 @@ async function getSong(id) {
     }
 }
 
+
+/**
+ * Get all active buzzer sounds
+ * @returns {Promise<Array>}
+ */
+async function getBuzzerSounds() {
+    try {
+        const { data, error } = await supabase
+            .from('buzzer_sounds')
+            .select('*')
+            .eq('is_active', true)
+            .order('display_name');
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error getting buzzer sounds:', error);
+        return [];
+    }
+}
+
+/**
+ * Get a specific buzzer sound
+ * @param {string} id - Sound ID
+ * @returns {Promise<Object|null>}
+ */
+async function getBuzzerSound(id) {
+    try {
+        const { data, error } = await supabase
+            .from('buzzer_sounds')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') return null;
+            throw error;
+        }
+        return data;
+    } catch (error) {
+        console.error('Error getting buzzer sound:', error);
+        return null;
+    }
+}
+
+/**
+ * Upload a buzzer sound file
+ * @param {File} file - Audio file
+ * @param {string} displayName - Display name
+ * @param {boolean} isStarter - Whether it's a starter sound
+ * @returns {Promise}
+ */
+async function uploadBuzzerSound(file, displayName, isStarter = false) {
+    try {
+        // Validate file size (500KB = 512000 bytes)
+        if (file.size > 512000) {
+            return { success: false, error: 'File size must be under 500KB' };
+        }
+
+        // Validate file type
+        if (!file.type.includes('audio/mpeg') && !file.type.includes('audio/mp3')) {
+            return { success: false, error: 'File must be MP3 format' };
+        }
+
+        // Generate unique file name
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('buzzer-sounds')
+            .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('buzzer-sounds')
+            .getPublicUrl(fileName);
+
+        // Create database entry
+        const { data: soundData, error: dbError } = await supabase
+            .from('buzzer_sounds')
+            .insert([{
+                file_name: fileName,
+                display_name: displayName,
+                file_url: urlData.publicUrl,
+                is_starter: isStarter,
+                file_size: file.size
+            }])
+            .select()
+            .single();
+
+        if (dbError) throw dbError;
+
+        return { success: true, sound: soundData };
+    } catch (error) {
+        console.error('Error uploading buzzer sound:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Delete a buzzer sound
+ * @param {string} id - Sound ID
+ * @returns {Promise}
+ */
+async function deleteBuzzerSound(id) {
+    try {
+        // Get sound data first to delete file
+        const sound = await getBuzzerSound(id);
+        if (!sound) return { success: false, error: 'Sound not found' };
+
+        // Delete from storage
+        const { error: storageError } = await supabase.storage
+            .from('buzzer-sounds')
+            .remove([sound.file_name]);
+
+        if (storageError) console.warn('Storage delete error:', storageError);
+
+        // Delete from database
+        const { error: dbError } = await supabase
+            .from('buzzer_sounds')
+            .delete()
+            .eq('id', id);
+
+        if (dbError) throw dbError;
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting buzzer sound:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Update buzzer sound properties
+ * @param {string} id - Sound ID
+ * @param {Object} updates - Fields to update
+ * @returns {Promise}
+ */
+async function updateBuzzerSound(id, updates) {
+    try {
+        const { error } = await supabase
+            .from('buzzer_sounds')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error updating buzzer sound:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get next available default buzzer sound for a room
+ * @param {string} code - Room code
+ * @returns {Promise<string|null>} Sound ID or null
+ */
+async function getNextAvailableBuzzerSound(code) {
+    try {
+        // Get all starter sounds
+        const { data: starterSounds, error: soundsError } = await supabase
+            .from('buzzer_sounds')
+            .select('id')
+            .eq('is_starter', true)
+            .eq('is_active', true)
+            .order('display_name');
+
+        if (soundsError) throw soundsError;
+        if (!starterSounds || starterSounds.length === 0) return null;
+
+        // Get all players in room and their sound IDs
+        const { data: players, error: playersError } = await supabase
+            .from('players')
+            .select('buzzer_sound_id')
+            .eq('room_code', code);
+
+        if (playersError) throw playersError;
+
+        const usedSoundIds = players.map(p => p.buzzer_sound_id).filter(Boolean);
+
+        // Find first unused starter sound
+        const availableSound = starterSounds.find(s => !usedSoundIds.includes(s.id));
+
+        return availableSound ? availableSound.id : starterSounds[0].id; // Fallback to first if all used
+    } catch (error) {
+        console.error('Error getting next available buzzer sound:', error);
+        return null;
+    }
+}
+
+
+
 // CONVERSION HELPERS
 // ============================================
 
@@ -663,6 +866,7 @@ function convertPlayerFromDB(dbPlayer) {
         isHost: dbPlayer.is_host,
         lockoutUntil: dbPlayer.lockout_until,
         lastSeen: dbPlayer.last_seen,
+        buzzerSoundId: dbPlayer.buzzer_sound_id,
         joined: new Date(dbPlayer.joined_at).getTime()
     };
 }
@@ -682,7 +886,8 @@ function convertPlayerToDB(appPlayer) {
         'correctCount': 'correct_count',
         'isHost': 'is_host',
         'lockoutUntil': 'lockout_until',
-        'lastSeen': 'last_seen'
+        'lastSeen': 'last_seen',
+        'buzzerSoundId': 'buzzer_sound_id'
     };
 
     for (const [appKey, dbKey] of Object.entries(fieldMap)) {
