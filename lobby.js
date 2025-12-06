@@ -11,6 +11,9 @@ let roomSubscription = null;
 let heartbeatInterval = null;
 let missedHeartbeats = {};
 
+let myBuzzerSoundId = sessionStorage.getItem('buzzerSoundId');
+let availableBuzzerSounds = [];
+
 document.getElementById('gameCode').textContent = gameCode;
 
 document.getElementById('toggleGameModeBtn')?.addEventListener('click', () => {
@@ -52,10 +55,9 @@ async function cleanupDisconnectedPlayers() {
 
     const now = Date.now();
     const heartbeatInterval = 5000; // 5 seconds between heartbeats
-    const timeout = heartbeatInterval + 1000; // Allow 1 second grace period
+    const timeout = heartbeatInterval + 1000;
 
     const players = room.players;
-    // FEATURE 5 FIX: Iterate by playerId
     for (const [name, data] of Object.entries(players)) {
         const playerId = data.playerId;
         if (!playerId) continue;
@@ -70,7 +72,6 @@ async function cleanupDisconnectedPlayers() {
                 await removePlayer(gameCode, playerId);
                 delete missedHeartbeats[playerId]; // Clean up tracking
 
-                // Check if room is now empty
                 const updatedRoom = await getRoom(gameCode);
                 const remainingPlayers = updatedRoom?.players || {};
                 if (Object.keys(remainingPlayers).length === 0) {
@@ -95,6 +96,109 @@ async function cleanupDisconnectedPlayers() {
             }
         }
     }
+}
+
+async function loadLobbySounds(room) {
+    if (isHost) {
+        document.getElementById('lobbySoundSelection').style.display = 'none';
+        return;
+    }
+
+    try {
+        availableBuzzerSounds = await getBuzzerSounds();
+
+        if (availableBuzzerSounds.length === 0) {
+            document.getElementById('lobbySoundSelection').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('lobbySoundSelection').style.display = 'block';
+
+        // Get used sound IDs from room
+        const usedSoundIds = Object.values(room.players || {})
+            .filter(p => p.playerId !== sessionStorage.getItem('playerId'))
+            .map(p => p.buzzerSoundId)
+            .filter(Boolean);
+
+        const grid = document.getElementById('lobbySoundGrid');
+        grid.innerHTML = availableBuzzerSounds.map(sound => {
+            const isUsed = usedSoundIds.includes(sound.id);
+            const isSelected = myBuzzerSoundId === sound.id;
+
+            return `
+                <div class="buzzer-sound-item ${isUsed ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" 
+                     data-sound-id="${sound.id}">
+                    <input type="radio" 
+                           name="lobbyBuzzerSound" 
+                           value="${sound.id}" 
+                           ${isUsed ? 'disabled' : ''} 
+                           ${isSelected ? 'checked' : ''}>
+                    <span class="buzzer-sound-name">${sound.display_name}</span>
+                    <button class="buzzer-sound-preview" 
+                            data-sound-url="${sound.file_url}" 
+                            type="button">▶️ Preview</button>
+                </div>
+            `;
+        }).join('');
+
+        // Add click handlers
+        document.querySelectorAll('#lobbySoundGrid .buzzer-sound-item:not(.disabled)').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.classList.contains('buzzer-sound-preview')) return;
+
+                const soundId = item.dataset.soundId;
+                selectLobbySoundAndSave(soundId);
+            });
+        });
+
+        document.querySelectorAll('#lobbySoundGrid .buzzer-sound-preview').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playLobbySoundPreview(btn.dataset.soundUrl);
+            });
+        });
+
+    } catch (error) {
+        console.error('Error loading lobby sounds:', error);
+    }
+}
+
+async function selectLobbySoundAndSave(soundId) {
+    const myPlayerId = sessionStorage.getItem('playerId');
+
+    const result = await updatePlayer(gameCode, myPlayerId, {
+        buzzerSoundId: soundId
+    });
+
+    if (result.success) {
+        myBuzzerSoundId = soundId;
+        sessionStorage.setItem('buzzerSoundId', soundId);
+
+        // Update UI
+        document.querySelectorAll('#lobbySoundGrid .buzzer-sound-item').forEach(item => {
+            item.classList.remove('selected');
+            item.querySelector('input[type="radio"]').checked = false;
+        });
+
+        const selectedItem = document.querySelector(`#lobbySoundGrid [data-sound-id="${soundId}"]`);
+        if (selectedItem) {
+            selectedItem.classList.add('selected');
+            selectedItem.querySelector('input[type="radio"]').checked = true;
+        }
+    }
+}
+
+let currentLobbyAudio = null;
+function playLobbySoundPreview(url) {
+    if (currentLobbyAudio) {
+        currentLobbyAudio.pause();
+        currentLobbyAudio.currentTime = 0;
+    }
+
+    currentLobbyAudio = new Audio(url);
+    currentLobbyAudio.play().catch(error => {
+        console.error('Error playing sound:', error);
+    });
 }
 
 getRoom(gameCode).then(room => {
@@ -262,17 +366,18 @@ document.addEventListener('click', (e) => {
 });
 roomSubscription = subscribeToRoom(gameCode, (room) => {
     if (!room) {
-        // Room deleted, go home
         window.location.href = 'index.html';
         return;
     }
 
-    // FEATURE 5 FIX: Find current player by playerId instead of name
     const currentPlayer = room.players ? Object.values(room.players).find(p => p.playerId === sessionStorage.getItem('playerId')) : null;
     if (currentPlayer && currentPlayer.name !== playerName) {
         playerName = currentPlayer.name;
         sessionStorage.setItem('playerName', playerName);
     }
+
+    loadLobbySounds(room);
+
     if (currentPlayer) {
         const hostStatus = currentPlayer.isHost;
 
@@ -291,6 +396,7 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
             document.getElementById('toggleParametersBtn').style.display = 'none';
             modeButtons.forEach(btn => btn.style.pointerEvents = 'none');
         }
+
     }
 
     // Update mode display - UNCHANGED logic
@@ -595,13 +701,10 @@ document.getElementById('saveNameBtn')?.addEventListener('click', async () => {
     const result = await changePlayerName(gameCode, playerId, newName);
 
     if (result.success) {
-        // Update session storage
         sessionStorage.setItem('playerName', newName);
 
-        // Update local reference
         window.playerName = newName;
 
-        // Update host field if this player is host
         if (isHost) {
             await updateRoom(gameCode, { host: newName });
         }
@@ -614,14 +717,12 @@ document.getElementById('saveNameBtn')?.addEventListener('click', async () => {
     }
 });
 
-// Handle Enter key in edit name input
 document.getElementById('editNameInput')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         document.getElementById('saveNameBtn').click();
     }
 });
 
-// Close modal when clicking outside
 window.addEventListener('click', (event) => {
     const modal = document.getElementById('editNameModal');
     if (event.target === modal) {
