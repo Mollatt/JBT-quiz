@@ -1,6 +1,7 @@
 let modalMode = 'create';
 let joinFlowStep = 1;
-
+let selectedBuzzerSoundId = null;
+let availableBuzzerSounds = [];
 
 function generateCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -36,6 +37,94 @@ function sanitizeName(name) {
     return name.trim().replace(/[.#$/[\]]/g, '');
 }
 
+async function loadBuzzerSounds(usedSoundIds = []) {
+    try {
+        availableBuzzerSounds = await getBuzzerSounds();
+
+        if (availableBuzzerSounds.length === 0) {
+            document.getElementById('buzzerSoundSelection').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('buzzerSoundSelection').style.display = 'block';
+
+        const grid = document.getElementById('buzzerSoundGrid');
+        grid.innerHTML = availableBuzzerSounds.map(sound => {
+            const isUsed = usedSoundIds.includes(sound.id);
+            const isSelected = selectedBuzzerSoundId === sound.id;
+
+            return `
+                <div class="buzzer-sound-item ${isUsed ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" 
+                     data-sound-id="${sound.id}">
+                    <input type="radio" 
+                           name="buzzerSound" 
+                           value="${sound.id}" 
+                           ${isUsed ? 'disabled' : ''} 
+                           ${isSelected ? 'checked' : ''}>
+                    <span class="buzzer-sound-name">${sound.display_name}</span>
+                    <button class="buzzer-sound-preview" 
+                            data-sound-url="${sound.file_url}" 
+                            type="button">▶️ Preview</button>
+                </div>
+            `;
+        }).join('');
+
+        document.querySelectorAll('.buzzer-sound-item:not(.disabled)').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.classList.contains('buzzer-sound-preview')) return;
+
+                const soundId = item.dataset.soundId;
+                selectBuzzerSound(soundId);
+            });
+        });
+
+        document.querySelectorAll('.buzzer-sound-preview').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playBuzzerSoundPreview(btn.dataset.soundUrl);
+            });
+        });
+
+        if (!selectedBuzzerSoundId && availableBuzzerSounds.length > 0) {
+            const firstAvailable = availableBuzzerSounds.find(s => !usedSoundIds.includes(s.id));
+            if (firstAvailable) {
+                selectBuzzerSound(firstAvailable.id);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error loading buzzer sounds:', error);
+    }
+}
+
+function selectBuzzerSound(soundId) {
+    selectedBuzzerSoundId = soundId;
+
+    document.querySelectorAll('.buzzer-sound-item').forEach(item => {
+        item.classList.remove('selected');
+        item.querySelector('input[type="radio"]').checked = false;
+    });
+
+    const selectedItem = document.querySelector(`[data-sound-id="${soundId}"]`);
+    if (selectedItem) {
+        selectedItem.classList.add('selected');
+        selectedItem.querySelector('input[type="radio"]').checked = true;
+    }
+}
+
+let currentAudio = null;
+function playBuzzerSoundPreview(url) {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+    }
+
+    currentAudio = new Audio(url);
+    currentAudio.play().catch(error => {
+        console.error('Error playing sound:', error);
+    });
+}
+
 const modal = document.getElementById('actionModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalActionBtn = document.getElementById('modalActionBtn');
@@ -47,9 +136,13 @@ const modalCancelBtn = document.getElementById('modalCancelBtn');
 function openModal(mode) {
     modalMode = mode;
     joinFlowStep = 1;
+    selectedBuzzerSoundId = null;
 
+    // Clear inputs
     gameCodeInput.value = '';
     modalNameInput.value = '';
+
+    document.getElementById('buzzerSoundSelection').style.display = 'none';
 
     if (mode === 'create') {
         modalTitle.textContent = 'Create Lobby';
@@ -57,6 +150,8 @@ function openModal(mode) {
         gameCodeInput.style.display = 'none';
         modalNameInput.style.display = 'block';
         modalNameInput.focus();
+
+        loadBuzzerSounds();
     } else {
         modalTitle.textContent = 'Join Lobby';
         modalActionBtn.textContent = 'Next';
@@ -156,6 +251,11 @@ async function handleCreateLobby() {
         sessionStorage.setItem('playerName', name);
         sessionStorage.setItem('playerId', result.player.player_id);
         sessionStorage.setItem('isHost', 'true');
+
+        if (selectedBuzzerSoundId) {
+            sessionStorage.setItem('buzzerSoundId', selectedBuzzerSoundId);
+        }
+
         window.location.href = 'lobby.html';
     } else {
         modalActionBtn.disabled = false;
@@ -185,12 +285,23 @@ async function handleJoinStep1() {
         return;
     }
 
+    if (room.status !== 'lobby') {
+        modalActionBtn.textContent = 'Next';
+        showModalError('Game already started!');
+        return;
+    }
+
     joinFlowStep = 2;
     modalTitle.textContent = 'Enter Your Name';
     modalActionBtn.textContent = 'Join';
     gameCodeInput.style.display = 'none';
     modalNameInput.style.display = 'block';
     modalNameInput.focus();
+
+    const usedSoundIds = Object.values(room.players || {})
+        .map(p => p.buzzerSoundId)
+        .filter(Boolean);
+    await loadBuzzerSounds(usedSoundIds);
 
     const errorEl = document.getElementById('modalError');
     if (errorEl) {
@@ -205,6 +316,11 @@ async function handleJoinStep2() {
 
     if (!name) {
         showModalError('Please enter your name!');
+        return;
+    }
+
+    if (!selectedBuzzerSoundId) {
+        showModalError('Please select a buzzer sound!');
         return;
     }
 
@@ -230,6 +346,7 @@ async function handleJoinStep2() {
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('playerId', result.player.player_id);
+            sessionStorage.setItem('buzzerSoundId', selectedBuzzerSoundId);
             sessionStorage.setItem('isHost', 'false');
 
             if (room.status === 'scoreboard') {
