@@ -2,6 +2,9 @@ const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 const isHost = sessionStorage.getItem('isHost') === 'true';
 
+let myBuzzerSoundId = sessionStorage.getItem('buzzerSoundId');
+let buzzerAudio = null;
+
 console.log('Buzzer.js loaded:', { gameCode, playerName, isHost });
 
 if (!gameCode || !playerName) {
@@ -500,6 +503,10 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
     const buzzTime = Date.now();
     console.log('Attempting to buzz at', buzzTime);
 
+    if (myBuzzerSoundId) {
+        playBuzzerSound(myBuzzerSoundId);
+    }
+
     try {
         const room = await getRoom(gameCode);
 
@@ -555,6 +562,34 @@ function handleBuzzed(buzzedPlayerName) {
         }
         document.getElementById('hostControls').style.display = 'block';
         document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
+
+        getRoom(gameCode).then(room => {
+            const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
+            if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
+                playBuzzerSound(buzzedPlayer.buzzerSoundId);
+            }
+        });
+    }
+}
+
+async function playBuzzerSound(buzzerSoundId) {
+    if (!buzzerSoundId) return;
+
+    try {
+        const sound = await getBuzzerSound(buzzerSoundId);
+        if (!sound) return;
+
+        if (buzzerAudio) {
+            buzzerAudio.pause();
+            buzzerAudio.currentTime = 0;
+        }
+
+        buzzerAudio = new Audio(sound.file_url);
+        buzzerAudio.play().catch(error => {
+            console.error('Error playing buzzer sound:', error);
+        });
+    } catch (error) {
+        console.error('Error loading buzzer sound:', error);
     }
 }
 
