@@ -331,6 +331,7 @@ async function handleJoinStep2() {
         showModalError('Please select a buzzer sound!');
         return;
     }
+    console.log('FEATURE 7 DEBUG: Selected sound ID:', selectedBuzzerSoundId);
 
     const room = await getRoom(code);
 
@@ -353,21 +354,31 @@ async function handleJoinStep2() {
         if (result.success) {
             const playerId = result.player.player_id;
 
+            console.log('FEATURE 7 DEBUG: Updating player', playerId, 'with sound', selectedBuzzerSoundId);
+
             if (selectedBuzzerSoundId) {
                 const updateResult = await updatePlayer(code, playerId, {
                     buzzerSoundId: selectedBuzzerSoundId
                 });
 
+                console.log('FEATURE 7 DEBUG: Update result:', updateResult);
+
                 if (!updateResult.success) {
                     console.error('Failed to set buzzer sound:', updateResult.error);
+                    showModalError('Failed to save buzzer sound');
+                    modalActionBtn.disabled = false;
+                    modalActionBtn.textContent = 'Join';
+                    return;
                 }
             }
 
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('playerId', result.player.player_id);
-            sessionStorage.setItem('buzzerSoundId', selectedBuzzerSoundId);
+            sessionStorage.setItem('buzzerSoundId', selectedBuzzerSoundId || '');
             sessionStorage.setItem('isHost', 'false');
+
+            await new Promise(resolve => setTimeout(resolve, 300));
 
             if (room.status === 'scoreboard') {
                 window.location.href = 'scoreboard.html';
