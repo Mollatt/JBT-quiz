@@ -250,7 +250,13 @@ function setupRoomSubscription() {
             handlePlayerLockout(playerData.lockoutUntil);
             updateScoreDisplay(playerData.score || 0);
         }
-        // Handle buzz state
+
+        console.log('Buzz state check:', {
+            roomBuzzedPlayer: room.buzzedPlayer,
+            buzzDisplayVisible: document.getElementById('buzzDisplay').style.display !== 'none',
+            isPaused: room.isPaused
+        });
+
         if (room.buzzedPlayer) {
             console.log('Buzz detected:', room.buzzedPlayer);
             handleBuzzed(room.buzzedPlayer);
@@ -561,12 +567,12 @@ function handleBuzzed(buzzedPlayerName) {
         }
     }
 
-  /*  getRoom(gameCode).then(room => {
-        const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
-        if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
-            playBuzzerSound(buzzedPlayer.buzzerSoundId);
-        }
-    });*/
+    /*  getRoom(gameCode).then(room => {
+          const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
+          if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
+              playBuzzerSound(buzzedPlayer.buzzerSoundId);
+          }
+      });*/
 
     if (isHost) {
         const hostButtons = document.getElementById('hostButtonsTop');
