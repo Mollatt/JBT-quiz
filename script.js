@@ -247,9 +247,17 @@ async function handleCreateLobby() {
     const result = await createRoom(code, name, 'everybody');
 
     if (result.success) {
+        const playerId = result.player.player_id;
+
+        if (selectedBuzzerSoundId) {
+            await updatePlayer(code, playerId, {
+                buzzerSoundId: selectedBuzzerSoundId
+            });
+        }
+
         sessionStorage.setItem('gameCode', code);
         sessionStorage.setItem('playerName', name);
-        sessionStorage.setItem('playerId', result.player.player_id);
+        sessionStorage.setItem('playerId', playerId);
         sessionStorage.setItem('isHost', 'true');
 
         if (selectedBuzzerSoundId) {
@@ -343,13 +351,16 @@ async function handleJoinStep2() {
         const result = await addPlayer(code, name, false);
 
         if (result.success) {
+            const playerId = result.player.player_id;
 
-            const nextSound = await getNextAvailableBuzzerSound(code);
-            if (nextSound) {
-                await updatePlayer(code, result.player.player_id, {
-                    buzzerSoundId: nextSound
+            if (selectedBuzzerSoundId) {
+                const updateResult = await updatePlayer(code, playerId, {
+                    buzzerSoundId: selectedBuzzerSoundId
                 });
-                sessionStorage.setItem('buzzerSoundId', nextSound);
+
+                if (!updateResult.success) {
+                    console.error('Failed to set buzzer sound:', updateResult.error);
+                }
             }
 
             sessionStorage.setItem('gameCode', code);
