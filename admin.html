@@ -263,96 +263,97 @@
         </div>
 
         <div id="statusMessage" class="status-message"></div>
-        <div id="songsTab" class="tab-content" style="display: none;"></div>
-        <!-- Add Song Form -->
-        <div class="form-section">
-            <h2 id="formTitle">Add New Song</h2>
+        <div id="songsTab" class="tab-content active">
+            <!-- Add Song Form -->
+            <div class="form-section">
+                <h2 id="formTitle">Add New Song</h2>
 
-            <form id="addSongForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Song Title <span class="required">*</span></label>
-                        <input type="text" name="title" placeholder="e.g., Dark Souls III Main Theme" required>
+                <form id="addSongForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Song Title <span class="required">*</span></label>
+                            <input type="text" name="title" placeholder="e.g., Dark Souls III Main Theme" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Artist/Composer</label>
+                            <input type="text" name="artist" placeholder="e.g., Motoi Sakuraba">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Artist/Composer</label>
-                        <input type="text" name="artist" placeholder="e.g., Motoi Sakuraba">
-                    </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Specific Game <span class="required">*</span></label>
-                        <input type="text" name="specificGame" placeholder="e.g., Dark Souls III" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Specific Game <span class="required">*</span></label>
+                            <input type="text" name="specificGame" placeholder="e.g., Dark Souls III" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Game Series</label>
+                            <input type="text" name="seriesSource" placeholder="e.g., Dark Souls">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Game Series</label>
-                        <input type="text" name="seriesSource" placeholder="e.g., Dark Souls">
-                    </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Developer</label>
-                        <input type="text" name="developer" placeholder="e.g., FromSoftware">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Developer</label>
+                            <input type="text" name="developer" placeholder="e.g., FromSoftware">
+                        </div>
+                        <div class="form-group">
+                            <label>Release Year</label>
+                            <input type="number" name="releaseYear" placeholder="2016" min="1980" max="2099">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Release Year</label>
-                        <input type="number" name="releaseYear" placeholder="2016" min="1980" max="2099">
-                    </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Boss Battle</label>
-                        <input type="text" name="bossBattle" placeholder="e.g., Champion Gundyr">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Boss Battle</label>
+                            <input type="text" name="bossBattle" placeholder="e.g., Champion Gundyr">
+                        </div>
+                        <div class="form-group">
+                            <label>Area/Location</label>
+                            <input type="text" name="area" placeholder="e.g., Firelink Shrine">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Area/Location</label>
-                        <input type="text" name="area" placeholder="e.g., Firelink Shrine">
-                    </div>
-                </div>
 
-                <div class="form-row full">
-                    <div class="form-group">
-                        <label>YouTube URL <span class="required">*</span></label>
-                        <input type="url" name="youtubeUrl" placeholder="https://youtube.com/watch?v=..." required>
+                    <div class="form-row full">
+                        <div class="form-group">
+                            <label>YouTube URL <span class="required">*</span></label>
+                            <input type="url" name="youtubeUrl" placeholder="https://youtube.com/watch?v=..." required>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Start Time (seconds)</label>
-                        <input type="number" name="startTime" value="0" min="0" max="1000">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Start Time (seconds)</label>
+                            <input type="number" name="startTime" value="0" min="0" max="1000">
+                        </div>
+                        <div class="form-group">
+                            <label>Duration (seconds)</label>
+                            <input type="number" name="duration" value="30" min="5" max="120">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Duration (seconds)</label>
-                        <input type="number" name="duration" value="30" min="5" max="120">
-                    </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Difficulty <span class="required">*</span></label>
-                        <select name="difficulty" required>
-                            <option value="">Select Difficulty</option>
-                            <option value="Very Easy">Very Easy</option>
-                            <option value="Easy">Easy</option>
-                            <option value="Medium">Medium</option>
-                            <option value="Hard">Hard</option>
-                            <option value="Very Hard">Very Hard</option>
-                            <option value="Unknown">Unknown</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Difficulty <span class="required">*</span></label>
+                            <select name="difficulty" required>
+                                <option value="">Select Difficulty</option>
+                                <option value="Very Easy">Very Easy</option>
+                                <option value="Easy">Easy</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Hard">Hard</option>
+                                <option value="Very Hard">Very Hard</option>
+                                <option value="Unknown">Unknown</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
 
-                <div class="button-group">
-                    <button type="submit" class="btn-primary">Add Song</button>
-                    <button type="reset" class="btn-secondary">Clear Form</button>
-                    <button type="button" id="cancelEditBtn" class="btn-secondary" style="display: none;">Cancel
-                        Edit</button>
-                </div>
-            </form>
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">Add Song</button>
+                        <button type="reset" class="btn-secondary">Clear Form</button>
+                        <button type="button" id="cancelEditBtn" class="btn-secondary" style="display: none;">Cancel
+                            Edit</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
 
