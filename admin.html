@@ -251,6 +251,21 @@
 </head>
 
 <body>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) {
+                window.location.href = 'admin-login.html';
+            }
+        });
+
+        function logout() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = 'admin-login.html';
+            });
+        }
+    </script>
     <div class="container admin-container">
         <div class="admin-header">
             <h1>🎵 Admin Panel - Song Manager</h1>
