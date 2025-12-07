@@ -561,12 +561,12 @@ function handleBuzzed(buzzedPlayerName) {
         }
     }
 
-    getRoom(gameCode).then(room => {
+  /*  getRoom(gameCode).then(room => {
         const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
         if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
             playBuzzerSound(buzzedPlayer.buzzerSoundId);
         }
-    });
+    });*/
 
     if (isHost) {
         const hostButtons = document.getElementById('hostButtonsTop');
