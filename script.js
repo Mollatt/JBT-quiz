@@ -343,6 +343,15 @@ async function handleJoinStep2() {
         const result = await addPlayer(code, name, false);
 
         if (result.success) {
+
+            const nextSound = await getNextAvailableBuzzerSound(code);
+            if (nextSound) {
+                await updatePlayer(code, result.player.player_id, {
+                    buzzerSoundId: nextSound
+                });
+                sessionStorage.setItem('buzzerSoundId', nextSound);
+            }
+
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('playerId', result.player.player_id);
