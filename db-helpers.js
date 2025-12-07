@@ -647,10 +647,12 @@ async function uploadBuzzerSound(file, displayName, isStarter = false) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-        // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('buzzer-sounds')
-            .upload(fileName, file);
+            .upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
 
         if (uploadError) throw uploadError;
 
@@ -899,9 +901,6 @@ function convertPlayerToDB(appPlayer) {
     return dbPlayer;
 }
 
-/**
- * Convert song data FROM database format TO app format
- */
 function convertSongFromDB(dbSong) {
     return {
         id: dbSong.id,
@@ -926,9 +925,6 @@ function generateRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-/**
- * Sanitize player name (remove invalid characters)
- */
 function sanitizeName(name) {
     return name.trim().replace(/[.#$/[\]]/g, '');
 }
