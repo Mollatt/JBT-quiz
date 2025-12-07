@@ -254,9 +254,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script>
+        let authChecked = false;
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (!session) {
                 window.location.href = 'admin-login.html';
+            } else {
+                authChecked = true;
+                console.log('Authenticated as:', session.user.email);
             }
         });
 
