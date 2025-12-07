@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Admin Login</h1>
+        <p class="subtitle">Login to manage game content</p>
+
+        <div id="errorMsg" class="error"></div>
+
+        <div class="menu">
+            <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
+            <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+            <button id="loginBtn" class="btn-primary">Login</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+
+            if (!email || !password) {
+                showError('Please enter email and password');
+                return;
+            }
+
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                // Successfully logged in
+                window.location.href = 'admin.html';
+            } catch (error) {
+                btn.disabled = false;
+                btn.textContent = 'Login';
+                showError(error.message);
+            }
+        });
+
+        // Handle Enter key
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('loginBtn').click();
+            }
+        });
+    </script>
+</body>
+</html>
