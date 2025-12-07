@@ -336,6 +336,12 @@ function handleBuzzCleared(room) {
     if (isHost) {
         document.getElementById('hostButtonsTop').style.display = 'block';
     }
+
+    if (buzzerAudio) {
+        buzzerAudio.pause();
+        buzzerAudio.currentTime = 0;
+        buzzerAudio = null;
+    }
 }
 
 function handlePauseState(pausedState) {
@@ -503,9 +509,9 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
     const buzzTime = Date.now();
     console.log('Attempting to buzz at', buzzTime);
 
-    if (myBuzzerSoundId) {
-        playBuzzerSound(myBuzzerSoundId);
-    }
+    /* if (myBuzzerSoundId) {
+         playBuzzerSound(myBuzzerSoundId);
+     }*/
 
     try {
         const room = await getRoom(gameCode);
@@ -554,6 +560,13 @@ function handleBuzzed(buzzedPlayerName) {
             buzzerSection.style.display = 'none';
         }
     }
+
+    getRoom(gameCode).then(room => {
+        const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
+        if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
+            playBuzzerSound(buzzedPlayer.buzzerSoundId);
+        }
+    });
 
     if (isHost) {
         const hostButtons = document.getElementById('hostButtonsTop');
