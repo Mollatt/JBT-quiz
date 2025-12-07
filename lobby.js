@@ -136,7 +136,7 @@ async function loadLobbySounds(room) {
                     <span class="buzzer-sound-name">${sound.display_name}</span>
                     <button class="buzzer-sound-preview" 
                             data-sound-url="${sound.file_url}" 
-                            type="button">▶️ Preview</button>
+                            type="button">▶️</button>
                 </div>
             `;
         }).join('');
