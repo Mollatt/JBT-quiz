@@ -163,6 +163,19 @@ async function loadLobbySounds(room) {
     }
 }
 
+document.getElementById('toggleBuzzerSoundBtn')?.addEventListener('click', () => {
+    const grid = document.getElementById('lobbySoundGrid');
+    const btn = document.getElementById('toggleBuzzerSoundBtn');
+
+    if (grid.style.display === 'none') {
+        grid.style.display = 'grid';
+        btn.textContent = 'Hide Buzzer Sounds';
+    } else {
+        grid.style.display = 'none';
+        btn.textContent = 'Change Buzzer Sound';
+    }
+});
+
 async function selectLobbySoundAndSave(soundId) {
     const myPlayerId = sessionStorage.getItem('playerId');
 
