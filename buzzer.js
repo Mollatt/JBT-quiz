@@ -2,6 +2,7 @@ const gameCode = sessionStorage.getItem('gameCode');
 const playerName = sessionStorage.getItem('playerName');
 const isHost = sessionStorage.getItem('isHost') === 'true';
 
+let lastHandledBuzzedPlayer = null;
 let myBuzzerSoundId = sessionStorage.getItem('buzzerSoundId');
 let buzzerAudio = null;
 
@@ -257,8 +258,9 @@ function setupRoomSubscription() {
             isPaused: room.isPaused
         });
 
-        if (room.buzzedPlayer) {
+        if (room.buzzedPlayer && room.buzzedPlayer !== lastHandledBuzzedPlayer) {
             console.log('Buzz detected:', room.buzzedPlayer);
+            lastHandledBuzzedPlayer = room.buzzedPlayer;
             handleBuzzed(room.buzzedPlayer);
         } else if (document.getElementById('buzzDisplay').style.display !== 'none') {
             console.log('Buzz cleared');
@@ -348,6 +350,7 @@ function handleBuzzCleared(room) {
         buzzerAudio.currentTime = 0;
         buzzerAudio = null;
     }
+    lastHandledBuzzedPlayer = null;
 }
 
 function handlePauseState(pausedState) {
