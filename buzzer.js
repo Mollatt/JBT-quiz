@@ -122,7 +122,8 @@ getRoom(gameCode).then(async room => {
             }
         }
     }
-
+/* Completely unecessary? As it already maintains existing lockout on reload.
+Why add more lockout on reload in that case? Test if safely removable.
     if (!isHost && room.status === 'playing' && room.currentQ >= 0) {
         const playerData = room.players ? room.players[playerName] : null;
         const now = Date.now();
@@ -143,7 +144,7 @@ getRoom(gameCode).then(async room => {
         } else {
             console.log('Fresh question start, no reload lockout');
         }
-    }
+    }*/
 
     // Setup subscriptions
     setupRoomSubscription();
