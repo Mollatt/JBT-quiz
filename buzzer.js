@@ -252,9 +252,13 @@ function setupRoomSubscription() {
             updateScoreDisplay(playerData.score || 0);
         }
 
+        const buzzDisplay = document.getElementById('buzzDisplay');
+        const buzzVisible = buzzDisplay && buzzDisplay.style.display !== 'none';
+
         console.log('Buzz state check:', {
             roomBuzzedPlayer: room.buzzedPlayer,
-            buzzDisplayVisible: document.getElementById('buzzDisplay').style.display !== 'none',
+            lastHandledBuzzedPlayer,
+            buzzVisible,
             isPaused: room.isPaused
         });
 
@@ -262,8 +266,10 @@ function setupRoomSubscription() {
             console.log('Buzz detected:', room.buzzedPlayer);
             lastHandledBuzzedPlayer = room.buzzedPlayer;
             handleBuzzed(room.buzzedPlayer);
-        } else if (document.getElementById('buzzDisplay').style.display !== 'none') {
+        } else if (!room.buzzedPlayer &&
+            lastHandledBuzzedPlayer !== null) {
             console.log('Buzz cleared');
+            lastHandledBuzzedPlayer = null;
             handleBuzzCleared(room);
         }
 
