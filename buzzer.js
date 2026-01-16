@@ -122,29 +122,29 @@ getRoom(gameCode).then(async room => {
             }
         }
     }
-/* Completely unecessary? As it already maintains existing lockout on reload.
-Why add more lockout on reload in that case? Test if safely removable.
-    if (!isHost && room.status === 'playing' && room.currentQ >= 0) {
-        const playerData = room.players ? room.players[playerName] : null;
-        const now = Date.now();
-
-        const questionAge = room.questionStartTime ? (now - room.questionStartTime) : 0;
-        const questionIsOld = questionAge > 5000; // Question has been active for more than 5 seconds
-
-        const isLikelyReload = questionIsOld || room.buzzedPlayer;
-
-        if (isLikelyReload) {
-            if (!playerData?.lockoutUntil || playerData.lockoutUntil < now) {
-                const reloadLockout = now + 3000;
-                console.log('Setting reload lockout for page refresh (question is old)');
-                await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
+    /* Completely unecessary? As it already maintains existing lockout on reload.
+    Why add more lockout on reload in that case? Test if safely removable.
+        if (!isHost && room.status === 'playing' && room.currentQ >= 0) {
+            const playerData = room.players ? room.players[playerName] : null;
+            const now = Date.now();
+    
+            const questionAge = room.questionStartTime ? (now - room.questionStartTime) : 0;
+            const questionIsOld = questionAge > 5000; // Question has been active for more than 5 seconds
+    
+            const isLikelyReload = questionIsOld || room.buzzedPlayer;
+    
+            if (isLikelyReload) {
+                if (!playerData?.lockoutUntil || playerData.lockoutUntil < now) {
+                    const reloadLockout = now + 3000;
+                    console.log('Setting reload lockout for page refresh (question is old)');
+                    await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
+                } else {
+                    console.log('Player already locked out, maintaining existing lockout');
+                }
             } else {
-                console.log('Player already locked out, maintaining existing lockout');
+                console.log('Fresh question start, no reload lockout');
             }
-        } else {
-            console.log('Fresh question start, no reload lockout');
-        }
-    }*/
+        }*/
 
     // Setup subscriptions
     setupRoomSubscription();
@@ -554,12 +554,29 @@ function handleBuzzed(buzzedPlayerName) {
     if (musicPlayer) {
         musicPlayer.pause();
     }
+    if (isHost) {
+        const hostButtons = document.getElementById('hostButtonsTop');
+        if (hostButtons) {
+            hostButtons.style.display = 'none';
+        }
+        document.getElementById('hostControls').style.display = 'block';
+        document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
+
+        getRoom(gameCode).then(room => {
+            const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
+            if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
+                playBuzzerSound(buzzedPlayer.buzzerSoundId);
+            }
+        });
+    }
     if (questionTimer) {
         clearInterval(questionTimer);
         questionTimer = null;
         updateRoom(gameCode, { remainingTime: remainingTime });
     }
     isPaused = true;
+
+    
 
     const buzzDisplay = document.getElementById('buzzDisplay');
     const buzzedPlayerEl = document.getElementById('buzzedPlayer');
@@ -584,21 +601,7 @@ function handleBuzzed(buzzedPlayerName) {
           }
       });*/
 
-    if (isHost) {
-        const hostButtons = document.getElementById('hostButtonsTop');
-        if (hostButtons) {
-            hostButtons.style.display = 'none';
-        }
-        document.getElementById('hostControls').style.display = 'block';
-        document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
 
-        getRoom(gameCode).then(room => {
-            const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
-            if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
-                playBuzzerSound(buzzedPlayer.buzzerSoundId);
-            }
-        });
-    }
 }
 
 async function playBuzzerSound(buzzerSoundId) {
