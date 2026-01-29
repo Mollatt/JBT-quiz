@@ -46,45 +46,22 @@ function createAlternateField(fieldName, value = '', isFirst = false) {
     input.type = 'text';
     input.className = `alternate-input alternate-${fieldName}`;
     input.value = value;
-    input.placeholder = isFirst ? 'Add alternate...' : '';
+    input.placeholder = 'Add alternate...';
     input.style.cssText = 'flex: 1; padding: 0.6rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.9rem;';
 
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.className = 'btn-add-alternate';
-    addBtn.textContent = '+';
-    addBtn.style.cssText = 'width: 35px; height: 35px; padding: 0; background: rgba(76, 175, 80, 0.3); border: 2px solid rgba(76, 175, 80, 0.6); color: white; border-radius: 6px; cursor: pointer; font-size: 1.2rem; font-weight: bold;';
-    addBtn.onclick = () => addAlternateField(fieldName, div);
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn-remove-alternate';
+    removeBtn.textContent = '−';
+    removeBtn.style.cssText = 'width: 35px; height: 35px; padding: 0; background: rgba(244, 67, 54, 0.3); border: 2px solid rgba(244, 67, 54, 0.6); color: white; border-radius: 6px; cursor: pointer; font-size: 1.2rem; font-weight: bold;';
+    removeBtn.onclick = () => removeAlternateField(div);
 
     div.appendChild(input);
-
-    if (!isFirst) {
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn-remove-alternate';
-        removeBtn.textContent = '−';
-        removeBtn.style.cssText = 'width: 35px; height: 35px; padding: 0; background: rgba(244, 67, 54, 0.3); border: 2px solid rgba(244, 67, 54, 0.6); color: white; border-radius: 6px; cursor: pointer; font-size: 1.2rem; font-weight: bold;';
-        removeBtn.onclick = () => removeAlternateField(div);
-        div.appendChild(removeBtn);
-    }
-
-    div.appendChild(addBtn);
+    div.appendChild(removeBtn);
 
     return div;
 }
 
-/**
- * Add a new alternate field after the current one
- */
-function addAlternateField(fieldName, afterElement) {
-    const newField = createAlternateField(fieldName);
-    afterElement.parentNode.insertBefore(newField, afterElement.nextSibling);
-    newField.querySelector('input').focus();
-}
-
-/**
- * Remove an alternate field
- */
 function removeAlternateField(element) {
     element.remove();
 }
@@ -99,11 +76,34 @@ function initializeAlternateFields(containerId, fieldName, existingValues = []) 
     container.innerHTML = '';
 
     if (existingValues.length === 0) {
-        container.appendChild(createAlternateField(fieldName, '', true));
+        // Create just a + button when no alternates exist
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn-add-alternate';
+        addBtn.textContent = '+ Add Alternate';
+        addBtn.style.cssText = 'padding: 0.5rem 1rem; background: rgba(76, 175, 80, 0.3); border: 2px solid rgba(76, 175, 80, 0.6); color: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: bold;';
+        addBtn.onclick = () => {
+            const newField = createAlternateField(fieldName, '', false);
+            container.insertBefore(newField, addBtn);
+            newField.querySelector('input').focus();
+        };
+        container.appendChild(addBtn);
     } else {
         existingValues.forEach((value, index) => {
-            container.appendChild(createAlternateField(fieldName, value, index === 0));
+            container.appendChild(createAlternateField(fieldName, value, false));
         });
+        // Add the + button at the end
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn-add-alternate';
+        addBtn.textContent = '+ Add Alternate';
+        addBtn.style.cssText = 'padding: 0.5rem 1rem; background: rgba(76, 175, 80, 0.3); border: 2px solid rgba(76, 175, 80, 0.6); color: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: bold; margin-top: 0.5rem;';
+        addBtn.onclick = () => {
+            const newField = createAlternateField(fieldName, '', false);
+            container.insertBefore(newField, addBtn);
+            newField.querySelector('input').focus();
+        };
+        container.appendChild(addBtn);
     }
 }
 
