@@ -917,7 +917,13 @@ function convertSongFromDB(dbSong) {
         startTime: dbSong.start_time,
         duration: dbSong.duration,
         difficulty: dbSong.difficulty,
-        verified: dbSong.verified
+        verified: dbSong.verified,
+        alternateTitles: dbSong.alternate_titles || [],
+        alternateArtists: dbSong.alternate_artists || [],
+        alternateGames: dbSong.alternate_games || [],
+        alternateDevelopers: dbSong.alternate_developers || [],
+        alternateBossBattles: dbSong.alternate_boss_battles || [],
+        alternateAreas: dbSong.alternate_areas || []
     };
 }
 
