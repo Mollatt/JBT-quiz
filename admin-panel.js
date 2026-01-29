@@ -1,6 +1,12 @@
 let editingSongId = null;
 let allSongs = [];
 
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.AlternateAnswersHelper) {
+        window.AlternateAnswersHelper.setupAlternateFields();
+    }
+});
+
 function showMessage(text, type = 'success') {
     const el = document.getElementById('statusMessage');
     el.textContent = text;
@@ -9,6 +15,8 @@ function showMessage(text, type = 'success') {
         el.className = 'status-message';
     }, 3000);
 }
+
+
 
 function extractYouTubeId(url) {
     const patterns = [
@@ -37,6 +45,12 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
         return;
     }
 
+    const alternateValidation = window.AlternateAnswersHelper.validateAllAlternates(formData);
+    if (!alternateValidation.valid) {
+        showMessage(alternateValidation.error, 'error');
+        return;
+    }
+
     const youtubeId = extractYouTubeId(data.youtubeUrl);
     if (!youtubeId) {
         showMessage('Invalid YouTube URL', 'error');
@@ -57,7 +71,8 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
         start_time: parseInt(data.startTime) || 0,
         duration: parseInt(data.duration) || 30,
         difficulty: data.difficulty,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        ...window.AlternateAnswersHelper.getAllAlternateData()
     };
 
 
@@ -77,6 +92,7 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
             document.getElementById('formTitle').textContent = 'Add New Song';
             const submitBtn = document.querySelector('#addSongForm button[type="submit"]');
             if (submitBtn) submitBtn.textContent = 'Add Song';
+            window.AlternateAnswersHelper.clearAlternateFields();
         } else {
             songData.created_at = new Date().toISOString();
             songData.verified = false;
@@ -91,6 +107,7 @@ document.getElementById('addSongForm')?.addEventListener('submit', async (e) => 
 
             showMessage(`Song added successfully! ID: ${newSong.id.substring(0, 8)}...`);
             document.getElementById('addSongForm').reset();
+            window.AlternateAnswersHelper.clearAlternateFields();
         }
 
         loadSongs();
@@ -137,7 +154,33 @@ function displaySongs(songs) {
         return;
     }
 
-    container.innerHTML = songs.map(song => `
+    container.innerHTML = songs.map(song => {
+        // FEATURE 1: Display alternate counts
+        const altCounts = [];
+        if (song.alternateTitles && song.alternateTitles.length > 0) {
+            altCounts.push(`${song.alternateTitles.length} alt titles`);
+        }
+        if (song.alternateArtists && song.alternateArtists.length > 0) {
+            altCounts.push(`${song.alternateArtists.length} alt artists`);
+        }
+        if (song.alternateGames && song.alternateGames.length > 0) {
+            altCounts.push(`${song.alternateGames.length} alt games`);
+        }
+        if (song.alternateDevelopers && song.alternateDevelopers.length > 0) {
+            altCounts.push(`${song.alternateDevelopers.length} alt devs`);
+        }
+        if (song.alternateBossBattles && song.alternateBossBattles.length > 0) {
+            altCounts.push(`${song.alternateBossBattles.length} alt bosses`);
+        }
+        if (song.alternateAreas && song.alternateAreas.length > 0) {
+            altCounts.push(`${song.alternateAreas.length} alt areas`);
+        }
+
+        const altCountsDisplay = altCounts.length > 0
+            ? `<span style="color: #4CAF50;">📝 ${altCounts.join(', ')}</span>`
+            : '';
+
+        return `
         <div class="song-card">
             <div class="song-title">${song.title}</div>
             <div class="song-details">
@@ -150,6 +193,7 @@ function displaySongs(songs) {
                 <span>⏱️ ${song.startTime}s - ${song.duration}s</span>
                 <span>📊 ${song.difficulty}</span>
                 ${song.verified ? '<span style="color: #4CAF50;">✓ Verified</span>' : '<span style="color: #FFC107;">⏳ Pending</span>'}
+                ${altCountsDisplay}
             </div>
             <div class="song-url">
                 <small>🔗 <a href="${song.youtubeUrl}" target="_blank" rel="noopener noreferrer">View YouTube</a></small>
@@ -162,7 +206,7 @@ function displaySongs(songs) {
                 <button class="btn-secondary" onclick="deleteSong('${song.id}')">🗑️ Delete</button>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 async function editSong(songId) {
@@ -184,6 +228,8 @@ async function editSong(songId) {
     document.getElementById('addSongForm').elements['duration'].value = song.duration || 30;
     document.getElementById('addSongForm').elements['difficulty'].value = song.difficulty;
 
+    window.AlternateAnswersHelper.populateAlternateFields(song);
+
     document.getElementById('formTitle').textContent = `Edit Song: ${song.title}`;
     const submitBtn = document.querySelector('#addSongForm button[type="submit"]');
     if (submitBtn) submitBtn.textContent = 'Update Song';
@@ -197,6 +243,7 @@ function cancelEdit() {
     document.getElementById('formTitle').textContent = 'Add New Song';
     const submitBtn = document.querySelector('#addSongForm button[type="submit"]');
     if (submitBtn) submitBtn.textContent = 'Add Song';
+    window.AlternateAnswersHelper.clearAlternateFields();
 }
 
 async function verifySong(songId) {
@@ -300,7 +347,13 @@ function convertSongFromDB(dbSong) {
         startTime: dbSong.start_time,
         duration: dbSong.duration,
         difficulty: dbSong.difficulty,
-        verified: dbSong.verified
+        verified: dbSong.verified,
+        alternateTitles: dbSong.alternate_titles || [],
+        alternateArtists: dbSong.alternate_artists || [],
+        alternateGames: dbSong.alternate_games || [],
+        alternateDevelopers: dbSong.alternate_developers || [],
+        alternateBossBattles: dbSong.alternate_boss_battles || [],
+        alternateAreas: dbSong.alternate_areas || []
     };
 }
 
