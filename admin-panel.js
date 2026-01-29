@@ -1,11 +1,6 @@
 let editingSongId = null;
 let allSongs = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.AlternateAnswersHelper) {
-        window.AlternateAnswersHelper.setupAlternateFields();
-    }
-});
 
 function showMessage(text, type = 'success') {
     const el = document.getElementById('statusMessage');
@@ -358,3 +353,7 @@ function convertSongFromDB(dbSong) {
 }
 
 loadSongs();
+
+if (window.AlternateAnswersHelper) {
+    window.AlternateAnswersHelper.setupAlternateFields();
+}
