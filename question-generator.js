@@ -63,6 +63,33 @@ class QuestionGenerator {
         ];
     }
 
+    // Get all possible answers for a field (primary + alternates)
+    getAllAnswersForField(song, field) {
+        const answers = [];
+
+        // Add primary answer if it exists
+        if (song[field] && song[field] !== "N/A" && song[field] !== null) {
+            answers.push(song[field]);
+        }
+
+        // Add alternates based on field
+        const alternateMap = {
+            'title': 'alternateTitles',
+            'artist': 'alternateArtists',
+            'specificGame': 'alternateGames',
+            'developer': 'alternateDevelopers',
+            'bossBattle': 'alternateBossBattles',
+            'area': 'alternateAreas'
+        };
+
+        const alternateField = alternateMap[field];
+        if (alternateField && song[alternateField] && Array.isArray(song[alternateField])) {
+            answers.push(...song[alternateField].filter(alt => alt && alt !== "N/A"));
+        }
+
+        return answers;
+    }
+
     // Generate questions for a quiz
     async generateQuestions(count, selectedCategories = null, yearMin = null, yearMax = null) {
         try {
@@ -72,7 +99,7 @@ class QuestionGenerator {
                 console.error('No songs found in database');
                 return [];
             }
-            let songsList = songsData; 
+            let songsList = songsData;
 
             if (yearMin !== null || yearMax !== null) {
                 songsList = songsList.filter(song => {
@@ -118,7 +145,7 @@ class QuestionGenerator {
 
                 usedSongs.add(song.id);
 
-        
+
                 let templates = this.questionTemplates;
 
                 if (selectedCategories && selectedCategories.length > 0) {
@@ -138,7 +165,8 @@ class QuestionGenerator {
                     Math.floor(Math.random() * applicableTemplates.length)
                 ];
 
-                const correctAnswer = song[template.field];
+                const allCorrectAnswers = this.getAllAnswersForField(song, template.field);
+                const correctAnswer = allCorrectAnswers[Math.floor(Math.random() * allCorrectAnswers.length)];
 
                 const wrongAnswers = this.generateWrongAnswers(
                     song,
@@ -160,7 +188,8 @@ class QuestionGenerator {
                     options: shuffled,
                     correct: correctIndex,
                     songId: song.id,
-                    templateId: template.id
+                    templateId: template.id,
+                    allCorrectAnswers: allCorrectAnswers
                 };
 
                 questions.push(question);
@@ -174,17 +203,27 @@ class QuestionGenerator {
         }
     }
 
-    // Generate wrong answers from other songs
     generateWrongAnswers(correctSong, field, allSongs, count) {
+        // Get all correct answers for this song (primary + alternates)
+        const correctAnswers = this.getAllAnswersForField(correctSong, field);
+
         const wrongAnswers = allSongs
-            .filter(song =>
-                song[field] !== correctSong[field] &&
-                song[field] &&
-                song[field] !== "N/A" &&
-                song[field] !== null &&
-                song.verified === true
-            )
-            .map(song => song[field])
+            .filter(song => {
+                // Get all possible answers for this field from this song
+                const songAnswers = this.getAllAnswersForField(song, field);
+
+                // Exclude if any answer from this song matches any correct answer
+                const hasMatchingAnswer = songAnswers.some(answer =>
+                    correctAnswers.includes(answer)
+                );
+
+                return !hasMatchingAnswer &&
+                    song[field] &&
+                    song[field] !== "N/A" &&
+                    song[field] !== null &&
+                    song.verified === true;
+            })
+            .flatMap(song => this.getAllAnswersForField(song, field)) // Get all possible answers
             .filter((value, index, self) => self.indexOf(value) === index) // Unique only
             .sort(() => Math.random() - 0.5)
             .slice(0, count);
