@@ -17,7 +17,6 @@ if (typeof unsubscribe !== 'function') {
 }
 // Track subscriptions for cleanup
 let roomSubscription = null;
-
 let currentQuestion = null;
 let musicPlayer = null;
 let isLockedOut = false;
@@ -25,9 +24,8 @@ let lockoutTimer = null;
 let questionTimer = null;
 let remainingTime = 0;
 let isPaused = false;
-let displayedQuestionIndex = -1; // Track displayed question
+let displayedQuestionIndex = -1;
 
-// FEATURE 8: Function to update score display
 function updateScoreDisplay(score) {
     const scoreEl = document.getElementById('currentScore');
     if (scoreEl) {
@@ -35,7 +33,6 @@ function updateScoreDisplay(score) {
     }
 }
 
-// FEATURE 8: Initialize score display (show/hide based on host status)
 function initializeScoreDisplay() {
     const scoreDisplay = document.getElementById('scoreDisplay');
     if (!scoreDisplay) return;
@@ -45,7 +42,6 @@ function initializeScoreDisplay() {
     } else {
         scoreDisplay.style.display = 'block';
 
-        // Load initial score
         getRoom(gameCode).then(room => {
             if (room && room.players && room.players[playerName]) {
                 updateScoreDisplay(room.players[playerName].score || 0);
@@ -122,33 +118,10 @@ getRoom(gameCode).then(async room => {
             }
         }
     }
-    /* Completely unecessary? As it already maintains existing lockout on reload.
-    Why add more lockout on reload in that case? Test if safely removable.
-        if (!isHost && room.status === 'playing' && room.currentQ >= 0) {
-            const playerData = room.players ? room.players[playerName] : null;
-            const now = Date.now();
-    
-            const questionAge = room.questionStartTime ? (now - room.questionStartTime) : 0;
-            const questionIsOld = questionAge > 5000; // Question has been active for more than 5 seconds
-    
-            const isLikelyReload = questionIsOld || room.buzzedPlayer;
-    
-            if (isLikelyReload) {
-                if (!playerData?.lockoutUntil || playerData.lockoutUntil < now) {
-                    const reloadLockout = now + 3000;
-                    console.log('Setting reload lockout for page refresh (question is old)');
-                    await updatePlayer(gameCode, playerName, { lockoutUntil: reloadLockout });
-                } else {
-                    console.log('Player already locked out, maintaining existing lockout');
-                }
-            } else {
-                console.log('Fresh question start, no reload lockout');
-            }
-        }*/
 
-    // Setup subscriptions
+
     setupRoomSubscription();
-    //setupLockoutListener();
+
 }).catch(error => {
     console.error('Error loading initial room:', error);
     alert('Failed to load game');
@@ -183,17 +156,7 @@ function setupRoomSubscription() {
             console.warn('Room data is null');
             return;
         }
-        /* Handle lockout for this player
-        if (!isHost && room.players && room.players[playerName]) {
-            const playerData = room.players[playerName];
-            handlePlayerLockout(playerData.lockoutUntil);
-        }
-        if (!isHost && room.players && room.players[playerName]) {
-            const playerData = room.players[playerName];
-            updateScoreDisplay(playerData.score || 0);
-        }*/
 
-        // Handle status changes
         if (room.status === 'finished') {
             console.log('Game finished, redirecting');
             window.location.href = 'results.html';
@@ -217,7 +180,6 @@ function setupRoomSubscription() {
             return;
         }
 
-        // New question detected
         if (qIndex !== displayedQuestionIndex) {
             console.log('NEW QUESTION DETECTED:', qIndex);
             displayedQuestionIndex = qIndex;
@@ -236,13 +198,6 @@ function setupRoomSubscription() {
                 clearInterval(questionTimer);
                 questionTimer = null;
             }
-            /*if (musicPlayer) {
-                try {
-                    musicPlayer.stop();
-                } catch (e) {
-                    console.warn('Could not stop music:', e);
-                }
-            }*/
 
             currentQuestion = room.questions[qIndex];
             displayQuestion(currentQuestion, qIndex);
@@ -274,7 +229,6 @@ function setupRoomSubscription() {
             handleBuzzCleared(room);
         }
 
-        // Handle pause state
         if (room.isPaused !== isPaused) {
             console.log('Pause state changed:', room.isPaused);
             handlePauseState(room.isPaused);
@@ -427,7 +381,6 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
 
     document.getElementById('timeLeft').textContent = remainingTime;
 
-    // Hide all UI elements initially
     document.getElementById('buzzerSection').style.display = 'none';
     document.getElementById('buzzDisplay').style.display = 'none';
     document.getElementById('hostControls').style.display = 'none';
@@ -435,7 +388,6 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
     document.getElementById('resultsBtn').style.display = 'none';
     document.getElementById('lockoutMsg').style.display = 'none';
 
-    // Show appropriate UI
     if (isHost) {
         const hostButtons = document.getElementById('hostButtonsTop');
         if (hostButtons) {
@@ -478,7 +430,6 @@ function displayQuestion(question, index, opts = { autoPlay: true }) {
             alert('Music failed to load: ' + error.message);
         });
     } else if (question.type === 'music' && !isHost) {
-        // FEATURE 2: Non-host players - no music, just start timer
         console.log('Player mode: Music plays on host device only');
         const duration = opts.remainingTime || 30;
         remainingTime = duration;
@@ -513,7 +464,6 @@ function startQuestionTimer() {
     }, 1000);
 }
 
-// Player buzzes
 document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
     console.log('Buzzer clicked!', { isLockedOut, isHost, isPaused, remainingTime });
 
@@ -525,9 +475,6 @@ document.getElementById('buzzerBtn')?.addEventListener('click', async () => {
     const buzzTime = Date.now();
     console.log('Attempting to buzz at', buzzTime);
 
-    /* if (myBuzzerSoundId) {
-         playBuzzerSound(myBuzzerSoundId);
-     }*/
 
     try {
         const room = await getRoom(gameCode);
@@ -560,7 +507,9 @@ function handleBuzzed(buzzedPlayerName) {
             hostButtons.style.display = 'none';
         }
         document.getElementById('hostControls').style.display = 'block';
-        document.getElementById('correctAnswer').textContent = currentQuestion.options[currentQuestion.correct];
+
+        const allAnswers = currentQuestion.allCorrectAnswers || [currentQuestion.options[currentQuestion.correct]];
+        document.getElementById('correctAnswer').textContent = allAnswers.join(' / ');
 
         getRoom(gameCode).then(room => {
             const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
@@ -576,7 +525,7 @@ function handleBuzzed(buzzedPlayerName) {
     }
     isPaused = true;
 
-    
+
 
     const buzzDisplay = document.getElementById('buzzDisplay');
     const buzzedPlayerEl = document.getElementById('buzzedPlayer');
@@ -593,14 +542,6 @@ function handleBuzzed(buzzedPlayerName) {
             buzzerSection.style.display = 'none';
         }
     }
-
-    /*  getRoom(gameCode).then(room => {
-          const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
-          if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
-              playBuzzerSound(buzzedPlayer.buzzerSoundId);
-          }
-      });*/
-
 
 }
 
@@ -625,7 +566,6 @@ async function playBuzzerSound(buzzerSoundId) {
     }
 }
 
-// Host clicks Correct
 document.getElementById('correctBtn')?.addEventListener('click', async () => {
     console.log('Correct button clicked');
 
@@ -641,10 +581,6 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
 
     if (!playerData) {
         console.error('Player left the game');
-        //Should resume the game automatically instead of advancing. 
-        //Should check if there are any players left first.
-        //If yes, resume the game. If no, end the game.
-        //Check handling in wrongBtn as well.
         alert('Player has left the game. Resuming question.');
         await updateRoom(gameCode, {
             buzzedPlayer: null,
@@ -663,19 +599,10 @@ document.getElementById('correctBtn')?.addEventListener('click', async () => {
         correctCount: correctCount,
         lastPoints: 1000
     });
-    /* Check clear handlers in handleBuzzCleared as well as next question advancement.
-    Replace advanceQuestion with the updateRoom logic under (in addition to advanceQ)?
-    Check for and remove any duplicate code and double handlers in other functions.
-    
-        await updateRoom(gameCode, {
-            buzzedPlayer: null,
-            buzzerLocked: false,
-            isPaused: false
-        });*/
     await advanceQuestion();
 });
 
-// Host clicks Wrong
+
 
 
 document.getElementById('wrongBtn')?.addEventListener('click', async () => {
