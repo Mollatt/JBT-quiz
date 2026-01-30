@@ -504,7 +504,9 @@ async function calculateAndShowResults(players) {
 
     const correctAnswers = Object.entries(players)
         .filter(([name, data]) => {
-            return data.answer === currentQuestion.correct &&
+            const playerAnsweredCorrectly = data.answer === currentQuestion.correct;
+
+            return playerAnsweredCorrectly &&
                 data.answered === true &&
                 data.answerTime != null;
         })
@@ -529,14 +531,11 @@ async function calculateAndShowResults(players) {
         );
     }
 
-    // CHANGED: Show feedback IMMEDIATELY, then update scores in background
     const isCorrect = selectedAnswer === currentQuestion.correct;
     showFeedback(isCorrect);
 
     // Update scores in background
     await Promise.all(updatePromises);
-
-    // CHANGED: Reduced wait time since showFeedback already handles async update
     await new Promise(resolve => setTimeout(resolve, 300));
 
     // Trigger a refresh of the feedback with updated server data
@@ -555,22 +554,6 @@ async function calculateAndShowResults(players) {
 
 async function advanceQuestionAfterCountdown() {
     try {
-        // CHANGED: Only host performs the database updates
-       /* if (!isHost) {
-            // Non-hosts just hide UI and wait for status change
-            document.getElementById('feedback').style.display = 'none';
-            document.getElementById('nextBtn').style.display = 'none';
-            document.getElementById('resultsBtn').style.display = 'none';
-            document.getElementById('waitingMsg').style.display = 'none';
-            document.getElementById('answerProgress').style.display = 'none';
-
-            const nextCountdownEl = document.getElementById('nextCountdown');
-            if (nextCountdownEl) nextCountdownEl.style.display = 'none';
-
-            return; // Don't update database, just wait
-        }
-
-        // Host proceeds with updates*/
         document.getElementById('feedback').style.display = 'none';
         document.getElementById('nextBtn').style.display = 'none';
         document.getElementById('resultsBtn').style.display = 'none';
@@ -626,14 +609,12 @@ async function advanceQuestionAfterCountdown() {
     }
 }
 
-// CHANGED: Handle countdown updates from room subscription
 function handleCountdownUpdate(room) {
     const countdown = room.nextCountdown;
 
     if (!countdown || !countdown.active) {
         clearLocalCountdownUI();
 
-        // Show appropriate buttons if results are calculated
         if (window.resultsCalculated) {
             showPostResultsButtons();
         }
@@ -724,43 +705,20 @@ function showPostResultsButtons() {
     const resultsBtn = document.getElementById('resultsBtn');
     const waitingMsg = document.getElementById('waitingMsg');
 
-    // CHANGED: Determine if next is a scoreboard
     const nextIsScoreboard = shouldShowScoreboard(nextQ, totalQ) && nextQ < totalQ;
 
-  /*  if (effMode === 'host') {
-        if (nextQ >= totalQ) {
-            if (isHost) {
-                if (resultsBtn) resultsBtn.style.display = 'block';
-            } else {
-                if (waitingMsg) waitingMsg.style.display = 'block';
-            }
+    if (nextQ >= totalQ) {
+        if (isHost) {
+            resultsBtn.style.display = 'block';
         } else {
-            // if (isHost) {
-            //  if (nextBtn) {
-            // CHANGED: Update button text based on what's next
-            nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
-            nextBtn.style.display = 'block';
-            /*  }
-          } else {
-              if (waitingMsg) waitingMsg.style.display = 'block';
-          }*/
-       // }
-   // } else {
-        if (nextQ >= totalQ) {
-            if (isHost) {
-                resultsBtn.style.display = 'block';
-            } else {
-                waitingMsg.style.display = 'block';
-                waitingMsg.textContent = "Finished! Waiting for host...";
-            }
-        } else {
-            //  if (nextBtn) {
-            nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
-            nextBtn.style.display = 'block';
-            // }
+            waitingMsg.style.display = 'block';
+            waitingMsg.textContent = "Finished! Waiting for host...";
         }
+    } else {
+        nextBtn.textContent = nextIsScoreboard ? '📊 View Current Scores' : 'Next Question';
+        nextBtn.style.display = 'block';
     }
-//}
+}
 
 function showFeedback(isCorrect) {
     const feedbackEl = document.getElementById('feedback');
