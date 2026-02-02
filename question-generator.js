@@ -127,6 +127,11 @@ class QuestionGenerator {
                 count = songsList.length;
             }
 
+            if (count === 0) {
+                console.error('No songs available after filtering');
+                return [];
+            }
+
             const questions = [];
             const usedSongs = new Set();
 
@@ -153,12 +158,13 @@ class QuestionGenerator {
                 }
 
                 const applicableTemplates = templates.filter(template => {
-                    const value = song[template.field];
-                    return value && value !== "N/A" && value !== "" && value !== null;
+                    const allAnswers = this.getAllAnswersForField(song, template.field);
+                    return allAnswers.length > 0;
                 });
 
                 if (applicableTemplates.length === 0) {
-                    continue; // Skip this song if no applicable templates
+                    i--; // Don't count this iteration, try another song
+                    continue;
                 }
 
                 const template = applicableTemplates[
@@ -193,6 +199,10 @@ class QuestionGenerator {
                 };
 
                 questions.push(question);
+            }
+
+            if (questions.length === 0) {
+                console.error('No questions could be generated from available songs');
             }
 
             return questions;
