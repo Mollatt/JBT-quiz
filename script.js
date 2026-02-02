@@ -328,10 +328,15 @@ async function handleJoinStep2() {
     }
 
     if (!selectedBuzzerSoundId) {
-        showModalError('Please select a buzzer sound!');
-        return;
+        const sounds = await getBuzzerSounds();
+        if (sounds && sounds.length > 0) {
+            selectedBuzzerSoundId = sounds[0].id;
+        } else {
+            showModalError('No buzzer sounds available!');
+            return;
+        }
     }
-    console.log('FEATURE 7 DEBUG: Selected sound ID:', selectedBuzzerSoundId);
+    console.log('Selected sound ID:', selectedBuzzerSoundId);
 
     const room = await getRoom(code);
 
@@ -375,8 +380,10 @@ async function handleJoinStep2() {
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('playerId', result.player.player_id);
-            sessionStorage.setItem('buzzerSoundId', selectedBuzzerSoundId || '');
             sessionStorage.setItem('isHost', 'false');
+            if (selectedBuzzerSoundId) {
+                sessionStorage.setItem('buzzerSoundId', selectedBuzzerSoundId);
+            }
 
             await new Promise(resolve => setTimeout(resolve, 300));
 
