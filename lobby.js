@@ -466,11 +466,13 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
     const container = document.getElementById('playerListContainer');
     container.innerHTML = playerArray.map(player => `
         <div class="player-item">
-            <span class="player-name">${player.name}</span>
+            <span class="player-name">
+                ${player.previousWinner ? '👑 ' : ''}${player.name}
+            </span>
             ${player.playerId === sessionStorage.getItem('playerId') ?
             `<button class="edit-name-btn" data-player-id="${player.playerId}">✏️ Edit</button>`
             : ''}
-            ${player.isHost ? '<span class="host-badge">👑 Host</span>' : ''}
+            ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
             ${isHost && !player.isHost ?
             `<button class="transfer-host-btn" data-player-id="${player.playerId}" data-player-name="${player.name}">Make Host</button>`
             : ''}
