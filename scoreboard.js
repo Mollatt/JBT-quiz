@@ -112,7 +112,9 @@ function displayTopPlayers(topPlayers) {
         <div class="scoreboard-item ${colors[index]}">
             <div class="rank-medal">${medals[index]}</div>
             <div class="player-info">
-                <div class="player-name">${player.name}</div>
+                <div class="player-name">
+                    ${player.previousWinner ? '👑 ' : ''}${player.name}
+                </div>
             </div>
             <div class="score">${player.score}</div>
         </div>
@@ -133,12 +135,18 @@ function displayYourPosition(rank, score, totalPlayers) {
         rankText = `You're in ${rank}${getOrdinalSuffix(rank)} place`;
     }
 
-    container.innerHTML = `
-        <div class="your-position-card">
-            <div class="position-text">${rankText}</div>
-            <div class="position-score">Your Score: ${score}</div>
-        </div>
-    `;
+    // Get current player data to check previous winner status
+    getRoom(gameCode).then(room => {
+        const playerData = room.players ? room.players[playerName] : null;
+        const isPrevWinner = playerData && playerData.previousWinner;
+
+        container.innerHTML = `
+            <div class="your-position-card">
+                <div class="position-text">${isPrevWinner ? '👑 ' : ''}${rankText}</div>
+                <div class="position-score">Your Score: ${score}</div>
+            </div>
+        `;
+    });
 }
 
 function getOrdinalSuffix(num) {
