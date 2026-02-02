@@ -92,6 +92,21 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
 
     const players = room.players || {};
 
+    // Determine winner(s) before resetting
+    let maxScore = -Infinity;
+    const winners = [];
+
+    Object.entries(players).forEach(([name, data]) => {
+        const score = data.score || 0;
+        if (score > maxScore) {
+            maxScore = score;
+            winners.length = 0;
+            winners.push(name);
+        } else if (score === maxScore) {
+            winners.push(name);
+        }
+    });
+
     for (const [name, data] of Object.entries(players)) {
         await updatePlayer(gameCode, name, {
             score: 0,
@@ -100,7 +115,8 @@ document.getElementById('playAgainBtn')?.addEventListener('click', async () => {
             answerTime: null,
             lastPoints: 0,
             correctCount: 0,
-            lockoutUntil: null
+            lockoutUntil: null,
+            previousWinner: winners.includes(name) // Mark winners
         });
     }
 
