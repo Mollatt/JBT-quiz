@@ -869,6 +869,7 @@ function convertPlayerFromDB(dbPlayer) {
         lockoutUntil: dbPlayer.lockout_until,
         lastSeen: dbPlayer.last_seen,
         buzzerSoundId: dbPlayer.buzzer_sound_id,
+        previousWinner: dbPlayer.previous_winner || false,
         joined: new Date(dbPlayer.joined_at).getTime()
     };
 }
@@ -889,7 +890,8 @@ function convertPlayerToDB(appPlayer) {
         'isHost': 'is_host',
         'lockoutUntil': 'lockout_until',
         'lastSeen': 'last_seen',
-        'buzzerSoundId': 'buzzer_sound_id'
+        'buzzerSoundId': 'buzzer_sound_id',
+        'previousWinner': 'previous_winner'
     };
 
     for (const [appKey, dbKey] of Object.entries(fieldMap)) {
