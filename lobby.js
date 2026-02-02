@@ -106,7 +106,6 @@ async function loadLobbySounds(room) {
 
     try {
         availableBuzzerSounds = await getBuzzerSounds();
-
         if (availableBuzzerSounds.length === 0) {
             document.getElementById('lobbySoundSelection').style.display = 'none';
             return;
@@ -388,6 +387,13 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
         playerName = currentPlayer.name;
         sessionStorage.setItem('playerName', playerName);
     }
+    if (currentPlayer && currentPlayer.buzzerSoundId && !isHost) {
+        const savedSoundId = sessionStorage.getItem('buzzerSoundId');
+        if (savedSoundId !== currentPlayer.buzzerSoundId) {
+            sessionStorage.setItem('buzzerSoundId', currentPlayer.buzzerSoundId);
+            myBuzzerSoundId = currentPlayer.buzzerSoundId;
+        }
+    }
 
     loadLobbySounds(room);
 
@@ -434,12 +440,13 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
     // Update parameters display - UNCHANGED
     updateParametersDisplay(mode);
 
-    // Update player list - UNCHANGED logic
     const players = room.players || {};
-    const playerArray = Object.entries(players).map(([name, data]) => ({
-        name,
-        ...data
-    }));
+    const playerArray = Object.entries(players)
+        .map(([name, data]) => ({
+            name,
+            ...data
+        }))
+        .sort((a, b) => (a.joined || 0) - (b.joined || 0));
 
 
     document.getElementById('playerCount').textContent = playerArray.length;
@@ -623,12 +630,16 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             musicDuration: 30
         };
 
-        await updateRoom(gameCode, {
+        const updateResult = await updateRoom(gameCode, {
             status: 'playing',
             currentQ: 0,
             questions: questions,
             gameParams: finalGameParams
         });
+
+        if (!updateResult.success) {
+            throw new Error('Failed to update room');
+        }
 
     } catch (error) {
         console.error('Error starting game:', error);
