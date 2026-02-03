@@ -1,3 +1,83 @@
+/* Skin Settings Button */
+.skin-settings-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 100;
+    padding: 0;
+}
+
+.skin-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* Skin Selection Modal */
+.skin-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    padding: 1rem 0;
+}
+
+.skin-option {
+    cursor: pointer;
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.skin-option:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.skin-option.selected {
+    background: rgba(102, 126, 234, 0.3);
+    border-color: rgba(102, 126, 234, 0.8);
+    border-width: 3px;
+}
+
+.skin-preview {
+    width: 100%;
+    height: 80px;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Placeholder previews - customize these */
+.skin-preview-default {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.skin-preview-ff {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.skin-preview-runescape {
+    background: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #CD853F 100%);
+}
+
+.skin-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
 /* Current Mode Display */
 .current-mode-display {
     background: rgba(102, 126, 234, 0.2);
