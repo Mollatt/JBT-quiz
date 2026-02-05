@@ -114,7 +114,7 @@
 }
 
 
-/* Parameters Section */
+/* Parameters Section in Lobby */
 .parameters-section {
     background: rgba(76, 175, 80, 0.15);
     border: 2px solid rgba(76, 175, 80, 0.4);
@@ -819,21 +819,6 @@ button:active {
     font-weight: 700;
 }
 
-/*
-.parameters-panel {
-    background: rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(76, 175, 80, 0.5);
-    padding: 1.5rem;
-    border-radius: 12px;
-    margin: 1rem 0;
-}
-
-.parameters-panel h3 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    opacity: 0.95;
-}*/
-
 .param-group {
     margin-bottom: 1rem;
 }
@@ -845,12 +830,6 @@ button:active {
     margin-bottom: 0.3rem;
     opacity: 0.9;
 }
-
-/*
-.parameters-panel button {
-    width: 100%;
-    margin-top: 1rem;
-}*/
 
 /* Modal Styles */
 .modal {
