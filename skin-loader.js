@@ -2,13 +2,16 @@ const AVAILABLE_SKINS = {
     'default': 'styles-default.css',
     'ff': 'styles-ff.css',
     'runescape': 'styles-runescape.css'
-
 };
 
 const DEFAULT_SKIN = 'default';
 
 function getCurrentSkin() {
     return localStorage.getItem('selectedSkin') || DEFAULT_SKIN;
+}
+
+function getAnimationPreference() {
+    return localStorage.getItem('reduceMotion') === 'true';
 }
 
 function setSkin(skinId) {
@@ -32,16 +35,13 @@ function setAnimationPreference(reduceMotion) {
     }
 }
 
-
 function loadSkinCSS() {
     const skinId = getCurrentSkin();
     const cssFile = AVAILABLE_SKINS[skinId];
 
-    // Remove any existing skin stylesheets
     const existingLinks = document.querySelectorAll('link[data-skin-style]');
     existingLinks.forEach(link => link.remove());
 
-    // Create and append new stylesheet link
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = cssFile;
@@ -54,10 +54,10 @@ function loadSkinCSS() {
     }
 }
 
-
 function changeSkin(skinId) {
     setSkin(skinId);
     loadSkinCSS();
 }
 
+// Auto-load skin on page load
 loadSkinCSS();
