@@ -14,7 +14,8 @@
         <div class="horizon"></div>
         <div class="sun-submerged"></div>
     </div>
-    <div class="container quiz-container">
+    <main class="page"> 
+     <div class="container quiz-container">
         <div class="question-header">
             <div class="question-number">
                 Question <span id="currentQ">1</span> of <span id="totalQ">5</span>
@@ -51,15 +52,16 @@
         <div id="waitingMsg" style="display: none; margin-top: 1rem; opacity: 0.8;">
             Waiting for other players...
         </div>
-    </div>
+        </div>
+        </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="db-helpers.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="supabase-config.js"></script>
+        <script src="db-helpers.js"></script>
 
-    <script src="question-generator.js"></script>
-    <script src="youtube-player.js"></script>
-    <script src="quiz.js"></script>
+        <script src="question-generator.js"></script>
+        <script src="youtube-player.js"></script>
+        <script src="quiz.js"></script>
 </body>
 
 </html>
