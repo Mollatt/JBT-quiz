@@ -1424,6 +1424,67 @@ input[type="radio"] {
 /* ============================================
    ADMIN.HTML - Admin Panel
    ============================================ */
+.admin-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: var(--space-xl);
+}
+
+.form-section {
+    background: var(--bg-light);
+    padding: var(--space-xl);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-xl);
+    border: var(--border-medium);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-md);
+}
+
+.form-row.full {
+    grid-template-columns: 1fr;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: var(--space-xs);
+    font-weight: 600;
+    font-size: var(--text-sm);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    padding: var(--space-md);
+    border: var(--border-medium);
+    border-radius: var(--radius-md);
+    background: var(--bg-light);
+    color: var(--text-primary);
+    font-size: var(--text-base);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--border-primary-solid);
+    background: var(--bg-medium);
+}
+
+.songs-list,
+.sounds-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+}
 
 .admin-tabs {
     display: flex;
@@ -1442,11 +1503,6 @@ input[type="radio"] {
     font-size: var(--text-base);
     font-weight: 600;
     transition: var(--transition-normal);
-}
-
-.admin-container {
-    margin: 2rem auto;
-    max-width: 900px;
 }
 
 .admin-tab:hover {
@@ -1509,7 +1565,23 @@ input[type="radio"] {
     padding: var(--space-lg);
     border-radius: var(--radius-lg);
     border: var(--border-medium);
-    margin-bottom: var(--space-md);
+}
+
+.song-title,
+.sound-title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    margin-bottom: var(--space-sm);
+}
+
+.song-details,
+.sound-details {
+    font-size: var(--text-sm);
+    opacity: 0.9;
+    margin-bottom: var(--space-sm);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
 }
 
 .song-url {
@@ -1531,6 +1603,22 @@ input[type="radio"] {
     text-decoration: underline;
 }
 
+.song-actions,
+.sound-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.song-actions button,
+.sound-actions button {
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--text-sm);
+    flex: 1;
+    min-width: 100px;
+}
+
 .checkbox-label {
     display: flex;
     align-items: center;
@@ -1545,6 +1633,15 @@ input[type="radio"] {
     cursor: pointer;
 }
 
+.button-group {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.button-group button {
+    flex: 1;
+}
 
 /* ============================================
    RESPONSIVE - Mobile Adjustments
@@ -1573,6 +1670,10 @@ input[type="radio"] {
         flex-direction: column;
     }
 
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
     .filter-row {
         grid-template-columns: 1fr;
     }
@@ -1580,6 +1681,9 @@ input[type="radio"] {
     .category-checkboxes {
         grid-template-columns: 1fr;
     }
+
+    .songs-list,
+    .sounds-list {
+        grid-template-columns: 1fr;
+    }
 }
-
-
