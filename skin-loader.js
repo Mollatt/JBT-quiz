@@ -1,23 +1,16 @@
-// Skin/Theme Management System
 const AVAILABLE_SKINS = {
     'default': 'styles-default.css',
     'ff': 'styles-ff.css',
     'runescape': 'styles-runescape.css'
-    // Add more skins here as you create them
+
 };
 
 const DEFAULT_SKIN = 'default';
 
-/**
- * Get current skin from localStorage
- */
 function getCurrentSkin() {
     return localStorage.getItem('selectedSkin') || DEFAULT_SKIN;
 }
 
-/**
- * Set and save skin preference
- */
 function setSkin(skinId) {
     if (!AVAILABLE_SKINS[skinId]) {
         console.warn(`Skin "${skinId}" not found, using default`);
@@ -28,9 +21,18 @@ function setSkin(skinId) {
     return skinId;
 }
 
-/**
- * Load the appropriate CSS file
- */
+function setAnimationPreference(reduceMotion) {
+    localStorage.setItem('reduceMotion', reduceMotion);
+
+    // Apply to body immediately
+    if (reduceMotion) {
+        document.body.classList.add('reduce-motion');
+    } else {
+        document.body.classList.remove('reduce-motion');
+    }
+}
+
+
 function loadSkinCSS() {
     const skinId = getCurrentSkin();
     const cssFile = AVAILABLE_SKINS[skinId];
@@ -45,15 +47,17 @@ function loadSkinCSS() {
     link.href = cssFile;
     link.setAttribute('data-skin-style', 'true');
     document.head.appendChild(link);
+
+    const reduceMotion = getAnimationPreference();
+    if (reduceMotion) {
+        document.body.classList.add('reduce-motion');
+    }
 }
 
-/**
- * Change skin and reload CSS
- */
+
 function changeSkin(skinId) {
     setSkin(skinId);
     loadSkinCSS();
 }
 
-// Auto-load skin on page load
 loadSkinCSS();
