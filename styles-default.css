@@ -1555,10 +1555,6 @@ input[type="radio"] {
         padding: var(--space-lg);
     }
 
-    h1 {
-        font-size: var(--text-xl);
-    }
-
     .question-header {
         flex-direction: column;
         align-items: flex-start;
@@ -1585,4 +1581,5 @@ input[type="radio"] {
         grid-template-columns: 1fr;
     }
 }
+
 
