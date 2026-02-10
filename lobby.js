@@ -418,11 +418,9 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
 
     }
 
-    // Update mode display - UNCHANGED logic
     const mode = room.mode || 'everybody';
     currentMode = mode;
 
-    // Update button states - UNCHANGED logic
     modeButtons.forEach(btn => {
         btn.classList.remove('active');
         if (btn.getAttribute('data-mode') === mode) {
@@ -430,14 +428,12 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
         }
     });
 
-    // Update current mode display - UNCHANGED logic
     const modeMap = {
-        'everybody': '🎮 Everybody Plays',
-        'buzzer': '🔴 Buzzer Mode'
+        'everybody': 'Multiple Choice',
+        'buzzer': 'Buzzer Mode'
     };
     document.getElementById('currentModeDisplay').textContent = modeMap[mode] || 'Unknown Mode';
 
-    // Update parameters display - UNCHANGED
     updateParametersDisplay(mode);
 
     const players = room.players || {};
@@ -484,7 +480,6 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
         btn.addEventListener('click', () => openEditNameModal(btn.dataset.playerId));
     });
 
-    // Add transfer host button handlers - UNCHANGED logic (but using helper)
     if (isHost) {
         document.querySelectorAll('.transfer-host-btn').forEach(btn => {
             btn.addEventListener('click', () => transferHost(btn.dataset.playerId, btn.dataset.playerName));
@@ -522,12 +517,9 @@ function updateParametersDisplay(mode) {
     }
 }
 
-// Save Parameters - CHANGED: Now uses updateRoom() helper
 document.getElementById('saveParametersBtn')?.addEventListener('click', async () => {
-    // Get number of questions - UNCHANGED
     const numQuestions = parseInt(document.getElementById('numQuestions')?.value) || 10;
 
-    // Build gameParams object - UNCHANGED logic
     const gameParams = currentMode === 'buzzer'
         ? {
             buzzerCorrectPoints: parseInt(document.getElementById('buzzerCorrectPoints')?.value) || 1000,
@@ -594,13 +586,11 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
         return;
     }
 
-    // Disable button while generating - UNCHANGED
     const btn = document.getElementById('startBtn');
     btn.disabled = true;
     btn.textContent = `Generating ${numQuestions} questions...`;
 
     try {
-        // Generate questions - NOTE: This will need question-generator.js updated
         const generator = new QuestionGenerator();
         const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
             .map(cb => cb.value);
@@ -621,7 +611,6 @@ document.getElementById('startBtn')?.addEventListener('click', async () => {
             alert(`Only ${questions.length} questions available. Starting with ${questions.length} questions.`);
         }
 
-        // Use existing gameParams or set defaults - UNCHANGED
         const finalGameParams = room.gameParams || {
             correctPointsScale: [1000, 800, 600, 400],
             buzzerCorrectPoints: 1000,
@@ -678,7 +667,6 @@ document.getElementById('leaveBtn')?.addEventListener('click', async () => {
 let isStartingGame = false;
 let isLeavingLobby = false;
 
-// FEATURE 5: Edit name modal functions
 function openEditNameModal(playerId) {
     const modal = document.getElementById('editNameModal');
     const input = document.getElementById('editNameInput');
@@ -700,7 +688,6 @@ function closeEditNameModal() {
     delete input.dataset.playerId;
 }
 
-// FEATURE 5: Edit name modal event listeners
 document.getElementById('closeEditNameBtn')?.addEventListener('click', closeEditNameModal);
 document.getElementById('cancelEditNameBtn')?.addEventListener('click', closeEditNameModal);
 
