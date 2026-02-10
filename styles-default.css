@@ -1425,7 +1425,7 @@ input[type="radio"] {
    ADMIN.HTML - Admin Panel
    ============================================ */
 .admin-container {
-    max-width: 1200px;
+    max-width: 900px;
     margin: 2rem auto;
     padding: var(--space-xl);
 }
@@ -1687,3 +1687,4 @@ input[type="radio"] {
         grid-template-columns: 1fr;
     }
 }
+
