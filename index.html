@@ -5,76 +5,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Connect</title>
-    <script src="skin-loader.js"></script>
+    <script src="skin-loader.js"></script> 
 </head>
 
 <body>
+    <div class="bg-synthwave">
+
+        <div class="grid"></div>
+        <div class="horizon"></div>
+        <div class="sun-submerged"></div>
+    </div>
     <button id="skinSettingsBtn" class="skin-settings-btn" title="Change Theme">🎨</button>
-    <div class="container">
-        <h1>🎯 Quiz Connect</h1>
-        <p class="subtitle">Real-time multiplayer quiz game</p>
+    <main class="page">
+        <h1 class="title">Big Quizza! </h1>
+        <p class="subtitle">Det er nachstemning og Medhus har meldt Quiz</p>
+        <div class="container">
 
-        <div id="errorMsg" class="error"></div>
 
-        <div class="menu">
-            <button id="createLobbyBtn" class="btn-primary">🎮 Create Lobby</button>
-            <button id="joinLobbyBtn" class="btn-secondary">Join Lobby</button>
-        </div>
-    </div>
+            <div id="errorMsg" class="error"></div>
 
-    <div id="actionModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">Create Lobby</h2>
-                <button id="closeModalBtn" class="modal-close">&times;</button>
+            <div class="menu">
+                <button id="createLobbyBtn" class="btn-primary">Create Lobby</button>
+                <button id="joinLobbyBtn" class="btn-secondary">Join Lobby</button>
             </div>
+        </div>
 
-            <div class="modal-body">
-                <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6" autocomplete="off"
-                    class="modal-input" style="display: none;">
+        <div id="actionModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Create Lobby</h2>
+                    <button id="closeModalBtn" class="modal-close">&times;</button>
+                </div>
 
-                <input id="modalNameInput" type="text" placeholder="Enter your name..." maxlength="20"
-                    autocomplete="off" class="modal-input">
+                <div class="modal-body">
+                    <input id="gameCodeInput" type="text" placeholder="Enter game code..." maxlength="6"
+                        autocomplete="off" class="modal-input" style="display: none;">
 
-                <div id="buzzerSoundSelection" style="display: none; margin-top: 1rem;">
-                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Choose Your Buzzer Sound:</h3>
-                    <div id="buzzerSoundGrid" class="buzzer-sound-grid">
+                    <input id="modalNameInput" type="text" placeholder="Enter your name..." maxlength="20"
+                        autocomplete="off" class="modal-input">
 
+                    <div id="buzzerSoundSelection" style="display: none; margin-top: 1rem;">
+                        <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Choose Your Buzzer Sound:</h3>
+                        <div id="buzzerSoundGrid" class="buzzer-sound-grid">
+
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="modal-footer">
-                <button id="modalActionBtn" class="btn-primary">Create</button>
-                <button id="modalCancelBtn" class="btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-    <div id="skinModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Select Theme</h2>
-                <button id="closeSkinModalBtn" class="modal-close">&times;</button>
-            </div>
-
-            <div class="modal-body">
-                <div class="skin-options">
-                    <div class="skin-option" data-skin="default">
-                        <div class="skin-preview skin-preview-default"></div>
-                        <div class="skin-name">Default</div>
-                    </div>
-                    <div class="skin-option" data-skin="ff">
-                        <div class="skin-preview skin-preview-ff"></div>
-                        <div class="skin-name">Final Fantasy</div>
-                    </div>
-                    <div class="skin-option" data-skin="runescape">
-                        <div class="skin-preview skin-preview-runescape"></div>
-                        <div class="skin-name">RuneScape</div>
-                    </div>
+                <div class="modal-footer">
+                    <button id="modalActionBtn" class="btn-primary">Create</button>
+                    <button id="modalCancelBtn" class="btn-secondary">Cancel</button>
                 </div>
             </div>
         </div>
-    </div>
+        <div id="skinModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Select Theme</h2>
+                    <button id="closeSkinModalBtn" class="modal-close">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="skin-options">
+                        <div class="skin-option" data-skin="default">
+                            <div class="skin-preview skin-preview-default"></div>
+                            <div class="skin-name">Cyber/Synth (default)</div>
+                        </div>
+                        <div class="skin-option" data-skin="ff">
+                            <div class="skin-preview skin-preview-ff"></div>
+                            <div class="skin-name">Final Fantasy VII</div>
+                        </div>
+                        <div class="skin-option" data-skin="runescape">
+                            <div class="skin-preview skin-preview-runescape"></div>
+                            <div class="skin-name">RuneScape</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="reduceMotionToggle"
+                                style="width: 20px; height: 20px; cursor: pointer;">
+                            <span>Reduce animations (improve performance)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script src="skin-ui.js"></script>
 
