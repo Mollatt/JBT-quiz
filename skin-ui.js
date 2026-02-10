@@ -1,20 +1,19 @@
-// Skin Selection UI Handler
-
 const skinModal = document.getElementById('skinModal');
 const skinSettingsBtn = document.getElementById('skinSettingsBtn');
 const closeSkinModalBtn = document.getElementById('closeSkinModalBtn');
+const reduceMotionToggle = document.getElementById('reduceMotionToggle');
 
-// Open skin modal
+
 skinSettingsBtn?.addEventListener('click', () => {
     openSkinModal();
 });
 
-// Close skin modal
+
 closeSkinModalBtn?.addEventListener('click', () => {
     closeSkinModal();
 });
 
-// Close on outside click
+
 window.addEventListener('click', (e) => {
     if (e.target === skinModal) {
         closeSkinModal();
@@ -33,6 +32,10 @@ function openSkinModal() {
         }
     });
 
+    if (reduceMotionToggle) {
+        reduceMotionToggle.checked = getAnimationPreference();
+    }
+
     skinModal.style.display = 'flex';
 }
 
@@ -47,18 +50,19 @@ document.querySelectorAll('.skin-option').forEach(option => {
     option.addEventListener('click', () => {
         const skinId = option.dataset.skin;
 
-        // Update selection
         document.querySelectorAll('.skin-option').forEach(opt => {
             opt.classList.remove('selected');
         });
         option.classList.add('selected');
 
-        // Apply skin
         changeSkin(skinId);
 
-        // Close modal after short delay
         setTimeout(() => {
             closeSkinModal();
         }, 300);
     });
+});
+
+reduceMotionToggle?.addEventListener('change', (e) => {
+    setAnimationPreference(e.target.checked);
 });
