@@ -1444,6 +1444,11 @@ input[type="radio"] {
     transition: var(--transition-normal);
 }
 
+.admin-container {
+    margin: 2rem auto;
+    max-width: 900px;
+}
+
 .admin-tab:hover {
     color: var(--text-primary);
     background: var(--bg-light);
@@ -1580,3 +1585,4 @@ input[type="radio"] {
         grid-template-columns: 1fr;
     }
 }
+
