@@ -653,8 +653,14 @@ select option {
 }
 
 .skin-preview-pipboy {
-    background: linear-gradient(135deg, #000000 0%, #12100d 50%, #1a1410 100%);
-    border: 2px solid #ffaa3c;
+    color: var(--text-primary);
+    background: repeating-linear-gradient(to bottom,
+            rgba(255, 255, 255, 0),
+            rgba(255, 255, 255, 0) 50%,
+            rgba(0, 0, 0, 0.2) 70%,
+            rgba(0, 0, 0, 0.6));
+    background-size: 100% 0.2rem;
+    border: 2px solid var(--color-primary);
 }
 
 
@@ -1694,6 +1700,7 @@ html {
     visibility: visible;
     opacity: 1;
 }
+
 
 
 
