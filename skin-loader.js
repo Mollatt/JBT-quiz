@@ -25,9 +25,16 @@ function setSkin(skinId) {
 }
 
 function setAnimationPreference(reduceMotion) {
-    localStorage.setItem('reduceMotion', reduceMotion);
+    localStorage.setItem('reduceMotion', reduceMotion.toString());
+    applyAnimationPreference();
+}
 
-    // Apply to body immediately
+/**
+ * Apply animation preference to body (separate function for reuse)
+ */
+function applyAnimationPreference() {
+    const reduceMotion = getAnimationPreference();
+
     if (reduceMotion) {
         document.body.classList.add('reduce-motion');
     } else {
@@ -46,18 +53,24 @@ function loadSkinCSS() {
     link.rel = 'stylesheet';
     link.href = cssFile;
     link.setAttribute('data-skin-style', 'true');
+
+    link.onload = () => {
+        document.body.classList.add('loaded');
+    };
+
     document.head.appendChild(link);
 
-    const reduceMotion = getAnimationPreference();
-    if (reduceMotion) {
-        document.body.classList.add('reduce-motion');
-    }
+    applyAnimationPreference();
 }
 
 function changeSkin(skinId) {
     setSkin(skinId);
-    loadSkinCSS();
+
+    document.body.classList.remove('loaded');
+
+    setTimeout(() => {
+        loadSkinCSS();
+    }, 100);
 }
 
-// Auto-load skin on page load
 loadSkinCSS();
