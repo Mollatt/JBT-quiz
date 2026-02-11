@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Results | Quiz Connect</title>
+    <style>
+        html {
+            visibility: hidden;
+            opacity: 0;
+        }
+    </style>
     <script src="skin-loader.js"></script>
 </head>
 
@@ -15,34 +21,34 @@
         <div class="sun-submerged"></div>
     </div>
     <main class="page">
-     <div class="container results-container">
-        <h1>Results</h1>
+        <div class="container results-container">
+            <h1>Results</h1>
 
-        <div class="trophy">🎉</div>
+            <div class="trophy">🎉</div>
 
-        <div class="leaderboard">
-            <h3>Leaderboard</h3>
-            <div id="leaderboardContainer"></div>
-        </div>
+            <div class="leaderboard">
+                <h3>Leaderboard</h3>
+                <div id="leaderboardContainer"></div>
+            </div>
 
-        <button id="playAgainBtn" class="btn-primary">Play Again</button>
-        <button id="homeBtn" class="btn-secondary">Back to Home</button>
+            <button id="playAgainBtn" class="btn-primary">Play Again</button>
+            <button id="homeBtn" class="btn-secondary">Back to Home</button>
 
-    <div class="container results-container">
-        <h1>Results</h1>
+            <div class="container results-container">
+                <h1>Results</h1>
 
-        <div class="trophy">🎉</div>
+                <div class="trophy">🎉</div>
 
-        <div class="leaderboard">
-            <h3>Leaderboard</h3>
-            <div id="leaderboardContainer"></div>
-        </div>
+                <div class="leaderboard">
+                    <h3>Leaderboard</h3>
+                    <div id="leaderboardContainer"></div>
+                </div>
 
-        <button id="playAgainBtn" class="btn-primary">Play Again</button>
-        <button id="homeBtn" class="btn-secondary">Back to Home</button>
-    </div>
+                <button id="playAgainBtn" class="btn-primary">Play Again</button>
+                <button id="homeBtn" class="btn-secondary">Back to Home</button>
+            </div>
     </main>
-
+    <script src="skin-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="db-helpers.js"></script>
