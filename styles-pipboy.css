@@ -3,6 +3,9 @@
    ============================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=PT+Sans:wght@400;700&family=Yellowtail&display=swap");
+@import url("https://fonts.googleapis.com/css?family=VT323&display=swap");
+@import url("https://fonts.googleapis.com/css?family=Share+Tech+Mono&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap");
 
 :root {
     /* ===== CORE COLORS ===== */
@@ -113,10 +116,10 @@
     --shadow-box: 5px 5px 0 var(--bg-container), 6px 6px 0 #ffaa3c;
 
     /* ===== FONT FAMILY ===== */
-    --font-body: "Roboto Mono", monospace;
-    --font-heading: "Roboto Mono", monospace;
-    --font-accent: "Roboto Mono", monospace;
-    --font-mono: "Roboto Mono", monospace;
+    --font-body: "VT323", monospace;
+    --font-heading: "Share Tech Mono", monospace;
+    --font-accent: "Share Tech Mono", monospace;
+    --font-mono: "Share Tech Mono", monospace;
 
     /* ===== FONT SIZES ===== */
     --text-xs: 0.75rem;
@@ -160,7 +163,7 @@
 /* Scanlines */
 @keyframes scanlines {
     from {
-        background-position: 0 20%;
+        background-position: 0 70%;
     }
 
     to {
@@ -285,7 +288,8 @@ body::after {
             rgba(0, 0, 0, 0.2) 70%,
             rgba(0, 0, 0, 0.6));
 
-    background-size: 100% 0.45rem;
+    background-size: 100% 0.3rem;
+    /*Scanline Size*/
 
     animation: scanlines 10s linear infinite;
 }
@@ -380,12 +384,14 @@ h1 {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
+    font-family: var(--font-heading);
 }
 
 .subtitle {
     margin-top: var(--space-sm);
     margin-bottom: var(--space-lg);
-    font-size: var(--text-base);
+    font-size: var(--text-xl);
+    /* font-family: var(--font-accent);*/
 }
 
 .error {
@@ -406,7 +412,7 @@ button {
     margin: var(--space-sm) 0;
     border: var(--border-medium);
     cursor: pointer;
-    font-size: var(--text-base);
+    font-size: var(--text-lg);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -418,9 +424,65 @@ button {
     z-index: 2;
 }
 
+#prompt {
+    display: none;
+}
+
+[contenteditable] {
+    caret-color: transparent;
+    /** This hides the default browser caret */
+    outline: none;
+}
+
+#input {
+    position: relative;
+    display: block;
+    white-space: pre-wrap;
+}
+
+/* Inserts the > before terminal input */
+#input:before {
+    content: var(--term);
+}
+
+/* Puts a blinking square after the content as replacement for caret */
+#input[contenteditable="true"]:after,
+.typer.active:after {
+    content: "■";
+    animation: cursor 1s infinite;
+    animation-timing-function: step-end;
+    margin-left: 1px;
+    line-height: 1rem;
+}
+
+/* 
+ * This makes the caret (:after) show correctly after the previously typed character.
+ * Otherwise the caret is always on new line
+ */
+[contenteditable="true"] br:last-child {
+    display: none;
+}
+
+#input.password .char {
+    display: none;
+}
+
+#input.password:after {
+    color: var(--color);
+}
+
+#input.password:before {
+    color: var(--color);
+    content: var(--term) attr(data-pw);
+}
+
+.typer {
+    word-break: break-all;
+}
+
 button:hover {
     background: var(--btn-primary-bg-hover);
-    box-shadow: 0 0 15px rgba(255, 170, 60, 0.5);
+    /* box-shadow: 0 0 15px rgba(255, 170, 60, 0.5);
     /* for more classic look use this instead of the box shadow transform*/
     outline: 2px solid currentColor;
 
