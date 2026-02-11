@@ -413,7 +413,7 @@ button {
     transition: var(--transition-normal);
     background: var(--btn-primary-bg);
     color: var(--btn-primary-text);
-    box-shadow: var(--shadow-box);
+    /* box-shadow: var(--shadow-box);*/
     position: relative;
     z-index: 2;
 }
@@ -421,6 +421,8 @@ button {
 button:hover {
     background: var(--btn-primary-bg-hover);
     box-shadow: 0 0 15px rgba(255, 170, 60, 0.5);
+    /* for more classic look use this instead of the box shadow transform*/
+    outline: 2px solid currentColor;
 
 }
 
@@ -533,10 +535,15 @@ a:hover {
     width: 40px;
     height: 40px;
     padding: 0;
+
 }
 
 .modal-close:hover {
+    transition: 0.3s ease;
     background: var(--bg-light);
+    outline: 2px solid currentColor;
+
+
 }
 
 .modal-body {
@@ -602,7 +609,9 @@ ul {
 
 .skin-settings-btn:hover {
     background: var(--bg-heavy);
-    transform: scale(1.1);
+    transform: scale(1.05);
+    border: 2px solid currentColor;
+
 }
 
 /* Skin Modal */
