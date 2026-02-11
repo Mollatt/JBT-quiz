@@ -152,11 +152,11 @@
 
     0%,
     100% {
-        opacity: 0.15;
+        opacity: 0.20;
     }
 
     50% {
-        opacity: 0.25;
+        opacity: 0.30;
     }
 }
 
@@ -288,7 +288,7 @@ body::after {
             rgba(0, 0, 0, 0.2) 70%,
             rgba(0, 0, 0, 0.6));
 
-    background-size: 100% 0.3rem;
+    background-size: 100% 0.48rem;
     /*Scanline Size*/
 
     animation: scanlines 10s linear infinite;
@@ -483,7 +483,7 @@ button {
 button:hover {
     background: var(--btn-primary-bg-hover);
     /* box-shadow: 0 0 15px rgba(255, 170, 60, 0.5);
-    /* for more classic look use this instead of the box shadow transform*/
+    /* for more classic look use this instead of the box shadow transform:*/
     outline: 2px solid currentColor;
 
 }
@@ -720,8 +720,9 @@ ul {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
 }
 
-.skin-preview-runescape {
-    background: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #CD853F 100%);
+.skin-preview-pipboy {
+    background: linear-gradient(135deg, #000000 0%, #12100d 50%, #1a1410 100%);
+    border: 2px solid #ffaa3c;
 }
 
 .skin-name {
