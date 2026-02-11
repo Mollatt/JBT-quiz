@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lobby | Quiz Connect</title>
+    <style>
+        html {
+            visibility: hidden;
+            opacity: 0;
+        }
+    </style>
     <script src="skin-loader.js"></script>
 </head>
 
@@ -23,16 +29,13 @@
                 <div class="code" id="gameCode">----</div>
             </div>
 
-            <!-- Current Game Mode Display -->
             <div class="current-mode-display">
                 <div class="mode-label">Current Mode:</div>
                 <div class="mode-value" id="currentModeDisplay">Multiple Choice</div>
             </div>
 
-            <!-- Change Game Mode Button -->
             <button id="toggleGameModeBtn" class="btn-secondary">Change Game Mode</button>
 
-            <!-- Game Mode Selection (hidden by default) -->
             <div id="gameModeSection" class="game-mode-section" style="display: none;">
                 <h3>Select Game Mode</h3>
                 <div class="mode-buttons">
@@ -44,14 +47,11 @@
                 </div>
             </div>
 
-            <!-- Alter Parameters Button -->
             <button id="toggleParametersBtn" class="btn-secondary">Alter Parameters</button>
 
-            <!-- Game Parameters (hidden by default) -->
             <div id="parametersSection" class="parameters-section" style="display: none;">
                 <h3>Game Parameters</h3>
 
-                <!-- Everybody Plays Mode Parameters -->
                 <div id="everybodyModeParams" style="display: none;">
                     <div class="param-group">
                         <label>Number of Questions (1-X):</label>
@@ -72,7 +72,6 @@
                     </div>
                 </div>
 
-                <!-- Buzzer Mode Parameters -->
                 <div id="buzzerModeParams" style="display: none;">
                     <div class="param-group">
                         <label>Number of Questions (1-X):</label>
@@ -190,6 +189,7 @@
             </div>
         </div>
     </main>
+    <script src="skin-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="db-helpers.js"></script>
