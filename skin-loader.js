@@ -1,7 +1,7 @@
 const AVAILABLE_SKINS = {
     'default': 'styles-default.css',
     'ff': 'styles-ff.css',
-    'runescape': 'styles-runescape.css'
+    'pipboy': 'styles-pipboy.css'
 };
 
 const DEFAULT_SKIN = 'default';
