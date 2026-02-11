@@ -652,9 +652,11 @@ select option {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
 }
 
-.skin-preview-runescape {
-    background: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #CD853F 100%);
+.skin-preview-pipboy {
+    background: linear-gradient(135deg, #000000 0%, #12100d 50%, #1a1410 100%);
+    border: 2px solid #ffaa3c;
 }
+
 
 .skin-name {
     font-weight: 600;
@@ -1692,5 +1694,6 @@ html {
     visibility: visible;
     opacity: 1;
 }
+
 
 
