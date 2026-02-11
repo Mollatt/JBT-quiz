@@ -1,25 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login</title>
-    <link rel="stylesheet" href="styles.css">
+    <!--<link rel="stylesheet" href="styles-default.css">-->
 </head>
+
 <body>
-    <div class="container">
-        <h1>🔐 Admin Login</h1>
-        <p class="subtitle">Login to manage game content</p>
-
-        <div id="errorMsg" class="error"></div>
-
-        <div class="menu">
-            <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
-            <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
-            <button id="loginBtn" class="btn-primary">Login</button>
-        </div>
+    <script>document.body.classList.add('reduce-motion');</script>
+    <div class="bg-synthwave">
+        <div class="grid"></div>
+        <div class="horizon"></div>
+        <div class="sun-submerged"></div>
     </div>
+    <main class="page">
+        <div class="container">
+            <h1>🔐 Admin Login</h1>
+            <p class="subtitle">Login to manage game content</p>
 
+            <div id="errorMsg" class="error"></div>
+
+            <div class="menu">
+                <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
+                <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+                <button id="loginBtn" class="btn-primary">Login</button>
+            </div>
+        </div>
+    </main>
+    <script src="skin-loader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script>
@@ -68,4 +78,5 @@
         });
     </script>
 </body>
+
 </html>
