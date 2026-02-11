@@ -3,17 +3,28 @@ const skinSettingsBtn = document.getElementById('skinSettingsBtn');
 const closeSkinModalBtn = document.getElementById('closeSkinModalBtn');
 const reduceMotionToggle = document.getElementById('reduceMotionToggle');
 
+// Apply saved animation preference on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // Apply animation preference (already handled in skin-loader.js, but ensure it's applied)
+    applyAnimationPreference();
 
+    // Sync checkbox state if it exists
+    if (reduceMotionToggle) {
+        reduceMotionToggle.checked = getAnimationPreference();
+    }
+});
+
+// Open skin modal
 skinSettingsBtn?.addEventListener('click', () => {
     openSkinModal();
 });
 
-
+// Close skin modal
 closeSkinModalBtn?.addEventListener('click', () => {
     closeSkinModal();
 });
 
-
+// Close on outside click
 window.addEventListener('click', (e) => {
     if (e.target === skinModal) {
         closeSkinModal();
@@ -32,6 +43,7 @@ function openSkinModal() {
         }
     });
 
+    // Set animation toggle state
     if (reduceMotionToggle) {
         reduceMotionToggle.checked = getAnimationPreference();
     }
@@ -50,19 +62,23 @@ document.querySelectorAll('.skin-option').forEach(option => {
     option.addEventListener('click', () => {
         const skinId = option.dataset.skin;
 
+        // Update selection
         document.querySelectorAll('.skin-option').forEach(opt => {
             opt.classList.remove('selected');
         });
         option.classList.add('selected');
 
+        // Apply skin
         changeSkin(skinId);
 
+        // Close modal after transition
         setTimeout(() => {
             closeSkinModal();
         }, 300);
     });
 });
 
+// Handle animation toggle
 reduceMotionToggle?.addEventListener('change', (e) => {
     setAnimationPreference(e.target.checked);
 });
