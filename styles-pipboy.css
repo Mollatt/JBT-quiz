@@ -300,7 +300,7 @@ body.reduce-motion html::before {
     animation: none;
 }
 
-/* Custom cursor (terminal-style) */
+/* Custom cursor (fallout-style) */
 html,
 body,
 button,
@@ -709,7 +709,6 @@ ul {
 }
 
 .skin-option {
-    cursor: default;
     padding: var(--space-md);
     border-radius: var(--radius-lg);
     background: var(--bg-light);
