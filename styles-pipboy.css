@@ -1719,7 +1719,6 @@ input[type="radio"] {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    cursor: pointer;
     font-size: var(--text-sm);
     padding: var(--space-xs);
 }
