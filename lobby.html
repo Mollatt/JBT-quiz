@@ -20,7 +20,9 @@
         <div class="horizon"></div>
         <div class="sun-submerged"></div>
     </div>
+
     <main class="page">
+        <button id="skinSettingsBtn" class="skin-settings-btn" title="Change Theme">⚙️</button>
         <div class="container lobby-container">
             <h1>Big Lobby</h1>
 
@@ -186,6 +188,38 @@
             <div class="lobby-actions">
                 <button id="startBtn" class="btn-primary" style="display: none;">Start Game</button>
                 <button id="leaveBtn" class="btn-secondary">Leave Lobby</button>
+            </div>
+        </div>
+        <div id="skinModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Select Theme</h2>
+                    <button id="closeSkinModalBtn" class="modal-close">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="skin-options">
+                        <div class="skin-option" data-skin="default">
+                            <div class="skin-preview skin-preview-default"></div>
+                            <div class="skin-name">Cyber/Synth (default)</div>
+                        </div>
+                        <div class="skin-option" data-skin="ff">
+                            <div class="skin-preview skin-preview-ff"></div>
+                            <div class="skin-name">Final Fantasy VII</div>
+                        </div>
+                        <div class="skin-option" data-skin="pipboy">
+                            <div class="skin-preview skin-preview-pipboy"></div>
+                            <div class="skin-name">Pip-Boy</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2);">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="reduceMotionToggle">
+                            <span>Reduce animations (improve performance)</span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
