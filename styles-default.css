@@ -2,6 +2,9 @@
    ROOT VARIABLES - DEFAULT THEME
    ============================================ */
 
+
+
+
 @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=PT+Sans:wght@400;700&family=Yellowtail&display=swap");
 
 :root {
@@ -98,8 +101,7 @@
     --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.3);
     /* --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);*/
-    --shadow-lg:
-        0 0 3px #ffff,
+    --shadow-lg: 0 0 3px #ffff,
         0 0 7px #fff,
         0 0 10px var(--color-secondary-light),
         0 0 15px var(--color-secondary-light),
@@ -118,10 +120,14 @@
     --shadow-inset-pressed: inset 0 5px 20px rgba(0, 0, 0, 0.5);
 
     /* ===== FONT FAMILY ===== */
-    --font-body: "PT Sans", sans-serif;
-    --font-heading: "Bebas Neue", sans-serif;
-    --font-accent: "Yellowtail", cursive;
-    --font-game-code: "Bebas Neue", sans-serif;
+    --font-body: "PT Sans",
+        sans-serif;
+    --font-heading: "Bebas Neue",
+        sans-serif;
+    --font-accent: "Yellowtail",
+        cursive;
+    --font-game-code: "Bebas Neue",
+        sans-serif;
 
     /* ===== FONT SIZES ===== */
     --text-xs: 0.75rem;
@@ -472,6 +478,63 @@ select option {
     color: var(--text-primary);
 }
 
+
+/* ============================================
+   BUZZER SOUND PREVIEW FOOTER
+   ============================================ */
+
+.buzzer-preview-footer {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-container);
+    border-top: 2px solid var(--color-secondary-light);
+    padding: var(--space-lg);
+    z-index: 1001;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.8);
+    text-align: center;
+}
+
+.buzzer-preview-footer.visible {
+    display: block;
+}
+
+.buzzer-preview-footer h3 {
+    margin-bottom: var(--space-md);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+}
+
+.buzzer-preview-large-btn {
+    padding: var(--space-lg) var(--space-xl);
+    font-size: var(--text-lg);
+    background: var(--btn-primary-bg);
+    border: var(--border-primary);
+    color: var(--text-primary);
+    cursor: default;
+    width: auto;
+    max-width: 400px;
+    margin: 0 auto;
+    display: inline-block;
+    box-shadow: var(--shadow-bevel);
+    position: relative;
+}
+
+.buzzer-preview-large-btn:hover {
+    background: var(--btn-primary-bg-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+
+.buzzer-preview-large-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+
 /* Modals */
 .modal {
     display: flex;
@@ -662,7 +725,6 @@ select option {
     background-size: 100% 0.2rem;
     border: 2px solid var(--color-primary);
 }
-
 
 .skin-name {
     font-weight: 600;
@@ -1700,7 +1762,3 @@ html {
     visibility: visible;
     opacity: 1;
 }
-
-
-
-
