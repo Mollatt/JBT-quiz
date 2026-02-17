@@ -480,7 +480,7 @@ button:disabled {
 
 .buzzer-preview-large-btn {
     padding: var(--space-lg) var(--space-xl) !important;
-    font-size: var(--text-base) !important;
+    font-size: var(--text-lg) !important;
     background: var(--bg-primary) !important;
     border: var(--border-primary) !important;
     color: var(--text-primary) !important;
@@ -581,7 +581,7 @@ select option {
     align-items: center;
     gap: var(--space-sm);
     cursor: default;
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     padding: var(--space-xs);
 }
 
