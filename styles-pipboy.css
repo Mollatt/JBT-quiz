@@ -303,6 +303,19 @@ body.reduce-motion html::before {
     animation: none;
 }
 
+body.reduce-motion::before {
+    animation: none;
+}
+
+body.reduce-motion~html::before,
+html:has(body.reduce-motion)::before {
+    animation: none;
+}
+
+body.reduce-motion * {
+    text-shadow: none !important;
+}
+
 /* Custom cursor (fallout-style) */
 html,
 body,
