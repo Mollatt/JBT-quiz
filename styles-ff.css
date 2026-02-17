@@ -592,6 +592,7 @@ select option {
 .buzzer-sound-item:not(.disabled):hover,
 .checkbox-label:hover,
 .category-label:hover {
+    overflow: visible;
     position: relative;
 }
 
@@ -726,7 +727,7 @@ input[type="radio"]:disabled {
 .modal-body {
     padding: var(--space-lg);
     font-size: var(--text-lg);
-
+    overflow-y: auto;
     flex: 1;
 }
 
@@ -857,12 +858,29 @@ ul {
 
 /* Index */
 
+#buzzerSoundSelection {
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: visible;
+}
+
+#lobbySoundGrid {
+    overflow: visible;
+}
+
+#lobbySoundSelection {
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: visible;
+}
+
 .buzzer-sound-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-sm);
     max-height: 200px;
     overflow-y: auto;
+    overflow: visible;
     margin-top: var(--space-sm);
 }
 
