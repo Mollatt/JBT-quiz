@@ -54,19 +54,17 @@ async function loadBuzzerSounds(usedSoundIds = []) {
             const isSelected = selectedBuzzerSoundId === sound.id;
 
             return `
-                <div class="buzzer-sound-item ${isUsed ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" 
-                     data-sound-id="${sound.id}">
-                    <input type="radio" 
-                           name="buzzerSound" 
-                           value="${sound.id}" 
-                           ${isUsed ? 'disabled' : ''} 
-                           ${isSelected ? 'checked' : ''}>
-                    <span class="buzzer-sound-name">${sound.display_name}</span>
-                    <button class="buzzer-sound-preview" 
-                            data-sound-url="${sound.file_url}" 
-                            type="button">▶️</button>
-                </div>
-            `;
+    <div class="buzzer-sound-item ${isUsed ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" 
+         data-sound-id="${sound.id}"
+         data-sound-url="${sound.file_url}">
+        <input type="radio" 
+               name="buzzerSound" 
+               value="${sound.id}" 
+               ${isUsed ? 'disabled' : ''} 
+               ${isSelected ? 'checked' : ''}>
+        <span class="buzzer-sound-name">${sound.display_name}</span>
+    </div>
+`;
         }).join('');
 
         document.querySelectorAll('.buzzer-sound-item:not(.disabled)').forEach(item => {
@@ -75,13 +73,6 @@ async function loadBuzzerSounds(usedSoundIds = []) {
 
                 const soundId = item.dataset.soundId;
                 selectBuzzerSound(soundId);
-            });
-        });
-
-        document.querySelectorAll('.buzzer-sound-preview').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                playBuzzerSoundPreview(btn.dataset.soundUrl);
             });
         });
 
@@ -109,6 +100,11 @@ function selectBuzzerSound(soundId) {
     if (selectedItem) {
         selectedItem.classList.add('selected');
         selectedItem.querySelector('input[type="radio"]').checked = true;
+        // NEW: Show footer with sound URL
+        const sound = availableBuzzerSounds.find(s => s.id === soundId);
+        if (sound && sound.file_url) {
+            showBuzzerFooter(sound.file_url);
+        }
     }
 }
 
@@ -424,4 +420,53 @@ async function handleJoinStep2() {
         modalActionBtn.textContent = 'Join';
         showModalError('Failed to join lobby. Please try again.');
     }
+}
+
+// ============================================
+// BUZZER PREVIEW FOOTER
+// ============================================
+
+// Create footer element (only once)
+let buzzerFooter = null;
+
+function createBuzzerFooter() {
+    if (buzzerFooter) return; // Already exists
+
+    buzzerFooter = document.createElement('div');
+    buzzerFooter.className = 'buzzer-preview-footer';
+    buzzerFooter.style.display = 'none'; // Hidden by default
+    buzzerFooter.innerHTML = `
+        <h3>PREVIEW SELECTED SOUND</h3>
+        <button id="largePreviewBtn" class="buzzer-preview-large-btn">
+            ▶️ PLAY SOUND
+        </button>
+    `;
+    document.body.appendChild(buzzerFooter);
+
+    // Add click handler to preview button
+    document.getElementById('largePreviewBtn').addEventListener('click', function () {
+        const url = this.dataset.soundUrl;
+        if (url) {
+            playBuzzerSoundPreview(url);
+        }
+    });
+}
+
+function showBuzzerFooter(soundUrl) {
+    createBuzzerFooter();
+    const btn = document.getElementById('largePreviewBtn');
+    btn.dataset.soundUrl = soundUrl;
+    buzzerFooter.style.display = 'block';
+}
+
+function hideBuzzerFooter() {
+    if (buzzerFooter) {
+        buzzerFooter.style.display = 'none';
+    }
+}
+
+// Call this when modal closes
+function closeModal() {
+    modal.style.display = 'none';
+    hideBuzzerFooter(); // ADD THIS LINE
 }
