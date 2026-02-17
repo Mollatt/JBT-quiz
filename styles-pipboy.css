@@ -204,7 +204,6 @@
 }
 
 html {
-    background: var(--bg-page);
     color: var(--text-primary);
     font-size: 15px;
     line-height: 1.5em;
@@ -408,6 +407,55 @@ button {
 
 #prompt {
     display: none;
+}
+
+/* ============================================
+   BUZZER SOUND PREVIEW FOOTER
+   ============================================ */
+
+.buzzer-preview-footer {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-container);
+    border-top: 2px solid var(--color-primary);
+    padding: var(--space-lg);
+    z-index: 1001;
+    /* ABOVE modal (1000) */
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.8);
+    text-align: center;
+}
+
+.buzzer-preview-footer.visible {
+    display: block;
+}
+
+.buzzer-preview-footer h3 {
+    margin-bottom: var(--space-md);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+}
+
+.buzzer-preview-large-btn {
+    padding: var(--space-lg) var(--space-xl) !important;
+    font-size: var(--text-lg) !important;
+    background: var(--bg-primary) !important;
+    border: var(--border-primary) !important;
+    color: var(--text-primary) !important;
+    width: auto !important;
+    max-width: 400px;
+    margin: 0 auto;
+    display: inline-block;
+    box-shadow: var(--shadow-bevel);
+    position: relative;
+}
+
+
+.buzzer-preview-large-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* ============================================
@@ -894,7 +942,6 @@ ul {
     padding: 0.2rem var(--space-sm);
     border-radius: var(--radius-round);
     background: var(--bg-light);
-    cursor: help;
     transition: var(--transition-fast);
 }
 
@@ -1766,6 +1813,15 @@ input[type="radio"]:hover {
     animation: blink-effect infinite 0.5s linear;
 }
 
+.buzzer-sound-item:hover input[type="radio"] {
+    animation: blink-effect infinite 0.5s linear;
+}
+
+input[type="radio"]:checked {
+    background: var(--color-primary);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.8), inset 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
 @keyframes blink-effect {
 
     /* At 50% of the animation duration, the opacity is 0 (hidden) */
@@ -1801,12 +1857,12 @@ input[type="checkbox"] {
     border: 2px solid var(--color-primary);
     background: rgba(0, 0, 0, 0.5);
     position: relative;
+
 }
 
-input[type="checkbox"]:hover {
-    /*background: var(--color-primary);
 
-    /* box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);*/
+
+input[type="checkbox"]:hover {
     animation: blink-effect infinite 0.5s linear;
 }
 
