@@ -112,6 +112,10 @@
         0 0 2px currentColor,
         0 0 6px currentColor,
         0 0 12px currentColor;
+    --shadow-crt-glow-small:
+        0 0 1px currentColor,
+        0 0 3px currentColor,
+        0 0 6px currentColor;
     --shadow-box: 5px 5px 0 var(--bg-container), 6px 6px 0 #00ff00;
 
     /* ===== FONT FAMILY ===== */
@@ -1922,6 +1926,10 @@ input[type="checkbox"]:disabled {
     .songs-list,
     .sounds-list {
         grid-template-columns: 1fr;
+    }
+
+    body {
+        text-shadow: var(--shadow-crt-glow-small);
     }
 }
 
