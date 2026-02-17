@@ -195,7 +195,6 @@ h4 {
     text-transform: uppercase;
     letter-spacing: 1px;
     text-shadow: 1px 1px 0 #000;
-    /* Only headers get shadows */
     margin-bottom: var(--space-md);
     font-weight: normal;
 }
@@ -254,8 +253,11 @@ button {
 button:hover:not(:disabled):not(.no-finger) {
     background: var(--btn-primary-bg-hover);
     color: var(--btn-primary-text-hover);
+
+}
+
+button:hover:not(:disabled):not(.no-finger):not(.skin-settings-btn):not(.modal-close):not(.transfer-host-btn):not(.edit-name-btn):not(.buzzer-sound-preview) {
     padding-left: 45px !important;
-    /* Make room for finger */
 }
 
 /* Animated finger cursor - inside button */
@@ -291,10 +293,10 @@ button:disabled {
 }
 
 /* ============================================
-   SMALL BUTTONS - Finger Outside
+   SMALL BUTTONS - Finger Outside (FIXED)
    ============================================ */
 
-/* Skin settings button - no padding shift, finger outside */
+/* Skin settings button */
 .skin-settings-btn {
     position: fixed;
     top: 20px;
@@ -307,31 +309,135 @@ button:disabled {
     font-size: var(--text-xl);
     cursor: default;
     z-index: 100;
-    padding: 0;
+    padding: 0 !important;
     box-shadow: var(--shadow-sm);
     text-align: center;
 }
 
 .skin-settings-btn:hover {
-    background: var(--bg-heavy);
-    border-color: var(--color-primary);
     padding-left: 0 !important;
-    /* Don't shift */
 }
 
-/* Finger appears to the LEFT of the button */
-.skin-settings-btn:hover::before {
+.skin-settings-btn::before {
+    display: none !important;
+}
+
+.skin-settings-btn:hover::after {
     content: "☛";
     position: absolute;
-    right: 100%;
-    /* Outside to the left */
-    margin-right: 8px;
+    right: calc(100% + 8px);
     top: 50%;
     transform: translateY(-50%);
     font-size: 1.2em;
     color: #FFFFFF;
     text-shadow: 2px 2px 0 #000;
     animation: ff7-cursor-bob-outside 0.8s infinite alternate;
+    display: block;
+}
+
+.modal-close {
+    background: none !important;
+    border: none !important;
+    font-size: var(--text-xxl);
+    color: var(--text-primary);
+    cursor: default;
+    width: 30px !important;
+    height: 30px;
+    padding: var(--space-xs) !important;
+    position: relative;
+    margin: 0;
+    text-align: center;
+}
+
+.modal-close::before {
+    display: none !important;
+}
+
+.modal-close:hover::after {
+    content: "☛";
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1em;
+    color: #FFFFFF;
+    text-shadow: 2px 2px 0 #000;
+    animation: ff7-cursor-bob-outside 0.8s infinite alternate;
+    display: block;
+}
+
+/* Transfer/Edit buttons */
+.transfer-host-btn,
+.edit-name-btn {
+    padding: var(--space-xs) 0.6rem !important;
+    font-size: var(--text-xs);
+    cursor: default;
+    width: auto;
+    margin: 0;
+    text-align: center;
+    position: relative;
+}
+
+.transfer-host-btn:hover,
+.edit-name-btn:hover {
+    padding-left: var(--space-xs) !important;
+}
+
+.transfer-host-btn::before,
+.edit-name-btn::before {
+    display: none !important;
+}
+
+.transfer-host-btn:hover::after,
+.edit-name-btn:hover::after {
+    content: "☛";
+    position: absolute;
+    right: calc(100% + 4px);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9em;
+    color: #FFFFFF;
+    text-shadow: 1px 1px 0 #000;
+    animation: ff7-cursor-bob-outside 0.8s infinite alternate;
+    display: block;
+}
+
+/* Skin option cards */
+.skin-option {
+    cursor: default;
+    padding: var(--space-md);
+    background: var(--bg-light);
+    border: var(--border-medium);
+    text-align: center;
+    position: relative;
+}
+
+.skin-option:hover {
+    /* NO background or padding changes */
+    padding-left: var(--space-md) !important;
+}
+
+.skin-option::before {
+    display: none !important;
+}
+
+.skin-option:hover::after {
+    content: "☛";
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    color: #FFFFFF;
+    text-shadow: 2px 2px 0 #000;
+    animation: ff7-cursor-bob-outside 0.8s infinite alternate;
+    display: block;
+}
+
+.skin-option.selected {
+    background: var(--bg-primary);
+    border-color: var(--color-primary);
+    border-width: 2px;
 }
 
 @keyframes ff7-cursor-bob-outside {
@@ -344,73 +450,77 @@ button:disabled {
     }
 }
 
-/* Modal close button - finger outside */
-.modal-close {
-    background: none;
-    border: none;
-    font-size: var(--text-xxl);
-    color: var(--text-primary);
-    cursor: default;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    position: relative;
-}
+/* ============================================
+   BUZZER SOUND PREVIEW FOOTER
+   ============================================ */
 
-.modal-close:hover {
-    color: var(--color-primary);
-    padding-left: 0 !important;
-    /* Don't shift */
-}
-
-.modal-close:hover::before {
-    content: "☛";
-    position: absolute;
-    right: 100%;
-    margin-right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1em;
-    color: #FFFFFF;
-    text-shadow: 2px 2px 0 #000;
-    animation: ff7-cursor-bob-outside 0.8s infinite alternate;
-}
-
-/* Skin option cards - finger outside to left */
-.skin-option {
-    cursor: default;
-    padding: var(--space-md);
-    background: var(--bg-light);
-    border: var(--border-medium);
+.buzzer-preview-footer {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-container);
+    border-top: 2px solid var(--color-primary);
+    padding: var(--space-lg);
+    z-index: 1001;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.8);
     text-align: center;
+}
+
+.buzzer-preview-footer.visible {
+    display: block;
+}
+
+.buzzer-preview-footer h3 {
+    margin-bottom: var(--space-md);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+}
+
+.buzzer-preview-large-btn {
+    padding: var(--space-lg) var(--space-xl) !important;
+    font-size: var(--text-lg) !important;
+    background: var(--bg-primary) !important;
+    border: var(--border-primary) !important;
+    color: var(--text-primary) !important;
+    cursor: default;
+    width: auto !important;
+    max-width: 400px;
+    margin: 0 auto;
+    display: inline-block;
+    box-shadow: var(--shadow-bevel);
     position: relative;
 }
 
-.skin-option:hover {
-    background: var(--bg-medium);
-    border-color: var(--color-primary);
-    padding-left: var(--space-md) !important;
-    /* Don't shift */
+.buzzer-preview-large-btn:hover {
+    background: linear-gradient(to right, #0050A0, #0060C0) !important;
+    color: #FFFFFF !important;
+    padding-left: calc(var(--space-xl) + 35px) !important;
 }
 
-.skin-option:hover::before {
-    content: "☛";
+.buzzer-preview-large-btn::before {
+    display: none !important;
+}
+
+.buzzer-preview-large-btn:hover::before {
+    content: "☛" !important;
     position: absolute;
-    right: 100%;
-    margin-right: 8px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 1.2em;
+    font-size: 1.4em;
     color: #FFFFFF;
     text-shadow: 2px 2px 0 #000;
-    animation: ff7-cursor-bob-outside 0.8s infinite alternate;
+    animation: ff7-cursor-bob 0.8s infinite alternate;
+    display: block !important;
 }
 
-.skin-option.selected {
-    background: var(--bg-primary);
-    border-color: var(--color-primary);
-    border-width: 2px;
+.buzzer-preview-large-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
+
 
 /* ============================================
    INPUTS
@@ -589,21 +699,6 @@ input[type="radio"]:disabled {
     font-size: var(--text-xl);
 }
 
-.modal-close {
-    background: none;
-    border: none;
-    font-size: var(--text-xxl);
-    color: var(--text-primary);
-    cursor: default;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-}
-
-.modal-close:hover {
-    color: var(--color-primary);
-}
-
 .modal-body {
     padding: var(--space-lg);
 }
@@ -619,6 +714,7 @@ input[type="radio"]:disabled {
     flex: 1;
     margin: 0;
 }
+
 
 /* ============================================
    LOADING
@@ -668,51 +764,11 @@ ul {
    SKIN SELECTOR
    ============================================ */
 
-.skin-settings-btn {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    background: var(--bg-medium);
-    border: var(--border-medium);
-    color: var(--text-primary);
-    font-size: var(--text-xl);
-    cursor: default;
-    z-index: 100;
-    padding: 0;
-    box-shadow: var(--shadow-sm);
-}
-
-.skin-settings-btn:hover {
-    background: var(--bg-heavy);
-    border-color: var(--color-primary);
-}
-
 .skin-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-md);
     padding: var(--space-md) 0;
-}
-
-.skin-option {
-    cursor: default;
-    padding: var(--space-md);
-    background: var(--bg-light);
-    border: var(--border-medium);
-    text-align: center;
-}
-
-.skin-option:hover {
-    background: var(--bg-medium);
-    border-color: var(--color-primary);
-}
-
-.skin-option.selected {
-    background: var(--bg-primary);
-    border-color: var(--color-primary);
-    border-width: 2px;
 }
 
 .skin-preview {
@@ -770,7 +826,6 @@ ul {
 
 /* ============================================
    COMPONENT STYLES
-   Copy structure from styles-default-CLEAN.css
    ============================================ */
 
 /* Lobby */
@@ -811,45 +866,6 @@ ul {
     padding: var(--space-lg);
     border: var(--border-medium);
     box-shadow: var(--shadow-bevel);
-}
-
-.mode-buttons {
-    display: grid;
-    gap: var(--space-sm);
-}
-
-.mode-btn {
-    padding: var(--space-md);
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--text-secondary);
-    cursor: default;
-    font-size: var(--text-base);
-    text-align: left;
-    position: relative;
-}
-
-.mode-btn:hover:not(.active) {
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    padding-left: 45px !important;
-}
-
-.mode-btn:hover:not(.active)::before {
-    content: "☛";
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.4em;
-    color: #FFFFFF;
-    text-shadow: 2px 2px 0 #000;
-    animation: ff7-cursor-bob 0.8s infinite alternate;
-}
-
-.mode-btn.active {
-    opacity: 0.4;
-    cursor: not-allowed;
 }
 
 .parameters-section {
@@ -900,66 +916,6 @@ ul {
     font-size: var(--text-xs);
 }
 
-/* Small lobby buttons - finger outside */
-.transfer-host-btn,
-.edit-name-btn {
-    padding: var(--space-xs) 0.6rem;
-    font-size: var(--text-xs);
-    cursor: default;
-    width: auto;
-    margin: 0;
-    text-align: center;
-}
-
-.transfer-host-btn:hover,
-.edit-name-btn:hover {
-    padding-left: var(--space-xs) !important;
-    /* Don't shift */
-}
-
-.transfer-host-btn:hover::before,
-.edit-name-btn:hover::before {
-    content: "☛";
-    position: absolute;
-    right: 100%;
-    margin-right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.9em;
-    color: #FFFFFF;
-    text-shadow: 1px 1px 0 #000;
-    animation: ff7-cursor-bob-outside 0.8s infinite alternate;
-}
-
-.buzzer-sound-preview {
-    padding: var(--space-xs);
-    background: var(--bg-medium);
-    border: var(--border-light);
-    font-size: var(--text-xs);
-    cursor: default;
-    white-space: nowrap;
-    width: auto;
-    margin: 0;
-    text-align: center;
-}
-
-.buzzer-sound-preview:hover {
-    padding-left: var(--space-xs) !important;
-}
-
-.buzzer-sound-preview:hover::before {
-    content: "☛";
-    position: absolute;
-    right: 100%;
-    margin-right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.8em;
-    color: #FFFFFF;
-    text-shadow: 1px 1px 0 #000;
-    animation: ff7-cursor-bob-outside 0.8s infinite alternate;
-}
-
 /* Responsive */
 @media (max-width: 480px) {
     :root {
@@ -981,5 +937,14 @@ ul {
     button:hover:not(:disabled)::before {
         left: 8px;
         font-size: 1.2em;
+    }
+
+    .buzzer-preview-footer {
+        padding: var(--space-md);
+    }
+
+    .buzzer-preview-large-btn {
+        font-size: var(--text-base);
+        padding: var(--space-md);
     }
 }
