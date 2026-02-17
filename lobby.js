@@ -11,6 +11,7 @@ let roomSubscription = null;
 let heartbeatInterval = null;
 let missedHeartbeats = {};
 
+
 let myBuzzerSoundId = sessionStorage.getItem('buzzerSoundId');
 let availableBuzzerSounds = [];
 
@@ -104,6 +105,7 @@ async function loadLobbySounds(room) {
         return;
     }
 
+
     try {
         availableBuzzerSounds = await getBuzzerSounds();
         if (availableBuzzerSounds.length === 0) {
@@ -113,7 +115,6 @@ async function loadLobbySounds(room) {
 
         document.getElementById('lobbySoundSelection').style.display = 'block';
 
-        // Get used sound IDs from room
         const usedSoundIds = Object.values(room.players || {})
             .filter(p => p.playerId !== sessionStorage.getItem('playerId'))
             .map(p => p.buzzerSoundId)
@@ -125,30 +126,20 @@ async function loadLobbySounds(room) {
             const isSelected = myBuzzerSoundId === sound.id;
 
             return `
-                <div class="buzzer-sound-item ${isUsed ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" 
-                     data-sound-id="${sound.id}">
-                    <input type="radio" 
-                           name="lobbyBuzzerSound" 
-                           value="${sound.id}" 
-                           ${isUsed ? 'disabled' : ''} 
-                           ${isSelected ? 'checked' : ''}>
-                    <span class="buzzer-sound-name">${sound.display_name}</span>
-                    <button class="buzzer-sound-preview" 
-                            data-sound-url="${sound.file_url}" 
-                            type="button">▶️</button>
-                </div>
-            `;
+    <div class="buzzer-sound-item ${isUsed ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" 
+         data-sound-id="${sound.id}"
+         data-sound-url="${sound.file_url}">
+        <input type="radio" 
+               name="lobbyBuzzerSound" 
+               value="${sound.id}" 
+               ${isUsed ? 'disabled' : ''} 
+               ${isSelected ? 'checked' : ''}>
+        <span class="buzzer-sound-name">${sound.display_name}</span>
+    </div>
+`;
         }).join('');
 
-        // Add click handlers
-        document.querySelectorAll('#lobbySoundGrid .buzzer-sound-item:not(.disabled)').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (e.target.classList.contains('buzzer-sound-preview')) return;
 
-                const soundId = item.dataset.soundId;
-                selectLobbySoundAndSave(soundId);
-            });
-        });
 
         document.querySelectorAll('#lobbySoundGrid .buzzer-sound-preview').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -169,9 +160,21 @@ document.getElementById('toggleBuzzerSoundBtn')?.addEventListener('click', () =>
     if (grid.style.display === 'none') {
         grid.style.display = 'grid';
         btn.textContent = 'Hide Buzzer Sounds';
+        // NEW: Show footer if a sound is selected
+        const selected = grid.querySelector('.buzzer-sound-item.selected');
+        if (selected) {
+            const soundId = selected.dataset.soundId;
+            const sound = availableLobbySounds.find(s => s.id === soundId);
+            if (sound && sound.file_url) {
+                showLobbyBuzzerFooter(sound.file_url);
+            }
+        }
     } else {
         grid.style.display = 'none';
         btn.textContent = 'Change Buzzer Sound';
+
+        // NEW: Hide footer when closing
+        hideLobbyBuzzerFooter();
     }
 });
 
@@ -196,6 +199,11 @@ async function selectLobbySoundAndSave(soundId) {
         if (selectedItem) {
             selectedItem.classList.add('selected');
             selectedItem.querySelector('input[type="radio"]').checked = true;
+            // NEW: Show footer with sound URL
+            const sound = availableLobbySounds.find(s => s.id === soundId);
+            if (sound && sound.file_url) {
+                showLobbyBuzzerFooter(sound.file_url);
+            }
         }
     }
 }
@@ -750,3 +758,82 @@ window.addEventListener('beforeunload', async (e) => {
         unsubscribe(roomSubscription);
     }
 });
+
+// ============================================
+// BUZZER PREVIEW FOOTER (LOBBY)
+// ============================================
+
+let lobbyBuzzerFooter = null;
+
+function createLobbyBuzzerFooter() {
+    if (lobbyBuzzerFooter) return;
+
+    lobbyBuzzerFooter = document.createElement('div');
+    lobbyBuzzerFooter.className = 'buzzer-preview-footer';
+    lobbyBuzzerFooter.style.display = 'none';
+    lobbyBuzzerFooter.innerHTML = `
+        <h3>PREVIEW SELECTED SOUND</h3>
+        <button id="lobbyLargePreviewBtn" class="buzzer-preview-large-btn">
+            ▶️ PLAY SOUND
+        </button>
+    `;
+    document.body.appendChild(lobbyBuzzerFooter);
+
+    document.getElementById('lobbyLargePreviewBtn').addEventListener('click', function () {
+        const url = this.dataset.soundUrl;
+        if (url) {
+            playLobbySoundPreview(url);
+        }
+    });
+}
+
+function showLobbyBuzzerFooter(soundUrl) {
+    createLobbyBuzzerFooter();
+    const btn = document.getElementById('lobbyLargePreviewBtn');
+    btn.dataset.soundUrl = soundUrl;
+    lobbyBuzzerFooter.style.display = 'block';
+}
+
+function hideLobbyBuzzerFooter() {
+    if (lobbyBuzzerFooter) {
+        lobbyBuzzerFooter.style.display = 'none';
+    }
+}
+
+async function selectLobbySoundAndSave(soundId) {
+    console.log('=== SELECT SOUND DEBUG ===');
+    console.log('Sound ID:', soundId);
+    console.log('Available sounds:', availableLobbySounds);
+
+    const myPlayerId = sessionStorage.getItem('playerId');
+    const result = await updatePlayer(gameCode, myPlayerId, {
+        buzzerSoundId: soundId
+    });
+
+    if (result.success) {
+        myBuzzerSoundId = soundId;
+
+        document.querySelectorAll('#lobbySoundGrid .buzzer-sound-item').forEach(item => {
+            item.classList.remove('selected');
+            item.querySelector('input[type="radio"]').checked = false;
+        });
+
+        const selectedItem = document.querySelector(`#lobbySoundGrid [data-sound-id="${soundId}"]`);
+        console.log('Selected item:', selectedItem);
+
+        if (selectedItem) {
+            selectedItem.classList.add('selected');
+            selectedItem.querySelector('input[type="radio"]').checked = true;
+
+            const sound = availableLobbySounds.find(s => s.id === soundId);
+            console.log('Found sound:', sound);
+
+            if (sound && sound.file_url) {
+                console.log('Showing footer with URL:', sound.file_url);
+                showLobbyBuzzerFooter(sound.file_url);
+            } else {
+                console.log('NO SOUND OR URL!');
+            }
+        }
+    }
+}
