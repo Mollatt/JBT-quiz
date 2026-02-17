@@ -457,12 +457,12 @@ function showBuzzerFooter(soundUrl) {
     const btn = document.getElementById('largePreviewBtn');
     btn.dataset.soundUrl = soundUrl;
     buzzerFooter.style.display = 'block';
+    document.body.style.paddingBottom = buzzerFooter.offsetHeight + 'px';
 }
 
 function hideBuzzerFooter() {
-    if (buzzerFooter) {
-        buzzerFooter.style.display = 'none';
-    }
+    if (buzzerFooter) buzzerFooter.style.display = 'none';
+    document.body.style.paddingBottom = '';
 }
 
 // Call this when modal closes
