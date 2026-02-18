@@ -511,10 +511,21 @@ function handleBuzzed(buzzedPlayerName) {
         const allAnswers = currentQuestion.allCorrectAnswers || [currentQuestion.options[currentQuestion.correct]];
         document.getElementById('correctAnswer').textContent = allAnswers.join(' / ');
 
-        getRoom(gameCode).then(room => {
+        getRoom(gameCode).then(async room => {
             const buzzedPlayer = Object.values(room.players || {}).find(p => p.name === buzzedPlayerName);
             if (buzzedPlayer && buzzedPlayer.buzzerSoundId) {
-                playBuzzerSound(buzzedPlayer.buzzerSoundId);
+                const allSounds = await getBuzzerSounds();
+                const sound = allSounds.find(s => s.id === buzzedPlayer.buzzerSoundId);
+                if (sound && sound.file_url) {
+                    if (buzzerAudio) {
+                        buzzerAudio.pause();
+                        buzzerAudio.currentTime = 0;
+                    }
+                    buzzerAudio = new Audio(sound.file_url);
+                    buzzerAudio.play().catch(error => {
+                        console.error('Error playing buzzer sound:', error);
+                    });
+                }
             }
         });
     }
@@ -544,7 +555,7 @@ function handleBuzzed(buzzedPlayerName) {
     }
 
 }
-
+/*
 async function playBuzzerSound(buzzerSoundId) {
     if (!buzzerSoundId) return;
 
@@ -564,7 +575,7 @@ async function playBuzzerSound(buzzerSoundId) {
     } catch (error) {
         console.error('Error loading buzzer sound:', error);
     }
-}
+}*/
 
 document.getElementById('correctBtn')?.addEventListener('click', async () => {
     console.log('Correct button clicked');
