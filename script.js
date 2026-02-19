@@ -349,23 +349,6 @@ async function handleJoinStep2() {
         if (result.success) {
             const playerId = result.player.player_id;
 
-
-            /* if (selectedBuzzerSoundId) {
-                 const updateResult = await updatePlayer(code, playerId, {
-                     buzzerSoundId: selectedBuzzerSoundId
-                 });
- 
-                 console.log('FEATURE 7 DEBUG: Update result:', updateResult);
- 
-                 if (!updateResult.success) {
-                     console.error('Failed to set buzzer sound:', updateResult.error);
-                     showModalError('Failed to save buzzer sound');
-                     modalActionBtn.disabled = false;
-                     modalActionBtn.textContent = 'Join';
-                     return;
-                 }
-             }*/
-
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('playerId', result.player.player_id);
@@ -400,7 +383,7 @@ async function handleJoinStep2() {
     modalActionBtn.disabled = true;
     modalActionBtn.textContent = 'Joining...';
 
-    const result = await addPlayer(code, name, false);
+    const result = await addPlayer(code, name, false, selectedBuzzerSoundId);
 
     if (result.success) {
         sessionStorage.setItem('gameCode', code);
