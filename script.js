@@ -240,16 +240,10 @@ async function handleCreateLobby() {
     modalActionBtn.disabled = true;
     modalActionBtn.textContent = 'Creating...';
 
-    const result = await createRoom(code, name, 'everybody');
+    const result = await createRoom(code, name, 'everybody', selectedBuzzerSoundId);
 
     if (result.success) {
         const playerId = result.player.player_id;
-
-        if (selectedBuzzerSoundId) {
-            await updatePlayer(code, playerId, {
-                buzzerSoundId: selectedBuzzerSoundId
-            });
-        }
 
         sessionStorage.setItem('gameCode', code);
         sessionStorage.setItem('playerName', name);
@@ -350,28 +344,27 @@ async function handleJoinStep2() {
         modalActionBtn.disabled = true;
         modalActionBtn.textContent = 'Joining...';
 
-        const result = await addPlayer(code, name, false);
+        const result = await addPlayer(code, name, false, selectedBuzzerSoundId);
 
         if (result.success) {
             const playerId = result.player.player_id;
 
-            console.log('FEATURE 7 DEBUG: Updating player', playerId, 'with sound', selectedBuzzerSoundId);
 
-            if (selectedBuzzerSoundId) {
-                const updateResult = await updatePlayer(code, playerId, {
-                    buzzerSoundId: selectedBuzzerSoundId
-                });
-
-                console.log('FEATURE 7 DEBUG: Update result:', updateResult);
-
-                if (!updateResult.success) {
-                    console.error('Failed to set buzzer sound:', updateResult.error);
-                    showModalError('Failed to save buzzer sound');
-                    modalActionBtn.disabled = false;
-                    modalActionBtn.textContent = 'Join';
-                    return;
-                }
-            }
+            /* if (selectedBuzzerSoundId) {
+                 const updateResult = await updatePlayer(code, playerId, {
+                     buzzerSoundId: selectedBuzzerSoundId
+                 });
+ 
+                 console.log('FEATURE 7 DEBUG: Update result:', updateResult);
+ 
+                 if (!updateResult.success) {
+                     console.error('Failed to set buzzer sound:', updateResult.error);
+                     showModalError('Failed to save buzzer sound');
+                     modalActionBtn.disabled = false;
+                     modalActionBtn.textContent = 'Join';
+                     return;
+                 }
+             }*/
 
             sessionStorage.setItem('gameCode', code);
             sessionStorage.setItem('playerName', name);
@@ -457,12 +450,12 @@ function showBuzzerFooter(soundUrl) {
     const btn = document.getElementById('largePreviewBtn');
     btn.dataset.soundUrl = soundUrl;
     buzzerFooter.style.display = 'block';
-    document.body.style.paddingBottom = buzzerFooter.offsetHeight + 'px';
 }
 
 function hideBuzzerFooter() {
-    if (buzzerFooter) buzzerFooter.style.display = 'none';
-    document.body.style.paddingBottom = '';
+    if (buzzerFooter) {
+        buzzerFooter.style.display = 'none';
+    }
 }
 
 // Call this when modal closes
