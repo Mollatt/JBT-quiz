@@ -5,6 +5,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 :root {
+
     /* ===== FF7 COLORS ===== */
     --color-primary: #78B0FF;
     /* Cyan/Blue for active text */
@@ -866,7 +867,7 @@ ul {
 
 
 
-
+/*Lobb*/
 
 #lobbySoundGrid {
     overflow: visible;
@@ -888,7 +889,7 @@ ul {
     margin-top: var(--space-sm);
 }
 
-/* Lobby */
+
 .lobby-container {
     max-width: 600px;
 }
@@ -974,6 +975,60 @@ ul {
     padding: 0.2rem 0.6rem;
     border: var(--border-gold);
     font-size: var(--text-xs);
+}
+
+/*Buzzer*/
+
+.buzzer-btn {
+    width: 100%;
+    max-width: 400px;
+    height: 150px;
+    /* shorter, wider rectangle */
+    margin: var(--space-xl) auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to right, #004080, #0050A0);
+    border: var(--border-primary);
+    box-shadow: var(--shadow-bevel);
+    cursor: default;
+    transition: none;
+    touch-action: manipulation;
+    position: relative;
+    font-size: var(--text-xxl);
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-left: 60px;
+    /* make room for finger */
+}
+
+.buzzer-btn::before {
+    content: "☛";
+    position: absolute;
+    left: 20px;
+    font-size: 2em;
+    color: #FFFFFF;
+    text-shadow: 2px 2px 0 #000;
+    animation: ff7-cursor-bob 0.8s infinite alternate;
+}
+
+.buzzer-btn:hover:not(:disabled) {
+    background: linear-gradient(to right, #0050A0, #0060C0);
+}
+
+.buzzer-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.buzzer-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.buzzer-icon,
+.buzzer-text {
+    display: none;
 }
 
 /* Responsive */
