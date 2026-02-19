@@ -69,74 +69,57 @@ async function getRoom(code) {
  * @param {string} mode - Game mode ('everybody' or 'buzzer')
  * @returns {Promise} Room creation result
  */
-async function createRoom(code, hostName, mode = 'everybody', hostBuzzerSoundId = null) {
+async function createRoom(code, hostName, mode = 'everybody', selectedSoundId = null) {
     try {
         // Create room
-        const { error: roomError } = await supabase
+        const { data: roomData, error: roomError } = await supabase
             .from('rooms')
             .insert([{
-                code,
+                code: code,
                 host: hostName,
-                mode,
+                mode: mode,
                 status: 'lobby',
-                created_at: Date.now()
-            }]);
+                current_q: -1,
+                questions: null,
+                game_params: {
+                    correctPointsScale: [1000, 800, 600, 400],
+                    numQuestions: 10,
+                    selectedCategories: ['game', 'series', 'composer', 'developer', 'title', 'location', 'boss', 'year'],
+                    releaseYearMin: null,
+                    releaseYearMax: null
+                }
+            }])
+            .select()
+            .single();
 
         if (roomError) throw roomError;
 
-        // Add host player with optional sound ID
-        const playerResult = await addPlayer(code, hostName, true, hostBuzzerSoundId);
+        // Create host player
+        const hostPlayerId = generatePlayerId();
+        const { data: playerData, error: playerError } = await supabase
+            .from('players')
+            .insert([{
+                room_code: code,
+                player_id: hostPlayerId,
+                name: hostName,
+                score: 0,
+                is_host: true,
+                last_seen: Date.now(),
+                buzzer_sound_id: selectedSoundId || null
+            }])
+            .select()
+            .single();
 
-        if (!playerResult.success) throw playerResult.error;
+        if (playerError) throw playerError;
 
-        return { success: true, player: playerResult.player };
+        return { success: true, room: roomData, player: playerData };
     } catch (error) {
         console.error('Error creating room:', error);
+        alert(`Failed to create room: ${error.message}`);
         return { success: false, error };
     }
 }
 
-/**
- * Get room data with all players
- * @param {string} code - Room code
- * @returns {Promise<Object|null>} Room data or null
- */
-async function getRoom(code) {
-    try {
-        // Get room
-        const { data: roomData, error: roomError } = await supabase
-            .from('rooms')
-            .select('*')
-            .eq('code', code)
-            .single();
-
-        if (roomError) {
-            if (roomError.code === 'PGRST116') return null; // Not found
-            throw roomError;
-        }
-
-        // Get players
-        const { data: playersData, error: playersError } = await supabase
-            .from('players')
-            .select('*')
-            .eq('room_code', code);
-
-        if (playersError) throw playersError;
-
-        // Convert to Firebase-like structure
-        const room = convertRoomFromDB(roomData);
-        room.players = {};
-
-        playersData.forEach(player => {
-            room.players[player.name] = convertPlayerFromDB(player);
-        });
-
-        return room;
-    } catch (error) {
-        console.error('Error getting room:', error);
-        return null;
-    }
-}
 
 /**
  * Update room fields
@@ -185,17 +168,19 @@ async function deleteRoom(code) {
 // PLAYERS - Create, Read, Update, Delete
 // ============================================
 
-/** Add a player to a room
- * @param {string} code  
- * @param {string} playerName 
- * @param {boolean} isHost
+/**
+ * Add a player to a room
+ * @param {string} code - Room code 
+ * @param {string} playerName - Player name
+ * @param {boolean} isHost - Whether player is host
  * @returns {Promise}
  */
-async function addPlayer(code, playerName, isHost = false, buzzerSoundId = null) {
+async function addPlayer(code, playerName, isHost = false, selectedSoundId = null) {
     try {
         const playerId = generatePlayerId();
 
-        // Only auto-assign if not provided AND not host
+        let buzzerSoundId = selectedSoundId;
+
         if (!buzzerSoundId && !isHost) {
             buzzerSoundId = await getNextAvailableBuzzerSound(code);
         }
