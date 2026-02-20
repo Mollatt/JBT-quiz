@@ -134,7 +134,6 @@ function openModal(mode) {
     joinFlowStep = 1;
     selectedBuzzerSoundId = null;
 
-    // Clear inputs
     gameCodeInput.value = '';
     modalNameInput.value = '';
 
@@ -398,28 +397,23 @@ async function handleJoinStep2() {
     }
 }
 
-// ============================================
-// BUZZER PREVIEW FOOTER
-// ============================================
 
-// Create footer element (only once)
 let buzzerFooter = null;
 
 function createBuzzerFooter() {
-    if (buzzerFooter) return; // Already exists
+    if (buzzerFooter) return;
 
     buzzerFooter = document.createElement('div');
     buzzerFooter.className = 'buzzer-preview-footer';
-    buzzerFooter.style.display = 'none'; // Hidden by default
+    buzzerFooter.style.display = 'none';
     buzzerFooter.innerHTML = `
         <h3>PREVIEW SELECTED SOUND</h3>
         <button id="largePreviewBtn" class="buzzer-preview-large-btn">
-            ▶️ PLAY SOUND
+            ▶ PLAY SOUND
         </button>
     `;
     document.body.appendChild(buzzerFooter);
 
-    // Add click handler to preview button
     document.getElementById('largePreviewBtn').addEventListener('click', function () {
         const url = this.dataset.soundUrl;
         if (url) {
@@ -441,8 +435,7 @@ function hideBuzzerFooter() {
     }
 }
 
-// Call this when modal closes
 function closeModal() {
     modal.style.display = 'none';
-    hideBuzzerFooter(); // ADD THIS LINE
+    hideBuzzerFooter();
 }
