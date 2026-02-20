@@ -110,12 +110,12 @@
     /* CRT specific shadows */
     --shadow-crt-glow:
         0 0 2px currentColor,
-        0 0 6px currentColor,
-        0 0 12px currentColor;
-    --shadow-crt-glow-small:
-        0 0 1px currentColor,
-        0 0 3px currentColor,
+        0 0 4px currentColor,
         0 0 6px currentColor;
+    --shadow-crt-glow-small:
+        /* 0 0 1px currentColor,*/
+        0 0 2px currentColor,
+        0 0 4px currentColor;
     --shadow-box: 5px 5px 0 var(--bg-container), 6px 6px 0 #00ff00;
 
     /* ===== FONT FAMILY ===== */
@@ -246,9 +246,9 @@ body::before {
     /* Radial glow from center */
     background: radial-gradient(circle at center,
             rgba(0, 255, 0, 0) 0%,
-            rgba(0, 75, 20, 0.78) 58%,
-            rgba(0, 75, 20, 0.55) 80%,
-            rgba(0, 75, 20, 0.27) 93%,
+            rgba(0, 75, 20, 0.78) 28%,
+            rgba(0, 75, 20, 0.55) 50%,
+            rgba(0, 75, 20, 0.27) 63%,
             transparent 100%);
 
     animation: crt-glow 60s infinite;
@@ -312,8 +312,9 @@ html:has(body.reduce-motion)::before {
     animation: none;
 }
 
+
 body.reduce-motion * {
-    text-shadow: none !important;
+    text-shadow: var(--shadow-crt-glow-small) !important;
 }
 
 /* Custom cursor (fallout-style) */
@@ -377,13 +378,15 @@ textarea {
 }
 
 h1 {
-    display: block;
+    display: inline-block;
     margin-bottom: var(--space-sm);
     font-size: var(--text-huge);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-family: var(--font-heading);
+    line-height: 1.2;
+
 }
 
 .subtitle {
@@ -669,6 +672,8 @@ a:hover {
     width: 90%;
     max-width: 400px;
     box-shadow: var(--shadow-box);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
@@ -700,6 +705,8 @@ a:hover {
 
 .modal-body {
     padding: var(--space-lg);
+    overflow-y: auto;
+    flex: 1;
 }
 
 .modal-footer {
@@ -868,7 +875,7 @@ ul {
 }
 
 .game-code .label {
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     opacity: 0.8;
     margin-bottom: var(--space-sm);
 }
@@ -889,7 +896,7 @@ ul {
 }
 
 .current-mode-display .mode-label {
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     opacity: 0.8;
     margin-bottom: var(--space-xs);
 }
@@ -974,7 +981,7 @@ ul {
     color: var(--text-primary);
     padding: var(--space-md);
     border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     max-width: 280px;
     z-index: 1000;
     pointer-events: none;
@@ -1007,7 +1014,7 @@ ul {
 
 .param-group label {
     display: block;
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     font-weight: 500;
     margin-bottom: var(--space-xs);
 }
@@ -1049,7 +1056,7 @@ ul {
     background: var(--bg-gold);
     padding: 0.2rem 0.6rem;
     border-radius: var(--radius-md);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: 600;
 }
 
@@ -1057,7 +1064,7 @@ ul {
 .edit-name-btn {
     padding: var(--space-xs) 0.6rem;
     border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     transition: var(--transition-normal);
     width: auto;
     margin: 0;
@@ -1152,7 +1159,7 @@ input[type="radio"] {
 }
 
 .buzzer-sound-name {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: 500;
 }
 
@@ -1161,7 +1168,7 @@ input[type="radio"] {
     background: var(--bg-medium);
     border: var(--border-light);
     border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     transition: var(--transition-fast);
     white-space: nowrap;
     width: auto;
