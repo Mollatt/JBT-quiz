@@ -1,9 +1,9 @@
 const roomCache = new Map();
-const CACHE_TTL = 500; // Cache for 500ms
+const CACHE_TTL = 500; //500ms
 
 
 /**
- * @returns {string} 8-character alphanumeric ID
+ * @returns {string} 
  */
 function generatePlayerId() {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -15,19 +15,16 @@ function generatePlayerId() {
 }
 
 /**
- * Get room data with all players (with caching)
  * @param {string} code - Room code
  * @returns {Promise<Object|null>} Room data or null
  */
 async function getRoom(code) {
-    // Check cache
     const cached = roomCache.get(code);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
         return cached.data;
     }
 
     try {
-        // Get room and players in parallel
         const [roomResult, playersResult] = await Promise.all([
             supabase.from('rooms').select('*').eq('code', code).single(),
             supabase.from('players').select('*').eq('room_code', code)
@@ -40,7 +37,6 @@ async function getRoom(code) {
 
         if (playersResult.error) throw playersResult.error;
 
-        // Convert to app format
         const room = convertRoomFromDB(roomResult.data);
         room.players = {};
 
@@ -48,7 +44,6 @@ async function getRoom(code) {
             room.players[player.name] = convertPlayerFromDB(player);
         });
 
-        // Cache result
         roomCache.set(code, {
             data: room,
             timestamp: Date.now()
@@ -63,15 +58,13 @@ async function getRoom(code) {
 
 
 /**
- * Create a new game room
- * @param {string} code - 4-character room code
- * @param {string} hostName - Name of the host player
- * @param {string} mode - Game mode ('everybody' or 'buzzer')
- * @returns {Promise} Room creation result
+ * @param {string} code
+ * @param {string} hostName 
+ * @param {string} mode 
+ * @returns {Promise}
  */
 async function createRoom(code, hostName, mode = 'everybody', selectedSoundId = null) {
     try {
-        // Create room
         const { data: roomData, error: roomError } = await supabase
             .from('rooms')
             .insert([{
@@ -94,7 +87,6 @@ async function createRoom(code, hostName, mode = 'everybody', selectedSoundId = 
 
         if (roomError) throw roomError;
 
-        // Create host player
         const hostPlayerId = generatePlayerId();
         const { data: playerData, error: playerError } = await supabase
             .from('players')
@@ -122,9 +114,8 @@ async function createRoom(code, hostName, mode = 'everybody', selectedSoundId = 
 
 
 /**
- * Update room fields
- * @param {string} code - Room code
- * @param {Object} updates - Fields to update
+ * @param {string} code 
+ * @param {Object} updates 
  * @returns {Promise}
  */
 async function updateRoom(code, updates) {
@@ -146,8 +137,7 @@ async function updateRoom(code, updates) {
 }
 
 /**
- * Delete a room (cascade deletes players)
- * @param {string} code - Room code
+ * @param {string} code 
  * @returns {Promise}
  */
 async function deleteRoom(code) {
@@ -165,14 +155,11 @@ async function deleteRoom(code) {
     }
 }
 
-// PLAYERS - Create, Read, Update, Delete
-// ============================================
-
 /**
- * Add a player to a room
- * @param {string} code - Room code 
- * @param {string} playerName - Player name
- * @param {boolean} isHost - Whether player is host
+
+ * @param {string} code 
+ * @param {string} playerName 
+ * @param {boolean} isHost 
  * @returns {Promise}
  */
 async function addPlayer(code, playerName, isHost = false, selectedSoundId = null) {
@@ -209,10 +196,9 @@ async function addPlayer(code, playerName, isHost = false, selectedSoundId = nul
 }
 
 /**
- * Update player fields
- * @param {string} code - Room code (CHANGED from roomCode)
- * @param {string} playerName - Player name
- * @param {Object} updates - Fields to update
+ * @param {string} code 
+ * @param {string} playerName 
+ * @param {Object} updates 
  * @returns {Promise}
  */
 async function updatePlayer(code, playerNameOrId, updates) {
@@ -242,9 +228,8 @@ async function updatePlayer(code, playerNameOrId, updates) {
 }
 
 /**
- * Remove a player from a room
- * @param {string} code - Room code (CHANGED from roomCode)
- * @param {string} playerName - Player name
+ * @param {string} code 
+ * @param {string} playerName 
  * @returns {Promise}
  */
 async function removePlayer(code, playerNameOrId) {
@@ -272,9 +257,9 @@ async function removePlayer(code, playerNameOrId) {
 }
 
 /**
- * @param {string} code - Room code
- * @param {string} playerId - Player ID
- * @param {string} newName - New name
+ * @param {string} code 
+ * @param {string} playerId 
+ * @param {string} newName 
  * @returns {Promise}
  */
 async function changePlayerName(code, playerId, newName) {
@@ -305,16 +290,15 @@ async function changePlayerName(code, playerId, newName) {
 }
 
 /**
- * Get all players in a room
- * @param {string} code - Room code (CHANGED from roomCode)
- * @returns {Promise<Object>} Players object keyed by name
+ * @param {string} code 
+ * @returns {Promise<Object>} 
  */
 async function getPlayers(code) {
     try {
         const { data, error } = await supabase
             .from('players')
             .select('*')
-            .eq('room_code', code);  // CHANGED: using 'code' parameter
+            .eq('room_code', code); 
 
         if (error) throw error;
 
@@ -330,19 +314,13 @@ async function getPlayers(code) {
     }
 }
 
-// REAL-TIME SUBSCRIPTIONS
-// ============================================
-
 /**
- * Subscribe to room changes
- * @param {string} code - Room code
- * @param {Function} callback - Called when room/players change
- * @returns {Object} Subscription channel (call unsubscribe() to stop)
+ * @param {string} code 
+ * @param {Function} callback 
  */
 function subscribeToRoom(code, callback) {
     console.log('subscribeToRoom called for:', code);
 
-    // Create unique channel name
     const channelName = `room_${code}_${Math.random().toString(36).substr(2, 9)}`;
 
     const channel = supabase
@@ -380,18 +358,16 @@ function subscribeToRoom(code, callback) {
             if (err) console.error('Subscription error:', err);
         });
 
-    // Do initial fetch
     getRoom(code).then(callback);
 
     return channel;
 }
 
 /**
- * Subscribe to specific room field
- * @param {string} code - Room code
- * @param {string} field - Field name (e.g., 'status', 'currentQ')
- * @param {Function} callback - Called with field value
- * @returns {Object} Subscription channel
+ * @param {string} code 
+ * @param {string} field 
+ * @param {Function} callback 
+ * @returns {Object} 
  */
 function subscribeToRoomField(code, field, callback) {
     console.log('subscribeToRoomField called for:', code, field);
@@ -435,7 +411,6 @@ function subscribeToRoomField(code, field, callback) {
             if (err) console.error('Subscription error:', err);
         });
 
-    // Do initial fetch
     getRoom(code).then(room => {
         if (room && room[field] !== undefined) {
             callback(room[field]);
@@ -446,10 +421,9 @@ function subscribeToRoomField(code, field, callback) {
 }
 
 /**
- * Subscribe to players in a room
- * @param {string} code - Room code
- * @param {Function} callback - Called with players object
- * @returns {Object} Subscription channel
+ * @param {string} code 
+ * @param {Function} callback 
+ * @returns {Object} 
  */
 function subscribeToPlayers(code, callback) {
     console.log('subscribeToPlayers called for:', code);
@@ -477,14 +451,12 @@ function subscribeToPlayers(code, callback) {
             if (err) console.error('Subscription error:', err);
         });
 
-    // Do initial fetch
     getPlayers(code).then(callback);
 
     return channel;
 }
 /** 
- * Unsubscribe from a channel
- * @param {Object} channel - Channel returned from subscribe function
+ * @param {Object} channel 
  */
 function unsubscribe(channel) {
     if (channel) {
@@ -492,11 +464,7 @@ function unsubscribe(channel) {
     }
 }
 
-// SONGS - Query Operations
-// ============================================
-
 /**
- * Get all verified songs
  * @returns {Promise<Array>} Array of songs
  */
 async function getVerifiedSongs() {
@@ -516,8 +484,7 @@ async function getVerifiedSongs() {
 }
 
 /**
- * Get song by ID
- * @param {string} id - Song ID
+ * @param {string} id 
  * @returns {Promise<Object|null>}
  */
 async function getSong(id) {
@@ -542,7 +509,6 @@ async function getSong(id) {
 
 
 /**
- * Get all active buzzer sounds
  * @returns {Promise<Array>}
  */
 async function getBuzzerSounds() {
@@ -562,7 +528,6 @@ async function getBuzzerSounds() {
 }
 
 /**
- * Get a specific buzzer sound
  * @param {string} id - Sound ID
  * @returns {Promise<Object|null>}
  */
@@ -586,25 +551,22 @@ async function getBuzzerSound(id) {
 }
 
 /**
- * Upload a buzzer sound file
- * @param {File} file - Audio file
- * @param {string} displayName - Display name
- * @param {boolean} isStarter - Whether it's a starter sound
+ * @param {File} file 
+ * @param {string} displayName 
+ * @param {boolean} isStarter 
  * @returns {Promise}
  */
 async function uploadBuzzerSound(file, displayName, isStarter = false) {
     try {
-        // Validate file size (500KB = 512000 bytes)
+        //(500KB = 512000 bytes)
         if (file.size > 512000) {
             return { success: false, error: 'File size must be under 500KB' };
         }
 
-        // Validate file type
         if (!file.type.includes('audio/mpeg') && !file.type.includes('audio/mp3')) {
             return { success: false, error: 'File must be MP3 format' };
         }
 
-        // Generate unique file name
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -617,12 +579,10 @@ async function uploadBuzzerSound(file, displayName, isStarter = false) {
 
         if (uploadError) throw uploadError;
 
-        // Get public URL
         const { data: urlData } = supabase.storage
             .from('buzzer-sounds')
             .getPublicUrl(fileName);
 
-        // Create database entry
         const { data: soundData, error: dbError } = await supabase
             .from('buzzer_sounds')
             .insert([{
@@ -645,24 +605,20 @@ async function uploadBuzzerSound(file, displayName, isStarter = false) {
 }
 
 /**
- * Delete a buzzer sound
- * @param {string} id - Sound ID
+ * @param {string} id 
  * @returns {Promise}
  */
 async function deleteBuzzerSound(id) {
     try {
-        // Get sound data first to delete file
         const sound = await getBuzzerSound(id);
         if (!sound) return { success: false, error: 'Sound not found' };
 
-        // Delete from storage
         const { error: storageError } = await supabase.storage
             .from('buzzer-sounds')
             .remove([sound.file_name]);
 
         if (storageError) console.warn('Storage delete error:', storageError);
 
-        // Delete from database
         const { error: dbError } = await supabase
             .from('buzzer_sounds')
             .delete()
@@ -678,9 +634,8 @@ async function deleteBuzzerSound(id) {
 }
 
 /**
- * Update buzzer sound properties
- * @param {string} id - Sound ID
- * @param {Object} updates - Fields to update
+ * @param {string} id 
+ * @param {Object} updates 
  * @returns {Promise}
  */
 async function updateBuzzerSound(id, updates) {
@@ -699,13 +654,11 @@ async function updateBuzzerSound(id, updates) {
 }
 
 /**
- * Get next available default buzzer sound for a room
- * @param {string} code - Room code
- * @returns {Promise<string|null>} Sound ID or null
+ * @param {string} code
+ * @returns {Promise<string|null>} 
  */
 async function getNextAvailableBuzzerSound(code) {
     try {
-        // Get all starter sounds
         const { data: starterSounds, error: soundsError } = await supabase
             .from('buzzer_sounds')
             .select('id')
@@ -716,7 +669,6 @@ async function getNextAvailableBuzzerSound(code) {
         if (soundsError) throw soundsError;
         if (!starterSounds || starterSounds.length === 0) return null;
 
-        // Get all players in room and their sound IDs
         const { data: players, error: playersError } = await supabase
             .from('players')
             .select('buzzer_sound_id')
@@ -726,7 +678,6 @@ async function getNextAvailableBuzzerSound(code) {
 
         const usedSoundIds = players.map(p => p.buzzer_sound_id).filter(Boolean);
 
-        // Find first unused starter sound
         const availableSound = starterSounds.find(s => !usedSoundIds.includes(s.id));
 
         return availableSound ? availableSound.id : starterSounds[0].id; // Fallback to first if all used
@@ -736,28 +687,14 @@ async function getNextAvailableBuzzerSound(code) {
     }
 }
 
-
-
-// CONVERSION HELPERS
-// ============================================
-
-/**
- * Convert camelCase to snake_case
- */
 function camelToSnake(str) {
     return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
-/**
- * Convert snake_case to camelCase
- */
 function snakeToCamel(str) {
     return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
 }
 
-/**
- * Convert room data FROM database format TO app format
- */
 function convertRoomFromDB(dbRoom) {
     return {
         code: dbRoom.code,
@@ -780,12 +717,8 @@ function convertRoomFromDB(dbRoom) {
     };
 }
 
-/**
- * Convert room data FROM app format TO database format
- */
 function convertRoomToDB(appRoom) {
     const dbRoom = {};
-
     const fieldMap = {
         'host': 'host',
         'mode': 'mode',
@@ -813,9 +746,6 @@ function convertRoomToDB(appRoom) {
     return dbRoom;
 }
 
-/**
- * Convert player data FROM database format TO app format
- */
 function convertPlayerFromDB(dbPlayer) {
     return {
         playerId: dbPlayer.player_id,
@@ -835,9 +765,6 @@ function convertPlayerFromDB(dbPlayer) {
     };
 }
 
-/**
- * Convert player data FROM app format TO database format
- */
 function convertPlayerToDB(appPlayer) {
     const dbPlayer = {};
 
