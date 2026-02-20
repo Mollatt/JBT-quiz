@@ -71,7 +71,7 @@ async function cleanupDisconnectedPlayers() {
             if (missedHeartbeats[playerId] >= 2) {
                 console.log(`Removing disconnected player: ${name} (missed ${missedHeartbeats[playerId]} heartbeats)`);
                 await removePlayer(gameCode, playerId);
-                delete missedHeartbeats[playerId]; // Clean up tracking
+                delete missedHeartbeats[playerId];
 
                 const updatedRoom = await getRoom(gameCode);
                 const remainingPlayers = updatedRoom?.players || {};
@@ -272,7 +272,6 @@ getRoom(gameCode).then(room => {
             }
         }
 
-        // Buzzer mode parameters - UNCHANGED logic
         if (params.buzzerCorrectPoints !== undefined) {
             const buzzerCorrect = document.getElementById('buzzerCorrectPoints');
             if (buzzerCorrect) {
@@ -302,13 +301,11 @@ getRoom(gameCode).then(room => {
 
 document.getElementById('gameCode').textContent = gameCode;
 
-// FEATURE 4 FIX: Start heartbeat system
 startHeartbeat();
 
 const myPlayerId = sessionStorage.getItem('playerId');
 updatePlayer(gameCode, myPlayerId, { lastSeen: Date.now() });
 
-// FEATURE 4 FIX: Host checks for disconnected players every 10 seconds
 if (isHost) {
     setInterval(cleanupDisconnectedPlayers, 10000);
 }
@@ -320,39 +317,29 @@ modeButtons.forEach(btn => {
 
         const mode = btn.getAttribute('data-mode');
 
-        // Only allow click if not already selected - UNCHANGED
         if (btn.classList.contains('active')) return;
 
-        // Update all buttons - UNCHANGED
         modeButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        // CHANGED: Update database using updateRoom() helper
-        // OLD: await roomRef.update({ mode });
         currentMode = mode;
         await updateRoom(gameCode, { mode });
 
-        // Show/hide appropriate parameters - UNCHANGED
         updateParametersDisplay(mode);
 
-        // Auto-close mode selection after choosing - UNCHANGED
         document.getElementById('gameModeSection').style.display = 'none';
     });
 });
-// FEATURE 2: Info icon handlers for game modes
 document.querySelectorAll('.mode-btn-info').forEach(infoIcon => {
-    // Prevent info icon from triggering mode selection
     infoIcon.addEventListener('click', (e) => {
         e.stopPropagation();
     });
 
-    // Show tooltip on click (works for both mobile and desktop)
     infoIcon.addEventListener('click', (e) => {
         const mode = infoIcon.getAttribute('data-info');
         showModeInfo(mode, e);
     });
 
-    // Also show on hover for desktop
     infoIcon.addEventListener('mouseenter', (e) => {
         const mode = infoIcon.getAttribute('data-info');
         showModeInfo(mode, e);
@@ -363,9 +350,8 @@ document.querySelectorAll('.mode-btn-info').forEach(infoIcon => {
     });
 });
 
-// FEATURE 2: Show mode information tooltip
 function showModeInfo(mode, event) {
-    // Remove any existing tooltip
+
     hideModeInfo();
 
     let message = '';
@@ -375,26 +361,22 @@ function showModeInfo(mode, event) {
 
     if (!message) return;
 
-    // Create tooltip
     const tooltip = document.createElement('div');
     tooltip.className = 'mode-info-tooltip show';
     tooltip.id = 'modeInfoTooltip';
     tooltip.textContent = message;
 
-    // Position tooltip near the info icon
     const rect = event.target.getBoundingClientRect();
     tooltip.style.top = `${rect.bottom + 10}px`;
     tooltip.style.left = `${rect.left - 100}px`;
 
     document.body.appendChild(tooltip);
 
-    // Auto-hide after 5 seconds on mobile (click)
     if (event.type === 'click') {
         setTimeout(hideModeInfo, 5000);
     }
 }
 
-// FEATURE 2: Hide mode information tooltip
 function hideModeInfo() {
     const tooltip = document.getElementById('modeInfoTooltip');
     if (tooltip) {
@@ -402,7 +384,6 @@ function hideModeInfo() {
     }
 }
 
-// Close tooltip when clicking outside
 document.addEventListener('click', (e) => {
     if (!e.target.classList.contains('mode-btn-info')) {
         hideModeInfo();
@@ -481,7 +462,6 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
     if (!hasHost && playerArray.length > 0) {
         const firstPlayer = playerArray[0].name;
         if (firstPlayer === playerName) {
-            // Make ourselves host
             updatePlayer(gameCode, playerName, { isHost: true });
             updateRoom(gameCode, { host: playerName });
         }
@@ -516,7 +496,6 @@ roomSubscription = subscribeToRoom(gameCode, (room) => {
     }
 
     if (room.status === 'playing') {
-        // Set flag so beforeunload doesn't remove player
         isStartingGame = true;
 
         const mode = room.mode;
@@ -732,7 +711,6 @@ document.getElementById('saveNameBtn')?.addEventListener('click', async () => {
         return;
     }
 
-    // Disable button during save
     const saveBtn = document.getElementById('saveNameBtn');
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
@@ -777,10 +755,6 @@ window.addEventListener('beforeunload', async (e) => {
     }
 });
 
-// ============================================
-// BUZZER PREVIEW FOOTER (LOBBY)
-// ============================================
-
 let lobbyBuzzerFooter = null;
 
 function createLobbyBuzzerFooter() {
@@ -790,7 +764,7 @@ function createLobbyBuzzerFooter() {
     lobbyBuzzerFooter.style.display = 'none';
     lobbyBuzzerFooter.innerHTML = `
         <h3>PREVIEW SELECTED SOUND</h3>
-        <button id="lobbyLargePreviewBtn" class="buzzer-preview-large-btn">▶️ PLAY SOUND</button>
+        <button id="lobbyLargePreviewBtn" class="buzzer-preview-large-btn">▶ PLAY SOUND</button>
     `;
     document.body.appendChild(lobbyBuzzerFooter);
     document.getElementById('lobbyLargePreviewBtn').addEventListener('click', function () {
