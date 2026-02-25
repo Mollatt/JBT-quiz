@@ -1,5 +1,7 @@
 let editingSongId = null;
 let allSongs = [];
+let sortColumn = 'title';
+let sortDirection = 'asc';
 
 
 function showMessage(text, type = 'success') {
@@ -143,65 +145,81 @@ async function loadSongs() {
 
 function displaySongs(songs) {
     const container = document.getElementById('songsList');
-
     if (!songs || songs.length === 0) {
         container.innerHTML = '<p style="opacity: 0.7;">No songs match your filters</p>';
         return;
     }
 
-    container.innerHTML = songs.map(song => {
-        // FEATURE 1: Display alternate counts
-        const altCounts = [];
-        if (song.alternateTitles && song.alternateTitles.length > 0) {
-            altCounts.push(`${song.alternateTitles.length} alt titles`);
-        }
-        if (song.alternateArtists && song.alternateArtists.length > 0) {
-            altCounts.push(`${song.alternateArtists.length} alt artists`);
-        }
-        if (song.alternateGames && song.alternateGames.length > 0) {
-            altCounts.push(`${song.alternateGames.length} alt games`);
-        }
-        if (song.alternateDevelopers && song.alternateDevelopers.length > 0) {
-            altCounts.push(`${song.alternateDevelopers.length} alt devs`);
-        }
-        if (song.alternateBossBattles && song.alternateBossBattles.length > 0) {
-            altCounts.push(`${song.alternateBossBattles.length} alt bosses`);
-        }
-        if (song.alternateAreas && song.alternateAreas.length > 0) {
-            altCounts.push(`${song.alternateAreas.length} alt areas`);
-        }
+    const sorted = [...songs].sort((a, b) => {
+        let valA = a[sortColumn] ?? '';
+        let valB = b[sortColumn] ?? '';
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
 
-        const altCountsDisplay = altCounts.length > 0
-            ? `<span style="color: #4CAF50;">📝 ${altCounts.join(', ')}</span>`
-            : '';
+    const difficultyOrder = { 'Very Easy': 1, 'Easy': 2, 'Medium': 3, 'Hard': 4, 'Very Hard': 5, 'Unknown': 6 };
+    if (sortColumn === 'difficulty') {
+        sorted.sort((a, b) => {
+            const diff = (difficultyOrder[a.difficulty] ?? 9) - (difficultyOrder[b.difficulty] ?? 9);
+            return sortDirection === 'asc' ? diff : -diff;
+        });
+    }
 
-        return `
-        <div class="song-card">
-            <div class="song-title">${song.title}</div>
-            <div class="song-details">
-                <span>🎮 ${song.specificGame}</span>
-                ${song.artist ? `<span>🎵 ${song.artist}</span>` : ''}
-                ${song.developer ? `<span>🏢 ${song.developer}</span>` : ''}
-                ${song.releaseYear ? `<span>📅 ${song.releaseYear}</span>` : ''}
-            </div>
-            <div class="song-details">
-                <span>⏱️ ${song.startTime}s - ${song.duration}s</span>
-                <span>📊 ${song.difficulty}</span>
-                ${song.verified ? '<span style="color: #4CAF50;">✓ Verified</span>' : '<span style="color: #FFC107;">⏳ Pending</span>'}
-                ${altCountsDisplay}
-            </div>
-            <div class="song-url">
-                <small>🔗 <a href="${song.youtubeUrl}" target="_blank" rel="noopener noreferrer">View YouTube</a></small>
-            </div>
-            <div class="song-actions">
-                <button class="btn-secondary" onclick="editSong('${song.id}')">✏️ Edit</button>
-                <button class="btn-secondary" onclick="verifySong('${song.id}')">
-                    ${song.verified ? 'Unverify' : 'Verify'}
-                </button>
-                <button class="btn-secondary" onclick="deleteSong('${song.id}')">🗑️ Delete</button>
-            </div>
-        </div>
-    `}).join('');
+    const arrow = col => col === sortColumn ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ' ⇅';
+
+    container.innerHTML = `
+    <table class="songs-table">
+        <thead>
+            <tr>
+                <th class="sortable" data-col="title">Title${arrow('title')}</th>
+                <th class="sortable" data-col="specificGame">Game${arrow('specificGame')}</th>
+                <th class="sortable" data-col="artist">Artist${arrow('artist')}</th>
+                <th class="sortable" data-col="developer">Developer${arrow('developer')}</th>
+                <th class="sortable" data-col="releaseYear">Year${arrow('releaseYear')}</th>
+                <th class="sortable" data-col="bossBattle">Boss?${arrow('bossBattle')}</th>
+                <th class="sortable" data-col="duration">Duration${arrow('duration')}</th>
+                <th class="sortable" data-col="difficulty">Difficulty${arrow('difficulty')}</th>
+                <th class="sortable" data-col="verified">Status${arrow('verified')}</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${sorted.map(song => `
+            <tr>
+                <td><strong>${song.title}</strong></td>
+                <td>${song.specificGame}</td>
+                <td>${song.artist || '—'}</td>
+                <td>${song.developer || '—'}</td>
+                <td>${song.releaseYear || '—'}</td>
+                <td>${song.bossBattle ? '⚔️ Yes' : '—'}</td>
+                <td>${song.startTime}s / ${song.duration}s</td>
+                <td>${song.difficulty}</td>
+                <td>${song.verified ? '<span class="status-verified">✓ Verified</span>' : '<span class="status-pending">⏳ Pending</span>'}</td>
+                <td class="actions-cell">
+                    <button class="btn-secondary btn-sm" onclick="editSong('${song.id}')">✏️</button>
+                    <button class="btn-secondary btn-sm" onclick="verifySong('${song.id}')">${song.verified ? '↩️' : '✓'}</button>
+                    <button class="btn-secondary btn-sm" onclick="deleteSong('${song.id}')">🗑️</button>
+                    ${song.youtubeUrl ? `<a href="${song.youtubeUrl}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none;">🔗</a>` : ''}
+                </td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+
+    container.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            if (sortColumn === col) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = col;
+                sortDirection = 'asc';
+            }
+            filterSongs(); // re-filter
+        });
+    });
 }
 
 async function editSong(songId) {
@@ -278,7 +296,6 @@ async function deleteSong(songId) {
 
         if (error) throw error;
 
-        // If we were editing this song, cancel edit
         if (editingSongId === songId) {
             cancelEdit();
         }
@@ -291,7 +308,6 @@ async function deleteSong(songId) {
     }
 }
 
-// Search and filter functionality
 function filterSongs() {
     const searchText = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const difficultyFilter = document.getElementById('difficultyFilter')?.value || '';
