@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login</title>
-    <!--<link rel="stylesheet" href="styles-default.css">-->
 </head>
 
 <body>
@@ -17,7 +16,7 @@
     </div>
     <main class="page">
         <div class="container">
-            <h1>🔐 Admin Login</h1>
+            <h1>Admin Login</h1>
             <p class="subtitle">Login to manage game content</p>
 
             <div id="errorMsg" class="error"></div>
@@ -25,8 +24,13 @@
             <div class="menu">
                 <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
                 <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+                <label class="checkbox-label" style="margin-top: 0.5rem; justify-content: center;">
+                    <input type="checkbox" id="rememberDevice">
+                    Remember this device for 30 days
+                </label>
                 <button id="loginBtn" class="btn-primary">Login</button>
             </div>
+
         </div>
     </main>
     <script src="skin-loader.js"></script>
@@ -61,7 +65,10 @@
 
                 if (error) throw error;
 
-                // Successfully logged in
+                const remember = document.getElementById('rememberDevice').checked;
+                const days = remember ? 30 : 0.125; // 30 days OR ~3 hours
+                const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
+                localStorage.setItem('adminSessionExpiry', expiry);
                 window.location.href = 'admin.html';
             } catch (error) {
                 btn.disabled = false;
@@ -70,7 +77,6 @@
             }
         });
 
-        // Handle Enter key
         document.getElementById('passwordInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('loginBtn').click();
