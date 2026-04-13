@@ -558,6 +558,8 @@ select option {
     max-width: 400px;
     box-shadow: var(--shadow-lg);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
@@ -595,6 +597,8 @@ select option {
 
 .modal-body {
     padding: var(--space-lg);
+    overflow-y: auto;
+    flex: 1;
 }
 
 .modal-footer {
@@ -1495,7 +1499,7 @@ input[type="radio"] {
    ADMIN.HTML - Admin Panel
    ============================================ */
 .admin-container {
-    max-width: 900px;
+    max-width: 1400px;
     margin: 2rem auto;
     padding: var(--space-xl);
 }
@@ -1583,6 +1587,74 @@ input[type="radio"] {
 .admin-tab.active {
     color: var(--text-primary);
     border-bottom-color: var(--color-primary);
+}
+
+.songs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    margin-top: var(--space-md);
+}
+
+.songs-table th,
+.songs-table td {
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    border-bottom: var(--border-light);
+    vertical-align: middle;
+}
+
+.songs-table th {
+    background: var(--bg-medium);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: var(--text-xs);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.songs-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.songs-table th.sortable:hover {
+    background: var(--bg-heavy);
+}
+
+.songs-table tr:hover td {
+    background: var(--bg-light);
+}
+
+.songs-table .actions-cell {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.btn-sm {
+    padding: var(--space-xs) var(--space-sm) !important;
+    font-size: var(--text-xs) !important;
+    min-width: unset !important;
+    flex: unset !important;
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.status-verified {
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+.status-pending {
+    color: #FFC107;
+    font-weight: 600;
+}
+
+
+
+#songsList {
+    overflow-x: auto;
 }
 
 .tab-content {
